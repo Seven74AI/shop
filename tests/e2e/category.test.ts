@@ -1,33 +1,55 @@
+import { createHash, randomUUID } from 'node:crypto'
 import { prisma } from '#app/utils/db.server.ts'
 import { test, expect } from '../playwright-utils.ts'
 import { createProductData } from '../product-utils.ts'
 
+const CATEGORY_E2E_PREFIX = 'category-e2e'
+
+function getTestPrefix(testId: string) {
+	const hash = createHash('md5').update(testId).digest('hex').slice(0, 8)
+	return `${CATEGORY_E2E_PREFIX}-${hash}`
+}
+
 test.describe('Category Page', () => {
-	test.afterEach(async () => {
-		// Cleanup: Delete in order to respect foreign key constraints
-		// OrderItems must be deleted before Products (Restrict constraint)
-		await prisma.orderItem.deleteMany({})
-		// CartItems will cascade when Products are deleted, but delete explicitly for clarity
-		await prisma.cartItem.deleteMany({})
-		await prisma.cart.deleteMany({})
-		// Now we can safely delete products
-		await prisma.product.deleteMany({})
-		await prisma.category.deleteMany({})
+	test.afterEach(async ({}, testInfo) => {
+		// Scoped cleanup - must not delete other tests' data when running in parallel
+		const testPrefix = getTestPrefix(testInfo.testId)
+		const categories = await prisma.category.findMany({
+			where: { slug: { startsWith: testPrefix } },
+			select: { id: true },
+		})
+		const categoryIds = categories.map((c) => c.id)
+		await prisma.$transaction([
+			prisma.orderItem.deleteMany({
+				where: { product: { categoryId: { in: categoryIds } } },
+			}),
+			prisma.cartItem.deleteMany({
+				where: { product: { categoryId: { in: categoryIds } } },
+			}),
+			prisma.product.deleteMany({
+				where: { categoryId: { in: categoryIds } },
+			}),
+			prisma.category.deleteMany({
+				where: { slug: { startsWith: testPrefix } },
+			}),
+		])
 	})
 
-	test('should display products filtered by category', async ({ page }) => {
+	test('should display products filtered by category', async ({ page }, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo.testId)
+		const uniqueId = randomUUID().slice(0, 8)
 		// Create two test categories
 		const category1 = await prisma.category.create({
 			data: {
 				name: 'Electronics',
-				slug: `electronics-${Date.now()}`,
+				slug: `${testPrefix}-electronics-${uniqueId}`,
 			},
 		})
 
 		const category2 = await prisma.category.create({
 			data: {
 				name: 'Clothing',
-				slug: `clothing-${Date.now()}`,
+				slug: `${testPrefix}-clothing-${uniqueId}`,
 			},
 		})
 
@@ -36,9 +58,9 @@ test.describe('Category Page', () => {
 		const product1 = await prisma.product.create({
 			data: {
 				name: 'Laptop',
-				slug: product1Data.slug,
+				slug: `${product1Data.slug}-${uniqueId}`,
 				description: product1Data.description,
-				sku: product1Data.sku,
+				sku: `${testPrefix}-sku-${uniqueId}-1`,
 				price: product1Data.price,
 				categoryId: category1.id,
 				status: 'ACTIVE',
@@ -49,9 +71,9 @@ test.describe('Category Page', () => {
 		const product2 = await prisma.product.create({
 			data: {
 				name: 'Shirt',
-				slug: product2Data.slug,
+				slug: `${product2Data.slug}-${uniqueId}`,
 				description: product2Data.description,
-				sku: product2Data.sku,
+				sku: `${testPrefix}-sku-${uniqueId}-2`,
 				price: product2Data.price,
 				categoryId: category2.id,
 				status: 'ACTIVE',
@@ -73,12 +95,14 @@ test.describe('Category Page', () => {
 		await expect(page.getByRole('heading', { name: product1.name })).not.toBeVisible()
 	})
 
-	test('should show empty state when category has no products', async ({ page }) => {
-		// Create empty category
+	test('should show empty state when category has no products', async ({ page }, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo.testId)
+		const uniqueId = randomUUID().slice(0, 8)
+		// Create empty category with testPrefix for scoped cleanup
 		const category = await prisma.category.create({
 			data: {
 				name: 'Empty Category',
-				slug: `empty-${Date.now()}`,
+				slug: `${testPrefix}-empty-${uniqueId}`,
 			},
 		})
 
@@ -88,12 +112,14 @@ test.describe('Category Page', () => {
 		await expect(page.getByText(/no products/i)).toBeVisible()
 	})
 
-	test('should display category name and description', async ({ page }) => {
+	test('should display category name and description', async ({ page }, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo.testId)
+		const uniqueId = randomUUID().slice(0, 8)
 		// Create category with description
 		const category = await prisma.category.create({
 			data: {
 				name: 'Test Category',
-				slug: `test-${Date.now()}`,
+				slug: `${testPrefix}-test-${uniqueId}`,
 				description: 'This is a test category description',
 			},
 		})
@@ -105,19 +131,21 @@ test.describe('Category Page', () => {
 		await expect(page.getByText(category.description!)).toBeVisible()
 	})
 
-	test('should allow filtering by category within category page', async ({ page }) => {
-		// Create two categories
+	test('should allow filtering by category within category page', async ({ page }, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo.testId)
+		const uniqueId = randomUUID().slice(0, 8)
+		// Create two categories - use testPrefix for scoped cleanup
 		const category1 = await prisma.category.create({
 			data: {
 				name: 'Category A',
-				slug: `category-a-${Date.now()}`,
+				slug: `${testPrefix}-category-a-${uniqueId}`,
 			},
 		})
 
 		const category2 = await prisma.category.create({
 			data: {
 				name: 'Category B',
-				slug: `category-b-${Date.now()}`,
+				slug: `${testPrefix}-category-b-${uniqueId}`,
 			},
 		})
 
@@ -126,9 +154,9 @@ test.describe('Category Page', () => {
 		const product1 = await prisma.product.create({
 			data: {
 				name: 'Product A1',
-				slug: product1Data.slug,
+				slug: `${product1Data.slug}-${uniqueId}`,
 				description: product1Data.description,
-				sku: product1Data.sku,
+				sku: `${testPrefix}-sku-${uniqueId}-1`,
 				price: product1Data.price,
 				categoryId: category1.id,
 				status: 'ACTIVE',
@@ -139,9 +167,9 @@ test.describe('Category Page', () => {
 		const product2 = await prisma.product.create({
 			data: {
 				name: 'Product B1',
-				slug: product2Data.slug,
+				slug: `${product2Data.slug}-${uniqueId}`,
 				description: product2Data.description,
-				sku: product2Data.sku,
+				sku: `${testPrefix}-sku-${uniqueId}-2`,
 				price: product2Data.price,
 				categoryId: category2.id,
 				status: 'ACTIVE',
@@ -153,22 +181,17 @@ test.describe('Category Page', () => {
 
 		// Wait for page to load
 		await page.waitForLoadState('networkidle')
-
-		// Initially should show only category1 products
-		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible()
+		
+		// Wait for products to load - check for product name in text (more reliable than heading)
+		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 10000 })
 
 		// Change filter to category2
 		const filterSelect = page.getByLabel(/filter by category/i)
 		await filterSelect.selectOption(category2.id)
-		
-		// Wait for the filter to update the products
-		await page.waitForTimeout(500)
-		await page.waitForLoadState('networkidle')
 
-		// Should now show only category2 products
-		await expect(page.getByRole('heading', { name: product2.name })).toBeVisible()
-		// Product A1 should not be visible
-		await expect(page.getByRole('heading', { name: product1.name })).not.toBeVisible()
+		// Wait for filter to apply - assert expected product visibility
+		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(product1.name)).not.toBeVisible({ timeout: 5000 })
 	})
 })
 

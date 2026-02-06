@@ -1,3 +1,4 @@
+import { copyFileSync } from 'node:fs'
 import path from 'node:path'
 import fsExtra from 'fs-extra'
 import { afterAll, beforeEach } from 'vitest'
@@ -8,7 +9,38 @@ const databasePath = path.join(process.cwd(), databaseFile)
 process.env.DATABASE_URL = `file:${databasePath}`
 
 beforeEach(async () => {
-	await fsExtra.copyFile(BASE_DATABASE_PATH, databasePath)
+	copyFileSync(BASE_DATABASE_PATH, databasePath)
+	
+	// Ensure currency and settings exist (they should be in base.db, but verify)
+	// Import prisma after DATABASE_URL is set
+	const { prisma } = await import('#app/utils/db.server.ts')
+	
+	// Check if settings exist, if not create them
+	const settings = await prisma.settings.findUnique({
+		where: { id: 'settings' },
+	})
+	
+	if (!settings) {
+		// Create USD currency if it doesn't exist
+		const usdCurrency = await prisma.currency.upsert({
+			where: { code: 'USD' },
+			create: {
+				code: 'USD',
+				name: 'US Dollar',
+				symbol: '$',
+				decimals: 2,
+			},
+			update: {},
+		})
+
+		// Create Settings with USD as default currency
+		await prisma.settings.create({
+			data: {
+				id: 'settings',
+				currencyId: usdCurrency.id,
+			},
+		})
+	}
 })
 
 afterAll(async () => {

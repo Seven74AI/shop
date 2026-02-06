@@ -1,17 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import { prisma } from '#app/utils/db.server.ts'
 import { test, expect } from '../playwright-utils.ts'
+import { createProductData } from '../product-utils.ts'
+
+const SHOP_CATEGORY_PREFIX = 'shop-e2e-category-'
+const SHOP_PRODUCT_PREFIX = 'shop-e2e-product-'
 
 test.describe('Shop Home Page', () => {
-	test.beforeEach(async () => {
-		// Create a test category
-		await prisma.category.create({
-			data: {
-				name: 'Test Category',
-				slug: `test-category-${Date.now()}`,
-				description: 'Test category description',
-			},
-		})
-	})
 
 	test('should display welcome message', async ({ page }) => {
 		await page.goto('/shop')
@@ -24,19 +19,63 @@ test.describe('Shop Home Page', () => {
 	})
 
 	test('should display category cards', async ({ page }) => {
+		const unique = randomUUID()
+		const categoryName = `Test Category ${unique.slice(0, 6)}`
+		const categorySlug = `${SHOP_CATEGORY_PREFIX}${unique}`
+		const productSlug = `${SHOP_PRODUCT_PREFIX}${unique}`
+		const productSku = `SHOP-E2E-${unique}`
+
+		// Create a category with a product so it's displayed
+		const category = await prisma.category.create({
+			data: {
+				name: categoryName,
+				slug: categorySlug,
+				description: 'Test category description',
+			},
+		})
+		
+		// Create a product in this category so the category is displayed
+		const productData = createProductData()
+		await prisma.product.create({
+			data: {
+				name: productData.name,
+				slug: productSlug,
+				description: productData.description,
+				sku: productSku,
+				price: productData.price,
+				status: 'ACTIVE',
+				categoryId: category.id,
+			},
+		})
+		
 		await page.goto('/shop')
-		const categoryCards = page.getByTestId('category-card')
-		await expect(categoryCards.first()).toBeVisible()
+		await page.waitForLoadState('networkidle')
+		
+		// Use accessible query - category cards are links to category pages
+		// Find any category link (they contain category names) - allow time for parallel test data
+		const categoryLink = page.getByRole('link', { name: new RegExp(categoryName, 'i') })
+		await expect(categoryLink).toBeVisible({ timeout: 15000 })
 	})
 
 	test.afterEach(async () => {
-		// Cleanup: Delete test categories
-		await prisma.category.deleteMany({
-			where: {
-				slug: {
-					startsWith: 'test-category-',
+		// Cleanup: Delete products first to avoid foreign key constraints, then categories
+		await prisma.$transaction([
+			prisma.product.deleteMany({
+				where: {
+					category: {
+						slug: {
+							startsWith: SHOP_CATEGORY_PREFIX,
+						},
+					},
 				},
-			},
-		})
+			}),
+			prisma.category.deleteMany({
+				where: {
+					slug: {
+						startsWith: SHOP_CATEGORY_PREFIX,
+					},
+				},
+			}),
+		])
 	})
 })

@@ -1,36 +1,46 @@
+import { randomUUID } from 'node:crypto'
+import { type TestInfo } from '@playwright/test'
 import { prisma } from '#app/utils/db.server.ts'
 import { generateOrderNumber } from '#app/utils/order-number.server.ts'
 import { expect, test } from '#tests/playwright-utils.ts'
 import { createProductData } from '#tests/product-utils.ts'
 
-test.describe('Order History', () => {
-	let testCategory: Awaited<ReturnType<typeof prisma.category.create>>
-	let testProduct: Awaited<ReturnType<typeof prisma.product.create>>
+const ORDERS_CATEGORY_PREFIX = 'orders-e2e-category-'
+const ORDERS_PRODUCT_PREFIX = 'orders-e2e-product-'
+const ORDERS_SKU_PREFIX = 'ORDERS-E2E-'
+const ORDERS_SESSION_PREFIX = 'orders-e2e-session-'
 
-	test.beforeEach(async () => {
-		// Create a test category
-		testCategory = await prisma.category.create({
-			data: {
-				name: 'Test Category',
-				slug: `test-category-${Date.now()}`,
-				description: 'Test category for products',
-			},
-		})
+function getTestPrefix(testInfo: TestInfo) {
+	return testInfo.testId.replace(/\W+/g, '-').toLowerCase()
+}
 
-		// Create a test product
-		const productData = createProductData()
-		testProduct = await prisma.product.create({
-			data: {
-				name: productData.name,
-				slug: productData.slug,
-				description: productData.description,
-				sku: productData.sku,
-				price: productData.price,
-				status: 'ACTIVE',
-				categoryId: testCategory.id,
-			},
-		})
+async function createTestCategory(testPrefix: string) {
+	return prisma.category.create({
+		data: {
+			name: `Test Category ${testPrefix.slice(-8)}`,
+			slug: `${ORDERS_CATEGORY_PREFIX}${testPrefix}-${randomUUID()}`,
+			description: 'Test category for products',
+		},
 	})
+}
+
+async function createTestProduct(categoryId: string, testPrefix: string) {
+	const productData = createProductData()
+	const uniqueId = randomUUID()
+	return prisma.product.create({
+		data: {
+			name: productData.name,
+			slug: `${ORDERS_PRODUCT_PREFIX}${testPrefix}-${uniqueId}`,
+			description: productData.description,
+			sku: `${ORDERS_SKU_PREFIX}${testPrefix}-${uniqueId}`,
+			price: productData.price,
+			status: 'ACTIVE',
+			categoryId,
+		},
+	})
+}
+
+test.describe('Order History', () => {
 
 	test('should allow unauthenticated users to access order history for guest lookup', async ({
 		page,
@@ -45,7 +55,13 @@ test.describe('Order History', () => {
 	})
 
 	test('should display empty state when user has no orders', async ({ page, login }) => {
-		await login()
+		const user = await login()
+		// Fresh user has no orders - deterministic empty state
+		const orders = await prisma.order.findMany({
+			where: { userId: user.id },
+			select: { id: true },
+		})
+		expect(orders).toHaveLength(0)
 
 		await page.goto('/shop/orders')
 
@@ -56,7 +72,11 @@ test.describe('Order History', () => {
 	test('should display user orders in reverse chronological order', async ({
 		page,
 		login,
-	}) => {
+	}, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo)
+		const category = await createTestCategory(testPrefix)
+		const product = await createTestProduct(category.id, testPrefix)
+		
 		const user = await login()
 
 		// Create two orders - generate second order number after first is committed
@@ -74,10 +94,10 @@ test.describe('Order History', () => {
 				shippingPostal: '12345',
 				shippingCountry: 'US',
 				status: 'CONFIRMED',
-				stripeCheckoutSessionId: `cs_test_${Date.now()}_1`,
+				stripeCheckoutSessionId: `${ORDERS_SESSION_PREFIX}${testPrefix}-1`,
 				items: {
 					create: {
-						productId: testProduct.id,
+						productId: product.id,
 						price: 10000,
 						quantity: 1,
 					},
@@ -100,10 +120,10 @@ test.describe('Order History', () => {
 				shippingPostal: '12345',
 				shippingCountry: 'US',
 				status: 'SHIPPED',
-				stripeCheckoutSessionId: `cs_test_${Date.now()}_2`,
+				stripeCheckoutSessionId: `${ORDERS_SESSION_PREFIX}${testPrefix}-2`,
 				items: {
 					create: {
-						productId: testProduct.id,
+						productId: product.id,
 						price: 20000,
 						quantity: 1,
 					},
@@ -111,11 +131,13 @@ test.describe('Order History', () => {
 			},
 		})
 
-		await page.goto('/shop/orders')
+		// Navigate to account orders (authenticated users are redirected from /shop/orders anyway)
+		await page.goto('/account/orders')
+		await page.waitForLoadState('networkidle')
 
 		// Verify orders are displayed (newest first)
-		await expect(page.getByText(orderNumber2)).toBeVisible()
-		await expect(page.getByText(orderNumber1)).toBeVisible()
+		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
 
 		// Verify order details are shown
 		await expect(page.getByText(/\$200\.00|\$200/)).toBeVisible()
@@ -127,7 +149,12 @@ test.describe('Order History', () => {
 	test('should display order number, date, status, and total for each order', async ({
 		page,
 		login,
-	}) => {
+		navigate,
+	}, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo)
+		const category = await createTestCategory(testPrefix)
+		const product = await createTestProduct(category.id, testPrefix)
+		
 		const user = await login()
 
 		const orderNumber = await generateOrderNumber()
@@ -144,10 +171,10 @@ test.describe('Order History', () => {
 				shippingPostal: '12345',
 				shippingCountry: 'US',
 				status: 'CONFIRMED',
-				stripeCheckoutSessionId: `cs_test_${Date.now()}`,
+				stripeCheckoutSessionId: `${ORDERS_SESSION_PREFIX}${testPrefix}-3`,
 				items: {
 					create: {
-						productId: testProduct.id,
+						productId: product.id,
 						price: 50000,
 						quantity: 1,
 					},
@@ -155,7 +182,8 @@ test.describe('Order History', () => {
 			},
 		})
 
-		await page.goto('/shop/orders')
+		// Navigate to account orders (authenticated users are redirected from /shop/orders anyway)
+		await navigate('/account/orders')
 
 		// Verify all required fields are displayed
 		await expect(page.getByText(orderNumber)).toBeVisible()
@@ -183,7 +211,11 @@ test.describe('Order History', () => {
 		await expect(page.getByRole('button', { name: /look up|find order/i })).toBeVisible()
 	})
 
-	test('should validate email matches order for guest lookup', async ({ page }) => {
+	test('should validate email matches order for guest lookup', async ({ page }, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo)
+		const category = await createTestCategory(testPrefix)
+		const product = await createTestProduct(category.id, testPrefix)
+
 		const orderNumber = await generateOrderNumber()
 		const guestEmail = 'guest@example.com'
 
@@ -201,10 +233,10 @@ test.describe('Order History', () => {
 				shippingPostal: '12345',
 				shippingCountry: 'US',
 				status: 'CONFIRMED',
-				stripeCheckoutSessionId: `cs_test_${Date.now()}`,
+				stripeCheckoutSessionId: `${ORDERS_SESSION_PREFIX}${testPrefix}-4`,
 				items: {
 					create: {
-						productId: testProduct.id,
+						productId: product.id,
 						price: 10000,
 						quantity: 1,
 					},
@@ -231,7 +263,11 @@ test.describe('Order History', () => {
 		await expect(page).toHaveURL(new RegExp(`/shop/orders/${orderNumber}`))
 	})
 
-	test('should link to order details from order history', async ({ page, login }) => {
+	test('should link to order details from order history', async ({ page, login, navigate }, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo)
+		const category = await createTestCategory(testPrefix)
+		const product = await createTestProduct(category.id, testPrefix)
+		
 		const user = await login()
 
 		const orderNumber = await generateOrderNumber()
@@ -248,10 +284,10 @@ test.describe('Order History', () => {
 				shippingPostal: '12345',
 				shippingCountry: 'US',
 				status: 'CONFIRMED',
-				stripeCheckoutSessionId: `cs_test_${Date.now()}`,
+				stripeCheckoutSessionId: `${ORDERS_SESSION_PREFIX}${testPrefix}-5`,
 				items: {
 					create: {
-						productId: testProduct.id,
+						productId: product.id,
 						price: 10000,
 						quantity: 1,
 					},
@@ -259,55 +295,62 @@ test.describe('Order History', () => {
 			},
 		})
 
-		await page.goto('/shop/orders')
+		// Navigate to account orders (authenticated users are redirected from /shop/orders anyway)
+		await navigate('/account/orders')
 
-		// Click on order number link
+		// Wait for order list to load and find the order link
 		const orderLink = page.getByRole('link', { name: orderNumber })
 		await expect(orderLink).toBeVisible()
 		await orderLink.click()
 
 		// Should navigate to order detail page
-		await expect(page).toHaveURL(new RegExp(`/shop/orders/${orderNumber}`))
+		await expect(page).toHaveURL(new RegExp(`/account/orders/${orderNumber}`))
 	})
 
-	test.afterEach(async () => {
-		// Cleanup: Delete in order to respect foreign key constraints
-		// Delete Orders first (will cascade delete OrderItems)
-		await prisma.order.deleteMany({
-			where: {
-				stripeCheckoutSessionId: {
-					startsWith: 'cs_test_',
-				},
-			},
-		})
-
-		// Delete CartItems before Products
-		await prisma.cartItem.deleteMany({
-			where: {
-				product: {
-					sku: {
-						startsWith: 'SKU-',
+	test.afterEach(async ({}, testInfo) => {
+		const testPrefix = getTestPrefix(testInfo)
+		// Scoped cleanup for data created by this suite
+		await prisma.$transaction([
+			prisma.orderItem.deleteMany({
+				where: {
+					product: {
+						sku: {
+							startsWith: `${ORDERS_SKU_PREFIX}${testPrefix}-`,
+						},
 					},
 				},
-			},
-		})
-
-		// Now we can safely delete products
-		await prisma.product.deleteMany({
-			where: {
-				sku: {
-					startsWith: 'SKU-',
+			}),
+			prisma.order.deleteMany({
+				where: {
+					stripeCheckoutSessionId: {
+						startsWith: `${ORDERS_SESSION_PREFIX}${testPrefix}-`,
+					},
 				},
-			},
-		})
-
-		await prisma.category.deleteMany({
-			where: {
-				slug: {
-					startsWith: 'test-category-',
+			}),
+			prisma.cartItem.deleteMany({
+				where: {
+					product: {
+						sku: {
+							startsWith: `${ORDERS_SKU_PREFIX}${testPrefix}-`,
+						},
+					},
 				},
-			},
-		})
+			}),
+			prisma.product.deleteMany({
+				where: {
+					sku: {
+						startsWith: `${ORDERS_SKU_PREFIX}${testPrefix}-`,
+					},
+				},
+			}),
+			prisma.category.deleteMany({
+				where: {
+					slug: {
+						startsWith: `${ORDERS_CATEGORY_PREFIX}${testPrefix}-`,
+					},
+				},
+			}),
+		])
 	})
 })
 
