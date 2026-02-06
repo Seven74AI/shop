@@ -30,7 +30,7 @@ export default defineConfig((config) => ({
 			}
 		},
 
-		sourcemap: true,
+		sourcemap: MODE !== 'production' || !!process.env.SENTRY_AUTH_TOKEN,
 	},
 	server: {
 		watch: {
