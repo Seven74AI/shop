@@ -33,12 +33,14 @@ beforeEach(async () => {
 			update: {},
 		})
 
-		// Create Settings with USD as default currency
-		await prisma.settings.create({
-			data: {
+		// Create Settings with USD as default currency (upsert handles race/retry cases)
+		await prisma.settings.upsert({
+			where: { id: 'settings' },
+			create: {
 				id: 'settings',
 				currencyId: usdCurrency.id,
 			},
+			update: {},
 		})
 	}
 })

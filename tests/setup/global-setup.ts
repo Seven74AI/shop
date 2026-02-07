@@ -46,7 +46,9 @@ export async function setup() {
 	// 1. In CI, the base database might exist from a previous run and skip reset
 	// 2. The database might have been manually deleted or corrupted
 	// 3. We need currency to exist for all tests that use getStoreCurrency
-	// We need to import prisma after DATABASE_URL is set
+	// IMPORTANT: Must set DATABASE_URL before importing prisma so we write to base.db,
+	// not the db from .env (which would cause workers to copy an empty base.db and hit FK errors)
+	process.env.DATABASE_URL = `file:${BASE_DATABASE_PATH}`
 	const { prisma } = await import('#app/utils/db.server.ts')
 	
 	// Create USD currency if it doesn't exist
