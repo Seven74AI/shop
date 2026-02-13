@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
@@ -96,7 +96,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
@@ -150,7 +150,7 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 50
 
@@ -197,7 +197,7 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: '50'
 
