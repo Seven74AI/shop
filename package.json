@@ -94,7 +94,7 @@
     "express-rate-limit": "^7.5.0",
     "fast-xml-parser": "^5.3.1",
     "get-port": "^7.1.0",
-    "glob": "^11.0.2",
+    "glob": "^13.0.0",
     "input-otp": "^1.4.2",
     "intl-parse-accept-language": "^1.0.0",
     "isbot": "^5.1.27",
