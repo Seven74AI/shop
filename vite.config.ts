@@ -62,6 +62,11 @@ export default defineConfig((config) => ({
 		setupFiles: ['./tests/setup/setup-test-env.ts'],
 		globalSetup: ['./tests/setup/global-setup.ts'],
 		restoreMocks: true,
+		server: {
+			deps: {
+				external: ['node:sqlite'],
+			},
+		},
 		coverage: {
 			include: ['app/**/*.{ts,tsx}'],
 			all: true,
