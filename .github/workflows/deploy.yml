@@ -124,7 +124,7 @@ jobs:
           key:
             db-cache-v2-schema_${{ hashFiles('./prisma/schema.prisma')
             }}-migrations_${{ hashFiles('./prisma/migrations/*/migration.sql')
-            }}-prisma7
+            }}-prisma7-v2
 
       - name: 🌱 Seed Database
         if: steps.db-cache.outputs.cache-hit != 'true'
