@@ -94,7 +94,7 @@ describe('tracking route', () => {
 		const result = await loader({
 			request,
 			params: { orderNumber: order.orderNumber },
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		if (typeof result === 'object' && result !== null && 'data' in result) {
@@ -148,7 +148,7 @@ describe('tracking route', () => {
 		const result = await loader({
 			request,
 			params: { orderNumber: order.orderNumber },
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		if (typeof result === 'object' && result !== null && 'data' in result) {

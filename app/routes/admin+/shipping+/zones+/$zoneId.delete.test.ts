@@ -73,7 +73,7 @@ describe('admin shipping zones delete route', () => {
 		const result = await action({
 			request,
 			params: { zoneId: zone.id },
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		expect(result).toHaveProperty('headers')
@@ -123,7 +123,7 @@ describe('admin shipping zones delete route', () => {
 		await action({
 			request,
 			params: { zoneId: zone.id },
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		// Verify zone was deleted
@@ -154,7 +154,7 @@ describe('admin shipping zones delete route', () => {
 			action({
 				request,
 				params: { zoneId: 'non-existent-id' },
-				context: {},
+				context: {}, url: '', pattern: '',
 			}),
 		).rejects.toThrow()
 	})

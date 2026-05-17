@@ -83,7 +83,7 @@ describe('admin shipping methods new route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		expect(result).toHaveProperty('zones')
@@ -116,7 +116,7 @@ describe('admin shipping methods new route', () => {
 		const result = await action({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		expect(result).toHaveProperty('headers')
@@ -158,7 +158,7 @@ describe('admin shipping methods new route', () => {
 		const result = await action({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		expect(result).toHaveProperty('headers')
@@ -188,7 +188,7 @@ describe('admin shipping methods new route', () => {
 		const result = await action({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		expect(result).toHaveProperty('result')

@@ -93,7 +93,7 @@ describe('shipping-methods route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		// data() returns DataWithResponseInit, extract the data property
@@ -115,7 +115,7 @@ describe('shipping-methods route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		// data() returns DataWithResponseInit, extract the data property
@@ -138,7 +138,7 @@ describe('shipping-methods route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		// data() returns DataWithResponseInit with status 400
@@ -158,7 +158,7 @@ describe('shipping-methods route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		// data() returns DataWithResponseInit with status 400
@@ -179,12 +179,12 @@ describe('shipping-methods route', () => {
 		const result1 = await loader({
 			request: request1,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 		const result2 = await loader({
 			request: request2,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		if (result1 instanceof Response && result2 instanceof Response) {

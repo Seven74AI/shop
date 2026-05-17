@@ -115,7 +115,7 @@ describe('Checkout Shipping Step', () => {
 			const result = await loader({
 				request,
 				params: {},
-				context: {},
+				context: {}, url: '', pattern: '',
 			})
 
 		if (result instanceof Response) {
@@ -155,7 +155,7 @@ describe('Checkout Shipping Step', () => {
 			const result = await loader({
 				request,
 				params: {},
-				context: {},
+				context: {}, url: '', pattern: '',
 			})
 
 			expect(result).toHaveProperty('status')
@@ -219,7 +219,7 @@ describe('Checkout Shipping Step', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: '', pattern: '',
 		})
 
 		if (result instanceof Response) {
@@ -279,7 +279,7 @@ describe('Checkout Shipping Step', () => {
 			const result = await action({
 				request,
 				params: {},
-				context: {},
+				context: {}, url: '', pattern: '',
 			})
 
 			// data() returns DataWithResponseInit
@@ -343,7 +343,7 @@ describe('Checkout Shipping Step', () => {
 			const result = await action({
 				request,
 				params: {},
-				context: {},
+				context: {}, url: '', pattern: '',
 			})
 
 			// redirect() returns a Response
@@ -416,7 +416,7 @@ describe('Checkout Shipping Step', () => {
 			await action({
 				request,
 				params: {},
-				context: {},
+				context: {}, url: '', pattern: '',
 			})
 
 			// Verify address was saved
@@ -499,7 +499,7 @@ describe('Checkout Shipping Step', () => {
 			const result = await action({
 				request,
 				params: {},
-				context: {},
+				context: {}, url: '', pattern: '',
 			})
 
 			// redirect() returns a Response
