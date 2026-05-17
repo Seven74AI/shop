@@ -85,7 +85,7 @@ describe('admin shipping zones index route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toHaveProperty('zones')
@@ -134,7 +134,7 @@ describe('admin shipping zones index route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result.zones).toHaveLength(3)

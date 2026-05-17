@@ -99,7 +99,7 @@ describe('admin shipping methods index route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toHaveProperty('methods')
@@ -165,7 +165,7 @@ describe('admin shipping methods index route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result.methods).toHaveLength(3)

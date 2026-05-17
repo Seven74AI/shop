@@ -87,7 +87,7 @@ describe('admin shipping methods delete route', () => {
 		const result = await action({
 			request,
 			params: { methodId: method.id },
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toHaveProperty('headers')
@@ -118,7 +118,7 @@ describe('admin shipping methods delete route', () => {
 			action({
 				request,
 				params: { methodId: 'non-existent-id' },
-				context: {}, url: '', pattern: '',
+				context: {}, url: new URL('http://localhost'), pattern: '',
 			}),
 		).rejects.toThrow()
 	})

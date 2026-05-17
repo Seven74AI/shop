@@ -52,7 +52,7 @@ describe('admin shipping zones new route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toEqual({})
@@ -82,7 +82,7 @@ describe('admin shipping zones new route', () => {
 		const result = await action({
 			request: requestWithFormData,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		// Should redirect with success toast
@@ -122,7 +122,7 @@ describe('admin shipping zones new route', () => {
 		const result = await action({
 			request: requestWithFormData,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toHaveProperty('result')
@@ -154,7 +154,7 @@ describe('admin shipping zones new route', () => {
 		const result = await action({
 			request: requestWithFormData,
 			params: {},
-			context: {}, url: '', pattern: '',
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toHaveProperty('headers')

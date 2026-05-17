@@ -100,7 +100,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: 🏄 Copy test env vars
-        run: cp .env.example .env
+        run: cp .env.example .env && echo 'MOCKS=true' >> .env && echo 'RESEND_API_KEY=""' >> .env && echo 'PLAYWRIGHT_TEST_BASE_URL=http://localhost:3000' >> .env
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
@@ -122,9 +122,9 @@ jobs:
         with:
           path: prisma/data.db
           key:
-            db-cache-schema_${{ hashFiles('./prisma/schema.prisma')
+            db-cache-v2-schema_${{ hashFiles('./prisma/schema.prisma')
             }}-migrations_${{ hashFiles('./prisma/migrations/*/migration.sql')
-            }}
+            }}-prisma7
 
       - name: 🌱 Seed Database
         if: steps.db-cache.outputs.cache-hit != 'true'
