@@ -30,7 +30,7 @@ export async function setup() {
 
 	if (needsReset) {
 		await execaCommand(
-			'npx prisma migrate reset --force --skip-seed --skip-generate',
+			'npx prisma migrate reset --force',
 			{
 				stdio: 'inherit',
 				env: {
@@ -42,16 +42,9 @@ export async function setup() {
 	}
 
 	// ALWAYS ensure currency and settings exist for tests (required by getStoreCurrency)
-	// This is critical because:
-	// 1. In CI, the base database might exist from a previous run and skip reset
-	// 2. The database might have been manually deleted or corrupted
-	// 3. We need currency to exist for all tests that use getStoreCurrency
-	// IMPORTANT: Must set DATABASE_URL before importing prisma so we write to base.db,
-	// not the db from .env (which would cause workers to copy an empty base.db and hit FK errors)
 	process.env.DATABASE_URL = `file:${BASE_DATABASE_PATH}`
 	const { prisma } = await import('#app/utils/db.server.ts')
 	
-	// Create USD currency if it doesn't exist
 	const usdCurrency = await prisma.currency.upsert({
 		where: { code: 'USD' },
 		create: {
@@ -63,7 +56,6 @@ export async function setup() {
 		update: {},
 	})
 
-	// Create Settings with USD as default currency
 	await prisma.settings.upsert({
 		where: { id: 'settings' },
 		create: {
