@@ -134,7 +134,7 @@ jobs:
         run: npm run build
 
       - name: 🎭 Playwright tests
-        run: npx playwright test
+        run: npx playwright test --workers=1
 
       - name: 📊 Upload report
         uses: actions/upload-artifact@v7
