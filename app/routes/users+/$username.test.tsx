@@ -57,10 +57,9 @@ test.skip('The user profile when logged in as self', async () => {
 	const authSession = await authSessionStorage.getSession()
 	authSession.set(sessionKey, session.id)
 	const setCookieHeader = await authSessionStorage.commitSession(authSession)
-	const parsedCookie = setCookieParser.parseString(setCookieHeader)
-	const cookie = Array.isArray(parsedCookie) ? parsedCookie[0]! : parsedCookie
+	const parsedCookie = setCookieParser.parseString(setCookieHeader) as any
 	const cookieHeader = new URLSearchParams({
-		[cookie.name]: cookie.value,
+		[parsedCookie.name]: parsedCookie.value,
 	}).toString()
 
 	const App = createRoutesStub([
