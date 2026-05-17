@@ -10,7 +10,7 @@ import Stripe from 'stripe'
  * In development/production, we use fetch-based HTTP client to bypass MSW.
  */
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-	apiVersion: '2025-10-29.clover',
+	apiVersion: '2026-04-22.dahlia',
 	maxNetworkRetries: 0, // Disable retries to fail fast
 	timeout: 10000, // 10 seconds global timeout
 	telemetry: false, // Disable telemetry for faster requests
@@ -141,7 +141,7 @@ export async function createCheckoutSession({
 	userId?: string | null
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
-	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = cart.items.map(
+	const lineItems: Array<any> = cart.items.map(
 		(item) => {
 			const unitAmount = item.variant?.price ?? item.product.price
 			invariant(unitAmount !== null, `Price missing for product ${item.product.id}`)
@@ -176,7 +176,7 @@ export async function createCheckoutSession({
 	}
 
 	// Create checkout session
-	const sessionParams: Stripe.Checkout.SessionCreateParams = {
+	const sessionParams: any = {
 		line_items: lineItems,
 		mode: 'payment',
 		success_url: `${domainUrl}/shop/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
