@@ -136,7 +136,7 @@ const rateLimitDefault = {
 	keyGenerator: (req: express.Request) => {
 		const flyIp = req.get('fly-client-ip')
 		if (flyIp) return flyIp
-		return req.ip ?? 'unknown'
+		return ipKeyGenerator(req.ip ?? '')
 	},
 }
 

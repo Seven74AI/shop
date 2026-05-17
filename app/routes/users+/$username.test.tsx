@@ -58,7 +58,7 @@ test.skip('The user profile when logged in as self', async () => {
 	authSession.set(sessionKey, session.id)
 	const setCookieHeader = await authSessionStorage.commitSession(authSession)
 	const parsedCookie = setCookieParser.parseString(setCookieHeader)
-	const cookie = Array.isArray(parsedCookie) ? parsedCookie[0] : parsedCookie
+	const cookie = Array.isArray(parsedCookie) ? parsedCookie[0]! : parsedCookie
 	const cookieHeader = new URLSearchParams({
 		[cookie.name]: cookie.value,
 	}).toString()
