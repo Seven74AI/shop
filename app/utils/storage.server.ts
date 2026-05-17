@@ -10,6 +10,12 @@ const STORAGE_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const STORAGE_REGION = process.env.AWS_REGION
 
 async function uploadToStorage(file: File | FileUpload, key: string) {
+	// In mocks mode, skip actual upload
+	if (process.env.MOCKS === 'true') {
+		console.info('🔶 Mocking storage upload:', key)
+		return key
+	}
+
 	const { url, headers } = getSignedPutRequestInfo(file, key)
 
 	const uploadResponse = await fetch(url, {

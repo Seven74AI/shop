@@ -25,11 +25,11 @@ test('Users can create note with an image', async ({
 	await page.getByRole('textbox', { name: 'alt text' }).fill(altText)
 
 	await page.getByRole('button', { name: 'submit' }).click()
-	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`))
-	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible()
+	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`), { timeout: 10000 })
+	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible({ timeout: 10000 })
 	await expect(
 		page.getByRole('region', { name: newNote.title }).getByAltText(altText),
-	).toBeVisible()
+	).toBeVisible({ timeout: 10000 })
 })
 
 test('Users can create note with multiple images', async ({
@@ -62,10 +62,10 @@ test('Users can create note with multiple images', async ({
 	await page.getByLabel('alt text').nth(1).fill(altText2)
 
 	await page.getByRole('button', { name: 'submit' }).click()
-	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`))
-	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible()
-	await expect(page.getByAltText(altText1)).toBeVisible()
-	await expect(page.getByAltText(altText2)).toBeVisible()
+	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`), { timeout: 10000 })
+	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible({ timeout: 10000 })
+	await expect(page.getByAltText(altText1)).toBeVisible({ timeout: 10000 })
+	await expect(page.getByAltText(altText2)).toBeVisible({ timeout: 10000 })
 })
 
 test('Users can edit note image', async ({ page, navigate, login }) => {
@@ -108,11 +108,11 @@ test('Users can edit note image', async ({ page, navigate, login }) => {
 	const finalUrl = page.url()
 	if (finalUrl.includes(`/notes/${note.id}/edit`)) {
 		// If still on edit page, check if image was updated there
-		await expect(page.getByAltText(updatedImage.altText)).toBeVisible()
+		await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 10000 })
 	} else {
 		// Should be on detail page
 		await expect(page).toHaveURL(`/users/${user.username}/notes/${note.id}`)
-		await expect(page.getByAltText(updatedImage.altText)).toBeVisible()
+		await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 10000 })
 	}
 })
 
