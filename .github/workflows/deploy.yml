@@ -17,7 +17,7 @@ permissions:
 jobs:
   lint:
     name: ⬣ ESLint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
@@ -41,7 +41,7 @@ jobs:
 
   typecheck:
     name: ʦ TypeScript
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
@@ -68,7 +68,7 @@ jobs:
 
   vitest:
     name: ⚡ Vitest
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
@@ -92,7 +92,7 @@ jobs:
 
   playwright:
     name: 🎭 Playwright
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: ⬇️ Checkout repo
