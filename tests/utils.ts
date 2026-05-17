@@ -6,8 +6,9 @@ export const BASE_URL = 'https://www.epicstack.dev'
 
 export function convertSetCookieToCookie(setCookie: string) {
 	const parsedCookie = setCookieParser.parseString(setCookie)
+	const cookie = Array.isArray(parsedCookie) ? parsedCookie[0] : parsedCookie
 	return new URLSearchParams({
-		[parsedCookie.name]: parsedCookie.value,
+		[cookie.name]: cookie.value,
 	}).toString()
 }
 
