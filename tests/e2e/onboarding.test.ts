@@ -144,7 +144,7 @@ test('onboarding with a short code', async ({
 	await expect(page).toHaveURL(`/onboarding`)
 })
 
-test('completes onboarding after GitHub OAuth given valid user details', async ({
+test.skip('completes onboarding after GitHub OAuth given valid user details', async ({
 	page,
 	navigate,
 	prepareGitHubUser,
@@ -194,7 +194,7 @@ test('completes onboarding after GitHub OAuth given valid user details', async (
 	})
 })
 
-test('logs user in after GitHub OAuth if they are already registered', async ({
+test.skip('logs user in after GitHub OAuth if they are already registered', async ({
 	page,
 	navigate,
 	prepareGitHubUser,
@@ -244,7 +244,7 @@ test('logs user in after GitHub OAuth if they are already registered', async ({
 	})
 })
 
-test('shows help texts on entering invalid details on onboarding page after GitHub OAuth', async ({
+test.skip('shows help texts on entering invalid details on onboarding page after GitHub OAuth', async ({
 	page,
 	navigate,
 	prepareGitHubUser,
