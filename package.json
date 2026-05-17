@@ -169,7 +169,7 @@
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vite-plugin-icons-spritesheet": "^3.0.1",
-    "vitest": "^4.0.0"
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": "22"
