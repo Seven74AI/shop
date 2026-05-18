@@ -1,9 +1,9 @@
 #!/bin/bash
-cd /tmp/shop-original
 set -a
-source .env
+source /tmp/shop-original/.env
 set +a
+export PORT=3000
 export PLAYWRIGHT_TEST_BASE_URL=http://localhost:3000
 export NODE_ENV=production
 export MOCKS=true
-exec node ./server-build/index.js
+exec node /tmp/shop-original/server-build/index.js

@@ -82,23 +82,30 @@ test.describe('Cart Badge', () => {
 
 		const product = await createTestProduct(category.id, testPrefix)
 
+		// Brief wait to let SQLite locks from Prisma operations clear
+		await page.waitForTimeout(500)
+
+		// Ensure server is responsive before navigating
+		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		// Navigate to product detail page
 		await page.goto(`/shop/products/${product.slug}`)
 
 		// Cart badge should be visible (no count shown when cart is empty)
 		const cartBadgeLink = page.getByRole('link', { name: /shopping cart with 0 items/i })
-		await expect(cartBadgeLink).toBeVisible()
+		await expect(cartBadgeLink).toBeVisible({ timeout: 10000 })
 
 		// Add product to cart
 		await page.getByRole('button', { name: /add to cart/i }).click()
 
 		// Wait for redirect to cart page
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		
 		// Cart badge should now show 1 item on the cart page
 		const cartPageBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(cartPageBadge).toBeVisible()
-		await expect(cartPageBadge.getByText('1')).toBeVisible()
+		await expect(cartPageBadge).toBeVisible({ timeout: 10000 })
+		await expect(cartPageBadge.getByText('1')).toBeVisible({ timeout: 5000 })
 	})
 
 	test('cart badge should display correct count for multiple items', async ({ page }, testInfo) => {
@@ -109,10 +116,17 @@ test.describe('Cart Badge', () => {
 
 		const product = await createTestProduct(category.id, testPrefix)
 
+		// Brief wait to let SQLite locks from Prisma operations clear
+		await page.waitForTimeout(500)
+
+		// Ensure server is responsive before navigating
+		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		// Navigate to product detail page and add to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		await page.getByRole('button', { name: /add to cart/i }).click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 
 		// Update quantity to 3
 		const quantityInput = page.getByLabel(/quantity/i)
@@ -126,7 +140,7 @@ test.describe('Cart Badge', () => {
 		await page.waitForLoadState('networkidle')
 		const cartBadge = page.getByRole('link', { name: /shopping cart with 3 items/i })
 		await expect(cartBadge).toBeVisible({ timeout: 15000 })
-		await expect(cartBadge.getByText('3')).toBeVisible()
+		await expect(cartBadge.getByText('3')).toBeVisible({ timeout: 5000 })
 	})
 
 	test('cart should merge guest cart with user cart on login', async ({ page }, testInfo) => {
@@ -137,14 +151,21 @@ test.describe('Cart Badge', () => {
 		// Create test product
 		const product = await createTestProduct(category.id, testPrefix)
 
+		// Brief wait to let SQLite locks from Prisma operations clear
+		await page.waitForTimeout(500)
+
+		// Ensure server is responsive before navigating
+		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		// As a guest, add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		await page.getByRole('button', { name: /add to cart/i }).click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		
 		// Verify guest cart has 1 item
 		const guestCartBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge).toBeVisible()
+		await expect(guestCartBadge).toBeVisible({ timeout: 10000 })
 
 		// Ensure user role exists (may be missing in test DB)
 		await prisma.role.upsert({
@@ -189,26 +210,33 @@ test.describe('Cart Badge', () => {
 
 		const product = await createTestProduct(category.id, testPrefix)
 
+		// Brief wait to let SQLite locks from Prisma operations clear
+		await page.waitForTimeout(500)
+
+		// Ensure server is responsive
+		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		// As logged-in user, add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		await page.getByRole('button', { name: /add to cart/i }).click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		
 		// Verify user cart has 1 item
 		const userCartBadge = page.getByRole('link', { name: /shopping cart/i })
-		await expect(userCartBadge).toBeVisible()
+		await expect(userCartBadge).toBeVisible({ timeout: 10000 })
 
 		await logout()
 
 		// As guest, add product to cart again
 		await page.goto(`/shop/products/${product.slug}`)
 		await page.getByRole('button', { name: /add to cart/i }).click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		
 		// Verify guest cart has ONLY 1 item (not the item from when logged in)
 		const guestCartBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge).toBeVisible()
-		await expect(guestCartBadge.getByText('1')).toBeVisible()
+		await expect(guestCartBadge).toBeVisible({ timeout: 10000 })
+		await expect(guestCartBadge.getByText('1')).toBeVisible({ timeout: 5000 })
 
 		// Verify cart page shows only 1 item (not 2 from user cart + guest cart)
 		await expect(page.getByRole('heading', { name: product.name })).toHaveCount(1)
@@ -223,12 +251,19 @@ test.describe('Cart Badge', () => {
 
 		const product2 = await createTestProduct(category.id, testPrefix)
 
+		// Brief wait to let SQLite locks from Prisma operations clear
+		await page.waitForTimeout(500)
+
+		// Ensure server is responsive before navigating
+		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		// 1. As guest, add product1 to cart
 		await page.goto(`/shop/products/${product1.slug}`)
 		await page.getByRole('button', { name: /add to cart/i }).click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		const guestCartBadge1 = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge1).toBeVisible()
+		await expect(guestCartBadge1).toBeVisible({ timeout: 10000 })
 
 		// 2. Login - product1 should merge into user cart
 		// Note: The login fixture bypasses handleNewSession, so we need to manually merge
@@ -243,7 +278,7 @@ test.describe('Cart Badge', () => {
 		
 		// Verify the cart has 1 item by checking the cart page
 		await page.goto('/shop/cart')
-		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible()
+		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 10000 })
 		
 		// Go back to shop and verify badge shows 1 item
 		await page.goto('/shop')
@@ -256,7 +291,7 @@ test.describe('Cart Badge', () => {
 		const addProduct2Btn = page.getByRole('button', { name: /add to cart/i })
 		await expect(addProduct2Btn).toBeVisible({ timeout: 10000 })
 		await addProduct2Btn.click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		await page.waitForLoadState('networkidle')
 		
 		// Verify cart has 2 products (product1 and product2)
@@ -291,9 +326,9 @@ test.describe('Cart Badge', () => {
 		const guestAddBtn = page.getByRole('button', { name: /add to cart/i })
 		await expect(guestAddBtn).toBeVisible({ timeout: 10000 })
 		await guestAddBtn.click()
-		await expect(page).toHaveURL(/\/shop\/cart/)
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		const guestCartBadge3 = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge3).toBeVisible()
+		await expect(guestCartBadge3).toBeVisible({ timeout: 10000 })
 
 		// 7. Login again - product1 should merge into user cart
 		const user2 = await login()
