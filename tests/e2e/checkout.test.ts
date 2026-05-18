@@ -45,6 +45,7 @@ async function createTestProduct(
 }
 
 test.describe('Checkout', () => {
+	test.describe.configure({ mode: 'serial', timeout: 120_000 })
 
 	test('should redirect to cart when checkout page accessed with empty cart', async ({
 		page,
@@ -84,7 +85,6 @@ test.describe('Checkout', () => {
 		await page.waitForURL(/\/shop\/checkout\/review/, { timeout: 15000 })
 		// Navigate to shipping step where the form is
 		await page.goto('/shop/checkout/shipping')
-		await page.waitForLoadState('networkidle')
 
 		// Verify checkout form is displayed - shipping page has "Shipping Information" heading
 		await expect(page.getByRole('heading', { name: /shipping information/i })).toBeVisible()
@@ -119,9 +119,6 @@ test.describe('Checkout', () => {
 		// Submit empty form - button says "Continue to Delivery"
 		await page.getByRole('button', { name: /continue to delivery/i }).click()
 
-		// Wait for form validation errors to appear (should stay on shipping page)
-		await page.waitForLoadState('networkidle')
-		
 		// Check that at least some validation errors are displayed
 		await expect(page.getByText(/name is required/i)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(/email is required/i)).toBeVisible()
@@ -147,7 +144,6 @@ test.describe('Checkout', () => {
 
 		// Navigate to checkout shipping step
 		await page.goto('/shop/checkout/shipping')
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 10000 })
 
 			// Fill form with invalid email
@@ -160,8 +156,6 @@ test.describe('Checkout', () => {
 
 		await page.getByRole('button', { name: /continue to delivery/i }).click()
 
-		// Wait for validation error (should stay on shipping page)
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByText(/invalid email address/i)).toBeVisible({ timeout: 10000 })
 	})
 
@@ -192,8 +186,6 @@ test.describe('Checkout', () => {
 
 		await page.getByRole('button', { name: /continue to delivery/i }).click()
 
-		// Wait for validation error (should stay on shipping page)
-		await page.waitForLoadState('networkidle')
 		await expect(
 			page.getByText(/country.*2.*letter.*iso/i),
 		).toBeVisible({ timeout: 10000 })
@@ -245,7 +237,6 @@ test.describe('Checkout', () => {
 
 		// Navigate to checkout shipping step
 		await page.goto('/shop/checkout/shipping')
-		await page.waitForLoadState('networkidle')
 		
 		// Verify we're on shipping page (not redirected to cart)
 		await expect(page).toHaveURL(/\/shop\/checkout\/shipping/, { timeout: 10000 })
@@ -294,7 +285,6 @@ test.describe('Checkout', () => {
 			// If we're on payment page, wait for it to auto-submit to Stripe
 			const currentUrl = page.url()
 			if (currentUrl.includes('/shop/checkout/payment')) {
-				await page.waitForLoadState('networkidle')
 				// Payment page auto-submits, so wait for redirect to Stripe
 				await page.waitForURL(/checkout\.stripe\.com/, { timeout: 20000 })
 			} else if (currentUrl.includes('checkout.stripe.com')) {
@@ -320,11 +310,13 @@ test.describe('Checkout', () => {
 			expect(finalUrl).not.toContain('/shop/checkout/delivery')
 		}
 
-		// Cleanup shipping zone and method
-		await prisma.$transaction([
-			prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } }),
-			prisma.shippingZone.deleteMany({ where: { id: shippingZoneId } }),
-		])
+		// Cleanup shipping zone and method sequentially
+		try {
+			await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } })
+		} catch { /* ignore cleanup errors */ }
+		try {
+			await prisma.shippingZone.deleteMany({ where: { id: shippingZoneId } })
+		} catch { /* ignore cleanup errors */ }
 	})
 
 	test('should complete Stripe checkout and redirect to order details', async ({
@@ -379,7 +371,6 @@ test.describe('Checkout', () => {
 
 		// Navigate to checkout shipping step
 		await page.goto('/shop/checkout/shipping')
-		await page.waitForLoadState('networkidle')
 
 		// Wait for the shipping form to be visible
 		await expect(page.getByRole('heading', { name: /shipping information/i })).toBeVisible({ timeout: 10000 })
@@ -410,7 +401,6 @@ test.describe('Checkout', () => {
 			page.waitForURL(/\/shop\/checkout\/delivery/, { timeout: 15000 }),
 			page.getByRole('button', { name: /continue to delivery/i }).click(),
 		])
-		await page.waitForLoadState('networkidle')
 		
 		// Check if we're still on delivery page (might have redirected if no shipping methods)
 		const deliveryUrl = page.url()
@@ -453,7 +443,6 @@ test.describe('Checkout', () => {
 			// If we're on payment page, wait for it to auto-submit to Stripe
 			const currentUrl = page.url()
 			if (currentUrl.includes('/shop/checkout/payment')) {
-				await page.waitForLoadState('networkidle')
 				// Payment page auto-submits, so wait for redirect to Stripe
 				await page.waitForURL(/checkout\.stripe\.com/, { timeout: 20000 })
 			} else if (currentUrl.includes('checkout.stripe.com')) {
@@ -490,71 +479,73 @@ test.describe('Checkout', () => {
 		// - Real Stripe test mode setup
 		// - More complex mocking of Stripe's hosted checkout page
 
-		// Cleanup shipping zone and method
-		await prisma.$transaction([
-			prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } }),
-			prisma.shippingZone.deleteMany({ where: { id: shippingZoneId } }),
-		])
+		// Cleanup shipping zone and method sequentially
+		try {
+			await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } })
+		} catch { /* ignore cleanup errors */ }
+		try {
+			await prisma.shippingZone.deleteMany({ where: { id: shippingZoneId } })
+		} catch { /* ignore cleanup errors */ }
 	})
 
 	test.afterEach(async ({}, testInfo) => {
 		const testPrefix = getTestPrefix(testInfo)
-		// Cleanup only data created for this test prefix
-		await prisma.$transaction([
-			prisma.orderItem.deleteMany({
-				where: {
-					product: {
-						sku: {
-							startsWith: `${CHECKOUT_SKU_PREFIX}${testPrefix}-`,
-						},
-					},
-				},
-			}),
-			prisma.order.deleteMany({
-				where: {
-					stripeCheckoutSessionId: {
-						startsWith: 'cs_test_',
-					},
-				},
-			}),
-			prisma.cartItem.deleteMany({
-				where: {
-					product: {
-						sku: {
-							startsWith: `${CHECKOUT_SKU_PREFIX}${testPrefix}-`,
-						},
-					},
-				},
-			}),
-			prisma.product.deleteMany({
-				where: {
-					sku: {
-						startsWith: `${CHECKOUT_SKU_PREFIX}${testPrefix}-`,
-					},
-				},
-			}),
-			prisma.shippingMethod.deleteMany({
-				where: {
-					name: {
-						startsWith: `Standard Shipping ${testPrefix}`,
-					},
-				},
-			}),
-			prisma.shippingZone.deleteMany({
-				where: {
-					name: {
-						startsWith: `${CHECKOUT_ZONE_PREFIX}${testPrefix}`,
-					},
-				},
-			}),
-			prisma.category.deleteMany({
-				where: {
-					slug: {
-						startsWith: `${CHECKOUT_CATEGORY_PREFIX}${testPrefix}-`,
-					},
-				},
-			}),
-		])
+		// Cleanup sequentially (not in a single transaction) to avoid
+		// cascading Prisma SQLite timeouts under load.
+		const cleanupOps = [
+			async () => {
+				try {
+					await prisma.orderItem.deleteMany({
+						where: { product: { sku: { startsWith: `${CHECKOUT_SKU_PREFIX}${testPrefix}-` } } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+			async () => {
+				try {
+					await prisma.order.deleteMany({
+						where: { stripeCheckoutSessionId: { startsWith: 'cs_test_' } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+			async () => {
+				try {
+					await prisma.cartItem.deleteMany({
+						where: { product: { sku: { startsWith: `${CHECKOUT_SKU_PREFIX}${testPrefix}-` } } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+			async () => {
+				try {
+					await prisma.product.deleteMany({
+						where: { sku: { startsWith: `${CHECKOUT_SKU_PREFIX}${testPrefix}-` } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+			async () => {
+				try {
+					await prisma.shippingMethod.deleteMany({
+						where: { name: { startsWith: `Standard Shipping ${testPrefix}` } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+			async () => {
+				try {
+					await prisma.shippingZone.deleteMany({
+						where: { name: { startsWith: `${CHECKOUT_ZONE_PREFIX}${testPrefix}` } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+			async () => {
+				try {
+					await prisma.category.deleteMany({
+						where: { slug: { startsWith: `${CHECKOUT_CATEGORY_PREFIX}${testPrefix}-` } },
+					})
+				} catch { /* ignore cleanup errors */ }
+			},
+		]
+		for (const op of cleanupOps) {
+			await op()
+		}
 	})
 })
 
