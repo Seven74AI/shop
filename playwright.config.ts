@@ -5,7 +5,7 @@ const PORT = process.env.PORT || '3000'
 
 export default defineConfig({
 	testDir: './tests/e2e',
-	timeout: 20 * 1000, // Reduced from 15s to fail faster
+	timeout: 20 * 1000,
 	expect: {
 		timeout: 5 * 1000,
 	},
