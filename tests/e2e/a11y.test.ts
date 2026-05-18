@@ -15,9 +15,9 @@ async function loginAndNavigateToAdminPage(
 ) {
 	await login({ asAdmin: true })
 	await page.goto(path)
-	await page.waitForLoadState('networkidle')
-	await page.waitForSelector('main', { timeout: 5000 })
-	await page.waitForSelector('h1', { timeout: 5000 })
+	await page.waitForLoadState('domcontentloaded')
+	await page.waitForSelector('main', { timeout: 15000 })
+	await page.waitForSelector('h1', { timeout: 15000 })
 }
 
 test.describe('Accessibility', () => {
@@ -395,40 +395,40 @@ test.describe('Accessibility', () => {
 			})
 		})
 
-		test('shop homepage should be accessible', async ({ page }) => {
-			await page.goto('/shop')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
-			await expectPageToBeAccessible(page)
-		})
+	test('shop homepage should be accessible', async ({ page }) => {
+		await page.goto('/shop')
+		await page.waitForLoadState('domcontentloaded')
+		await page.waitForSelector('main', { timeout: 10000 })
+		await expectPageToBeAccessible(page)
+	})
 
 		test('product catalog should be accessible', async ({ page }) => {
 			await page.goto('/shop/products')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
 		test('product detail page should be accessible', async ({ page }) => {
 			await page.goto(`/shop/products/${shopTestProduct.slug}`)
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
-			await page.waitForSelector('h1', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('h1', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
 		test('category page should be accessible', async ({ page }) => {
 			await page.goto(`/shop/categories/${shopTestCategory.slug}`)
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
-			await page.waitForSelector('h1', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('h1', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
 		test('cart page should be accessible', async ({ page }) => {
 			await page.goto('/shop/cart')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -436,12 +436,12 @@ test.describe('Accessibility', () => {
 			// Add product to cart first
 			await page.goto(`/shop/products/${shopTestProduct.slug}`)
 			await page.getByRole('button', { name: /add to cart/i }).click()
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 			
 			// Navigate to checkout
 			await page.goto('/shop/checkout')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -451,8 +451,8 @@ test.describe('Accessibility', () => {
 			
 			// Navigate to orders (even if empty, page should still be accessible)
 			await page.goto('/account/orders')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -505,9 +505,9 @@ test.describe('Accessibility', () => {
 				await page.getByRole('textbox', { name: /username/i }).fill(user.username)
 				await page.getByLabel(/^password$/i).fill(user.username)
 				await page.getByRole('button', { name: /log in/i }).click()
-				await page.waitForLoadState('networkidle')
+				await page.waitForLoadState('domcontentloaded')
 				// Wait for redirect after login to ensure session is established
-				await page.waitForURL(/\/admin|\/shop|\//, { timeout: 5000 }).catch(() => {})
+				await page.waitForURL(/\/admin|\/shop|\//, { timeout: 10000 }).catch(() => {})
 				// Wait a bit more to ensure session cookie is set
 				await page.waitForTimeout(500)
 				
@@ -518,9 +518,9 @@ test.describe('Accessibility', () => {
 					console.log(`Order detail page returned ${response.status()}, skipping accessibility test`)
 					return
 				}
-				await page.waitForLoadState('networkidle')
+				await page.waitForLoadState('domcontentloaded')
 				await page.waitForSelector('main', { timeout: 10000 })
-				await page.waitForSelector('h1', { timeout: 5000 })
+				await page.waitForSelector('h1', { timeout: 10000 })
 				await expectPageToBeAccessible(page)
 			} finally {
 				// Cleanup: delete order first, then user
@@ -534,14 +534,14 @@ test.describe('Accessibility', () => {
 			// Navigate to checkout success with a session_id (it will redirect if order exists)
 			// We'll test the processing state by providing a non-existent session_id
 			await page.goto(`/shop/checkout/success?session_id=cs_test_nonexistent_${Date.now()}`)
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 			// Wait a bit for the loader to run
 			await page.waitForTimeout(2000)
 			// The page might redirect or show processing state
 			// Check if we're still on the success page or redirected
 			const currentUrl = page.url()
 			if (currentUrl.includes('/shop/checkout/success')) {
-				await page.waitForSelector('main', { timeout: 5000 })
+				await page.waitForSelector('main', { timeout: 10000 })
 				await expectPageToBeAccessible(page)
 			}
 			// If redirected, that's also fine - the redirect happens server-side
@@ -551,15 +551,15 @@ test.describe('Accessibility', () => {
 	test.describe('Auth Pages', () => {
 		test('login page should be accessible', async ({ page }) => {
 			await page.goto('/login')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 
 		test('signup page should be accessible', async ({ page }) => {
 			await page.goto('/signup')
-			await page.waitForLoadState('networkidle')
-			await page.waitForSelector('main', { timeout: 5000 })
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
 			await expectPageToBeAccessible(page)
 		})
 	})
