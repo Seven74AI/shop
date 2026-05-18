@@ -15,22 +15,22 @@
     "dev:no-mocks": "cross-env NODE_ENV=development node ./server/dev-server.js",
     "format": "prettier --write .",
     "lint": "eslint .",
-    "setup": "npm run build && prisma migrate deploy && prisma generate --sql && playwright install",
+    "setup": "pnpm run build && prisma migrate deploy && prisma generate --sql && playwright install",
     "start": "cross-env NODE_ENV=production node .",
     "start:mocks": "cross-env NODE_ENV=production MOCKS=true tsx .",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "test:e2e": "npm run test:e2e:dev --silent",
+    "test:e2e": "pnpm run test:e2e:dev --silent",
     "test:e2e:dev": "playwright test --ui",
-    "pretest:e2e:run": "npm run build",
+    "pretest:e2e:run": "pnpm run build",
     "test:e2e:run": "cross-env CI=true playwright test",
-    "test:e2e:install": "npx playwright install --with-deps chromium",
+    "test:e2e:install": "pnpm exec playwright install --with-deps chromium",
     "test:a11y": "playwright test tests/e2e/a11y.test.ts",
     "test:a11y:ui": "playwright test tests/e2e/a11y.test.ts --ui",
     "test:sitemap": "tsx scripts/test-sitemap.ts",
     "typecheck": "react-router typegen && tsc",
     "validate": "run-p \"test -- --run\" lint typecheck test:e2e:run",
-    "stop": "pkill -f \"npm run dev\""
+    "stop": "pkill -f \"pnpm run dev\""
   },
   "prettier": "@epic-web/config/prettier",
   "eslintIgnore": [
@@ -176,6 +176,18 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "@sentry-internal/node-cpu-profiler",
+      "@sentry/cli",
+      "esbuild",
+      "msw",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "epic-stack": {
     "head": "833a0571124ab45d660ae566448a0a0118bcad36",
