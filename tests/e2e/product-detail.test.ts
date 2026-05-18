@@ -80,7 +80,6 @@ test.describe('Product Detail', () => {
 		})
 
 		await page.goto(`/shop/products/${product.slug}`)
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { name: product.name })).toBeVisible({ timeout: 10000 })
 
 		// Find and click add to cart button - wait for redirect (form POST)
