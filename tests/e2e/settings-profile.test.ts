@@ -11,16 +11,19 @@ test('Users can update their basic info', async ({ page, navigate, login }) => {
 	await login()
 	await navigate('/account')
 	await page.waitForLoadState('networkidle')
-	
-	// Wait for the profile form to be visible
-	await page.waitForSelector('form', { timeout: 10000 })
-	await page.waitForSelector('input[type="text"]', { timeout: 10000 })
+
+	// Wait for the profile heading to confirm page is loaded
+	await expect(
+		page.getByRole('heading', { name: /profile information/i }),
+	).toBeVisible({ timeout: 10000 })
 
 	const newUserData = createUser()
 
 	// Use semantic selectors now that labels are properly associated with inputs
-	await page.getByLabel(/username/i).fill(newUserData.username)
-	await page.getByLabel(/display name/i).fill(newUserData.name)
+	const usernameInput = page.getByRole('textbox', { name: /^username$/i })
+	const nameInput = page.getByRole('textbox', { name: /^display name$/i })
+	await usernameInput.fill(newUserData.username)
+	await nameInput.fill(newUserData.name)
 
 	// Submit the form and wait for it to complete
 	await page.getByRole('button', { name: /save changes/i }).click()
