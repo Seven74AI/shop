@@ -37,6 +37,18 @@ async function globalSetup() {
 		update: {},
 	})
 
+	// Create 'user' and 'admin' roles if they don't exist (critical for login fixture)
+	await prisma.role.upsert({
+		where: { name: 'user' },
+		create: { name: 'user', description: 'Default user role' },
+		update: {},
+	})
+	await prisma.role.upsert({
+		where: { name: 'admin' },
+		create: { name: 'admin', description: 'Administrator role' },
+		update: {},
+	})
+
 	// Create Settings with USD as default currency
 	await prisma.settings.upsert({
 		where: { id: 'settings' },
