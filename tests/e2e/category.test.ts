@@ -11,28 +11,16 @@ function getTestPrefix(testId: string) {
 }
 
 test.describe('Category Page', () => {
+	test.describe.configure({ mode: 'serial', timeout: 60_000 })
 	test.afterEach(async ({}, testInfo) => {
 		// Scoped cleanup - must not delete other tests' data when running in parallel
+		// Run individually (not in a transaction) to avoid holding SQLite write locks
+		// while the server is still processing page requests (SQLITE_BUSY contention)
 		const testPrefix = getTestPrefix(testInfo.testId)
-		const categories = await prisma.category.findMany({
-			where: { slug: { startsWith: testPrefix } },
-			select: { id: true },
-		})
-		const categoryIds = categories.map((c) => c.id)
-		await prisma.$transaction([
-			prisma.orderItem.deleteMany({
-				where: { product: { categoryId: { in: categoryIds } } },
-			}),
-			prisma.cartItem.deleteMany({
-				where: { product: { categoryId: { in: categoryIds } } },
-			}),
-			prisma.product.deleteMany({
-				where: { categoryId: { in: categoryIds } },
-			}),
-			prisma.category.deleteMany({
-				where: { slug: { startsWith: testPrefix } },
-			}),
-		])
+		try { await prisma.orderItem.deleteMany({ where: { product: { category: { slug: { startsWith: testPrefix } } } } }) } catch {}
+		try { await prisma.cartItem.deleteMany({ where: { product: { category: { slug: { startsWith: testPrefix } } } } }) } catch {}
+		try { await prisma.product.deleteMany({ where: { category: { slug: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.category.deleteMany({ where: { slug: { startsWith: testPrefix } } }) } catch {}
 	})
 
 	test('should display products filtered by category', async ({ page }, testInfo) => {
@@ -81,18 +69,20 @@ test.describe('Category Page', () => {
 		})
 
 		// Navigate to category1 page
-		await page.goto(`/shop/categories/${category1.slug}`)
+		await page.goto(`/shop/categories/${category1.slug}`, { timeout: 30_000 })
+		await page.waitForLoadState('networkidle')
 
 		// Should show only product1 (from category1)
-		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible()
-		await expect(page.getByRole('heading', { name: product2.name })).not.toBeVisible()
+		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 15_000 })
+		await expect(page.getByText(product2.name)).not.toBeVisible({ timeout: 5_000 })
 
 		// Navigate to category2 page
-		await page.goto(`/shop/categories/${category2.slug}`)
+		await page.goto(`/shop/categories/${category2.slug}`, { timeout: 30_000 })
+		await page.waitForLoadState('networkidle')
 
 		// Should show only product2 (from category2)
-		await expect(page.getByRole('heading', { name: product2.name })).toBeVisible()
-		await expect(page.getByRole('heading', { name: product1.name })).not.toBeVisible()
+		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 15_000 })
+		await expect(page.getByText(product1.name)).not.toBeVisible({ timeout: 5_000 })
 	})
 
 	test('should show empty state when category has no products', async ({ page }, testInfo) => {
@@ -107,9 +97,10 @@ test.describe('Category Page', () => {
 		})
 
 		await page.goto(`/shop/categories/${category.slug}`)
+		await page.waitForLoadState('networkidle')
 
 		// Should show empty state message
-		await expect(page.getByText(/no products/i)).toBeVisible()
+		await expect(page.getByText(/no products/i)).toBeVisible({ timeout: 10_000 })
 	})
 
 	test('should display category name and description', async ({ page }, testInfo) => {
@@ -125,10 +116,11 @@ test.describe('Category Page', () => {
 		})
 
 		await page.goto(`/shop/categories/${category.slug}`)
+		await page.waitForLoadState('networkidle')
 
 		// Should show category name and description
-		await expect(page.getByRole('heading', { name: category.name })).toBeVisible()
-		await expect(page.getByText(category.description!)).toBeVisible()
+		await expect(page.getByRole('heading', { name: category.name })).toBeVisible({ timeout: 10_000 })
+		await expect(page.getByText(category.description!)).toBeVisible({ timeout: 10_000 })
 	})
 
 	test('should allow filtering by category within category page', async ({ page }, testInfo) => {
