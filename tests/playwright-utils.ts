@@ -118,10 +118,10 @@ export const test = base.extend<{
 				await authSessionStorage.commitSession(authSession),
 			)
 			const newConfig = {
-				...cookieConfig,
+				...cookieConfig!,
 				domain: 'localhost',
-				expires: cookieConfig.expires?.getTime(),
-				sameSite: cookieConfig.sameSite as 'Strict' | 'Lax' | 'None',
+				expires: cookieConfig!.expires?.getTime(),
+				sameSite: cookieConfig!.sameSite as 'Strict' | 'Lax' | 'None',
 			}
 		await page.context().addCookies([newConfig])
 		return user

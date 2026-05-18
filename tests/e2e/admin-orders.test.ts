@@ -38,27 +38,13 @@ test.describe('Admin Order Management', () => {
 
 	test.afterEach(async () => {
 		// Scoped cleanup: use currentPrefix (unique per test) so parallel tests don't delete each other's data
+		// Run individually (not in a transaction) to avoid holding SQLite write locks
+		// while the server is still processing page requests (SQLITE_BUSY contention)
 		if (!currentPrefix) return
-		await prisma.$transaction([
-			prisma.order.deleteMany({
-				where: {
-					stripeCheckoutSessionId: { startsWith: currentPrefix },
-				},
-			}),
-			prisma.cartItem.deleteMany({
-				where: {
-					product: {
-						sku: { startsWith: currentPrefix },
-					},
-				},
-			}),
-			prisma.product.deleteMany({
-				where: { sku: { startsWith: currentPrefix } },
-			}),
-			prisma.category.deleteMany({
-				where: { slug: { startsWith: currentPrefix } },
-			}),
-		])
+		try { await prisma.order.deleteMany({ where: { stripeCheckoutSessionId: { startsWith: currentPrefix } } }) } catch {}
+		try { await prisma.cartItem.deleteMany({ where: { product: { sku: { startsWith: currentPrefix } } } }) } catch {}
+		try { await prisma.product.deleteMany({ where: { sku: { startsWith: currentPrefix } } }) } catch {}
+		try { await prisma.category.deleteMany({ where: { slug: { startsWith: currentPrefix } } }) } catch {}
 	})
 
 	test('should redirect non-admin users from admin orders page', async ({
@@ -335,6 +321,9 @@ test.describe('Admin Order Management', () => {
 			.first()
 		await searchInput.fill(`empty-state-${currentPrefix}`)
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
+
+		// Wait for server to finish processing the search before direct DB writes
+		await page.waitForLoadState('networkidle')
 
 		await prisma.order.deleteMany({
 			where: { stripeCheckoutSessionId: { startsWith: currentPrefix } },

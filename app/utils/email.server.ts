@@ -1,4 +1,5 @@
 import { render } from '@react-email/components'
+import path from 'node:path'
 import { type ReactElement } from 'react'
 import { z } from 'zod'
 
@@ -39,13 +40,18 @@ export async function sendEmail({
 		...(react ? await renderReactEmail(react) : null),
 	}
 
-	// feel free to remove this condition once you've set up resend
-	if (!process.env.RESEND_API_KEY && !process.env.MOCKS) {
-		console.error(`RESEND_API_KEY not set and we're not in mocks mode.`)
-		console.error(
-			`To send emails, set the RESEND_API_KEY environment variable.`,
-		)
-		console.error(`Would have sent the following email:`, JSON.stringify(email))
+	// Skip real API call when no valid API key or in mocks mode
+	if (!process.env.RESEND_API_KEY || process.env.MOCKS === 'true') {
+		console.info('🔶 Mocking email send (no API key or mocks mode)')
+		// Write email fixture for e2e tests
+		try {
+			const { default: fsExtra } = await import('fs-extra')
+			const fixturesDir = path.join(process.cwd(), 'tests', 'fixtures', 'email')
+			await fsExtra.ensureDir(fixturesDir)
+			await fsExtra.writeJSON(path.join(fixturesDir, `${email.to}.json`), email)
+		} catch {
+			// Fixture write is optional — only needed for e2e tests
+		}
 		return {
 			status: 'success',
 			data: { id: 'mocked' },

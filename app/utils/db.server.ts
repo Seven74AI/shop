@@ -1,16 +1,17 @@
 import { styleText } from 'node:util'
 import { remember } from '@epic-web/remember'
-// Changed import due to issue: https://github.com/remix-run/react-router/pull/12644
-import { PrismaClient } from '@prisma/client/index.js'
+import { PrismaClient } from '@prisma/client'
+import { PrismaLibSql } from '@prisma/adapter-libsql'
 
 export const prisma = remember('prisma', () => {
-	// NOTE: if you change anything in this function you'll need to restart
-	// the dev server to see your changes.
-
-	// Feel free to change this log threshold to something that makes sense for you
 	const logThreshold = 20
 
+	const adapter = new PrismaLibSql({
+		url: process.env.DATABASE_URL ?? 'file:./prisma/data.db',
+	})
+
 	const client = new PrismaClient({
+		adapter,
 		log: [
 			{ level: 'query', emit: 'event' },
 			{ level: 'error', emit: 'stdout' },

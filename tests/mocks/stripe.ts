@@ -8,7 +8,7 @@ function createMockCheckoutSession(
 	params: {
 		sessionId?: string
 		url?: string
-		paymentStatus?: Stripe.Checkout.Session.PaymentStatus
+		paymentStatus?: Stripe.Checkout.Session['payment_status']
 		amountTotal?: number
 		currency?: string
 		lineItems?: Array<{
@@ -193,7 +193,7 @@ export function generateTestWebhookSignature(
 	secret: string,
 ): string {
 	const stripe = new Stripe(secret, {
-		apiVersion: '2025-10-29.clover',
+		apiVersion: '2026-04-22.dahlia',
 	})
 	
 	const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload)

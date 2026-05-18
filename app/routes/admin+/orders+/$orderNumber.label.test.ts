@@ -97,7 +97,7 @@ describe('label route', () => {
 		const result = await loader({
 			request,
 			params: { orderNumber: order.orderNumber },
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toBeInstanceOf(Response)
@@ -155,7 +155,7 @@ describe('label route', () => {
 		const result = await loader({
 			request,
 			params: { orderNumber: order.orderNumber },
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toBeInstanceOf(Response)
@@ -206,7 +206,7 @@ describe('label route', () => {
 		const result = await loader({
 			request,
 			params: { orderNumber: order.orderNumber },
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toBeInstanceOf(Response)

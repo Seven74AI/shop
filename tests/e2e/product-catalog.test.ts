@@ -39,6 +39,8 @@ async function createTestProduct(categoryId: string, testPrefix: string) {
 }
 
 test.describe('Product Catalog', () => {
+	test.describe.configure({ mode: 'serial' })
+
 	test('product catalog should display products page', async ({ page }) => {
 		await page.goto('/shop/products')
 		await expect(page.getByRole('heading', { name: /products/i })).toBeVisible()
@@ -75,40 +77,11 @@ test.describe('Product Catalog', () => {
 
 	test.afterEach(async ({}, testInfo) => {
 		const testPrefix = getTestPrefix(testInfo)
-		// Scoped cleanup for data created by this suite
-		await prisma.$transaction([
-			prisma.orderItem.deleteMany({
-				where: {
-					product: {
-						sku: {
-							startsWith: `${CATALOG_SKU_PREFIX}${testPrefix}-`,
-						},
-					},
-				},
-			}),
-			prisma.cartItem.deleteMany({
-				where: {
-					product: {
-						sku: {
-							startsWith: `${CATALOG_SKU_PREFIX}${testPrefix}-`,
-						},
-					},
-				},
-			}),
-			prisma.product.deleteMany({
-				where: {
-					sku: {
-						startsWith: `${CATALOG_SKU_PREFIX}${testPrefix}-`,
-					},
-				},
-			}),
-			prisma.category.deleteMany({
-				where: {
-					slug: {
-						startsWith: `${CATALOG_CATEGORY_PREFIX}${testPrefix}-`,
-					},
-				},
-			}),
-		])
+		// Scoped cleanup — individual operations to avoid SQLITE_BUSY contention
+		// when the server is still serving page requests
+		try { await prisma.orderItem.deleteMany({ where: { product: { sku: { startsWith: `${CATALOG_SKU_PREFIX}${testPrefix}-` } } } }) } catch {}
+		try { await prisma.cartItem.deleteMany({ where: { product: { sku: { startsWith: `${CATALOG_SKU_PREFIX}${testPrefix}-` } } } }) } catch {}
+		try { await prisma.product.deleteMany({ where: { sku: { startsWith: `${CATALOG_SKU_PREFIX}${testPrefix}-` } } }) } catch {}
+		try { await prisma.category.deleteMany({ where: { slug: { startsWith: `${CATALOG_CATEGORY_PREFIX}${testPrefix}-` } } }) } catch {}
 	})
 })

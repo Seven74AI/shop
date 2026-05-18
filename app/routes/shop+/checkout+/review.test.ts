@@ -80,7 +80,7 @@ describe('Checkout Review Step', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).not.toBeInstanceOf(Response)
@@ -122,7 +122,7 @@ describe('Checkout Review Step', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(result).toHaveProperty('status')
@@ -164,7 +164,7 @@ describe('Checkout Review Step', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		if (result instanceof Response) {
@@ -226,7 +226,7 @@ describe('Checkout Review Step', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		if (result instanceof Response) {

@@ -52,7 +52,7 @@ describe('pickup-points route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		// data() returns DataWithResponseInit, extract the data property
@@ -86,7 +86,7 @@ describe('pickup-points route', () => {
 		await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(mondialRelayApi1.searchPickupPoints).toHaveBeenCalledWith({
@@ -103,7 +103,7 @@ describe('pickup-points route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		if (typeof result === 'object' && result !== null && 'data' in result) {
@@ -121,7 +121,7 @@ describe('pickup-points route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		if (typeof result === 'object' && result !== null && 'data' in result) {
@@ -142,7 +142,7 @@ describe('pickup-points route', () => {
 		const result = await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		if (typeof result === 'object' && result !== null && 'data' in result) {
@@ -163,7 +163,7 @@ describe('pickup-points route', () => {
 		await loader({
 			request,
 			params: {},
-			context: {},
+			context: {}, url: new URL('http://localhost'), pattern: '',
 		})
 
 		expect(mondialRelayApi1.searchPickupPoints).toHaveBeenCalledWith(

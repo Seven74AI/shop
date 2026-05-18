@@ -5,6 +5,7 @@ on:
       - main
       - dev
   pull_request: {}
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,13 +18,13 @@ permissions:
 jobs:
   lint:
     name: ⬣ ESLint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -41,13 +42,13 @@ jobs:
 
   typecheck:
     name: ʦ TypeScript
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -68,13 +69,13 @@ jobs:
 
   vitest:
     name: ⚡ Vitest
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -92,17 +93,17 @@ jobs:
 
   playwright:
     name: 🎭 Playwright
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🏄 Copy test env vars
-        run: cp .env.example .env
+        run: cp .env.example .env && echo 'MOCKS=true' >> .env && echo 'RESEND_API_KEY=""' >> .env && echo 'PLAYWRIGHT_TEST_BASE_URL=http://localhost:3000' >> .env
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -117,13 +118,13 @@ jobs:
 
       - name: 🏦 Cache Database
         id: db-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: prisma/data.db
           key:
-            db-cache-schema_${{ hashFiles('./prisma/schema.prisma')
+            db-cache-v2-schema_${{ hashFiles('./prisma/schema.prisma')
             }}-migrations_${{ hashFiles('./prisma/migrations/*/migration.sql')
-            }}
+            }}-prisma7-v2
 
       - name: 🌱 Seed Database
         if: steps.db-cache.outputs.cache-hit != 'true'
@@ -133,10 +134,10 @@ jobs:
         run: npm run build
 
       - name: 🎭 Playwright tests
-        run: npx playwright test
+        run: npx playwright test --workers=1
 
       - name: 📊 Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
@@ -150,7 +151,7 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 50
 
@@ -197,7 +198,7 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: '50'
 

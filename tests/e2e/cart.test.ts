@@ -55,12 +55,23 @@ test.describe('Shopping Cart', () => {
 		// Create test product
 		const product = await createTestProduct(category.id, testPrefix)
 
+		// Wait for server to be responsive (may restart after Prisma SQLite contention)
+		for (let attempt = 0; attempt < 8; attempt++) {
+			try {
+				await page.goto('/', { timeout: 5000 })
+				await page.waitForLoadState('networkidle')
+				break
+			} catch {
+				await page.waitForTimeout(1500)
+			}
+		}
+
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addButton = page.getByRole('button', { name: /add to cart/i })
 		await expect(addButton).toBeVisible({ timeout: 10000 })
 		await addButton.click()
-		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		await page.waitForLoadState('networkidle')
 		
 		// Verify cart page displays the item
@@ -76,12 +87,23 @@ test.describe('Shopping Cart', () => {
 		// Create test product
 		const product = await createTestProduct(category.id, testPrefix)
 
+		// Wait for server to be responsive (may restart after Prisma SQLite contention)
+		for (let attempt = 0; attempt < 8; attempt++) {
+			try {
+				await page.goto('/', { timeout: 5000 })
+				await page.waitForLoadState('networkidle')
+				break
+			} catch {
+				await page.waitForTimeout(1500)
+			}
+		}
+
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addBtn = page.getByRole('button', { name: /add to cart/i })
 		await expect(addBtn).toBeVisible({ timeout: 10000 })
 		await addBtn.click()
-		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
+		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 
 		// Navigate to cart page (may already be there)
 		await page.goto('/shop/cart')

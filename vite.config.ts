@@ -10,6 +10,20 @@ import { defineConfig } from 'vite'
 import { envOnlyMacros } from 'vite-env-only'
 import { iconsSpritesheet } from 'vite-plugin-icons-spritesheet'
 
+// Plugin to externalize node builtins for Vitest 4 compatibility
+function externalizeNodeBuiltins() {
+	return {
+		name: 'externalize-node-builtins',
+		enforce: 'pre' as const,
+		resolveId(id: string) {
+			if (id.startsWith('node:')) {
+				return { id, external: true }
+			}
+			return null
+		},
+	}
+}
+
 const MODE = process.env.NODE_ENV
 
 export default defineConfig((config) => ({
@@ -37,8 +51,12 @@ export default defineConfig((config) => ({
 			ignored: ['**/playwright-report/**'],
 		},
 	},
+	ssr: {
+		external: ['node:sqlite'],
+	},
 	sentryConfig,
 	plugins: [
+		externalizeNodeBuiltins(),
 		envOnlyMacros(),
 		tailwindcss(),
 		// reactRouterDevTools(),
@@ -57,11 +75,19 @@ export default defineConfig((config) => ({
 			? sentryReactRouter(sentryConfig, config)
 			: null,
 	],
+	resolve: {
+		external: ['node:sqlite'],
+	},
 	test: {
 		include: ['./app/**/*.test.{ts,tsx}'],
 		setupFiles: ['./tests/setup/setup-test-env.ts'],
 		globalSetup: ['./tests/setup/global-setup.ts'],
 		restoreMocks: true,
+		server: {
+			deps: {
+				external: [/node:.*/],
+			},
+		},
 		coverage: {
 			include: ['app/**/*.{ts,tsx}'],
 			all: true,
