@@ -77,7 +77,7 @@ jobs:
         run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
 
       - name: 🔎 Type check
-        run: pnpm typecheck --if-present
+        run: pnpm typecheck
 
   vitest:
     name: ⚡ Vitest
