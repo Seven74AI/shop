@@ -10,7 +10,9 @@ import {
 	createTestRole,
 } from '#tests/user-utils.ts'
 
-// Run admin user tests in parallel - each test uses unique data prefixes to avoid collisions
+// Run admin user tests in serial — all tests share a SQLite DB and
+// parallel execution causes SQLITE_BUSY on createUser/deleteMany/upsert
+test.describe.configure({ mode: 'serial' })
 
 const ADMIN_USERS_PREFIX = 'admin-users-e2e'
 
@@ -55,6 +57,8 @@ async function createPrefixedUser(testId: string, overrides?: Parameters<typeof 
 }
 
 test.describe('Admin User Management', () => {
+	test.describe.configure({ mode: 'serial' })
+
 	test.beforeEach(async () => {
 		// Ensure admin role exists
 		await prisma.role.upsert({
@@ -65,41 +69,18 @@ test.describe('Admin User Management', () => {
 	})
 
 	test.afterEach(async ({}, testInfo) => {
+		// Scoped cleanup — run individually (not in a transaction) to avoid
+		// holding SQLite write locks while the server is still processing
+		// page requests (SQLITE_BUSY contention)
 		const testPrefix = getTestSpecificPrefix(testInfo.testId)
-		await prisma.$transaction([
-			prisma.order.deleteMany({
-				where: {
-					stripeCheckoutSessionId: { startsWith: testPrefix },
-				},
-			}),
-			prisma.cartItem.deleteMany({
-				where: {
-					product: {
-						sku: { startsWith: testPrefix },
-					},
-				},
-			}),
-			prisma.product.deleteMany({
-				where: {
-					sku: { startsWith: testPrefix },
-				},
-			}),
-			prisma.category.deleteMany({
-				where: {
-					slug: { startsWith: testPrefix },
-				},
-			}),
-			prisma.user.deleteMany({
-				where: {
-					email: { startsWith: testPrefix },
-				},
-			}),
-			prisma.role.deleteMany({
-				where: {
-					name: { startsWith: `${testPrefix}-role-` },
-				},
-			}),
-		])
+		try { await prisma.orderItem.deleteMany({ where: { order: { stripeCheckoutSessionId: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.order.deleteMany({ where: { stripeCheckoutSessionId: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.cartItem.deleteMany({ where: { product: { sku: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.cart.deleteMany({ where: { user: { email: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.product.deleteMany({ where: { sku: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.category.deleteMany({ where: { slug: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.user.deleteMany({ where: { email: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.role.deleteMany({ where: { name: { startsWith: `${testPrefix}-role-` } } }) } catch {}
 	})
 
 	test('should redirect non-admin users from admin users page', async ({
@@ -110,7 +91,6 @@ test.describe('Admin User Management', () => {
 		await login()
 		await navigate('/admin/users')
 		// requireUserWithRole throws a 403 response, which React Router renders as an error page
-		await page.waitForLoadState('networkidle')
 
 		// Check for error content that indicates unauthorized access
 		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({
@@ -140,7 +120,6 @@ test.describe('Admin User Management', () => {
 		})
 
 		await navigate('/admin/users')
-		await page.waitForLoadState('networkidle')
 		// Wait for the table to be visible
 		await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
 
@@ -203,7 +182,6 @@ test.describe('Admin User Management', () => {
 		await createPrefixedUser(test.info().testId, { name: bobName })
 
 		await navigate('/admin/users')
-		await page.waitForLoadState('networkidle')
 
 		// Wait for users list to load
 		await expect(page.getByRole('heading', { name: /users/i })).toBeVisible({ timeout: 10000 })
@@ -255,7 +233,6 @@ test.describe('Admin User Management', () => {
 		await navigate(('/admin/users/' + testUser.id) as any)
 
 		// Wait for page to load and heading to appear
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
 		
 		// Check that user details are displayed - use accessible queries
@@ -279,7 +256,6 @@ test.describe('Admin User Management', () => {
 		await navigate(('/admin/users/' + testUser.id) as any)
 
 		// Wait for page to load and heading to appear
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
 		
 		// Check that statistics section is displayed using role-based locators
@@ -360,6 +336,8 @@ test.describe('Admin User Management', () => {
 })
 
 test.describe('Admin User Edit', () => {
+	test.describe.configure({ mode: 'serial' })
+
 	test.beforeEach(async () => {
 		// Ensure admin role exists
 		await prisma.role.upsert({
@@ -370,44 +348,18 @@ test.describe('Admin User Edit', () => {
 	})
 
 	test.afterEach(async ({}, testInfo) => {
+		// Scoped cleanup — run individually (not in a transaction) to avoid
+		// holding SQLite write locks while the server is still processing
+		// page requests (SQLITE_BUSY contention)
 		const testPrefix = getTestSpecificPrefix(testInfo.testId)
-		await prisma.$transaction([
-			prisma.order.deleteMany({
-				where: {
-					stripeCheckoutSessionId: { startsWith: testPrefix },
-				},
-			}),
-			prisma.cartItem.deleteMany({
-				where: {
-					product: {
-						sku: { startsWith: testPrefix },
-					},
-				},
-			}),
-			prisma.product.deleteMany({
-				where: {
-					sku: { startsWith: testPrefix },
-				},
-			}),
-			prisma.cart.deleteMany({
-				where: { user: { email: { startsWith: testPrefix } } },
-			}),
-			prisma.category.deleteMany({
-				where: {
-					slug: { startsWith: testPrefix },
-				},
-			}),
-			prisma.user.deleteMany({
-				where: {
-					email: { startsWith: testPrefix },
-				},
-			}),
-			prisma.role.deleteMany({
-				where: {
-					name: { startsWith: `${testPrefix}-role-` },
-				},
-			}),
-		])
+		try { await prisma.orderItem.deleteMany({ where: { order: { stripeCheckoutSessionId: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.order.deleteMany({ where: { stripeCheckoutSessionId: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.cartItem.deleteMany({ where: { product: { sku: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.cart.deleteMany({ where: { user: { email: { startsWith: testPrefix } } } }) } catch {}
+		try { await prisma.product.deleteMany({ where: { sku: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.category.deleteMany({ where: { slug: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.user.deleteMany({ where: { email: { startsWith: testPrefix } } }) } catch {}
+		try { await prisma.role.deleteMany({ where: { name: { startsWith: `${testPrefix}-role-` } } }) } catch {}
 	})
 
 	test('should redirect to login if not authenticated', async ({ page }) => {
@@ -423,7 +375,6 @@ test.describe('Admin User Edit', () => {
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
 		await navigate(`/admin/users/${testUser.id}/edit` as any)
-		await page.waitForLoadState('networkidle')
 
 		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({
 			timeout: 5000,
@@ -435,7 +386,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 
 		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/edit`))
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -462,7 +413,7 @@ test.describe('Admin User Edit', () => {
 		const originalName = faker.person.fullName()
 		const { user: testUser } = await createPrefixedUser(test.info().testId, { name: originalName })
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// Verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -486,7 +437,6 @@ test.describe('Admin User Edit', () => {
 		])
 		
 		// Wait for page to fully load
-		await page.waitForLoadState('networkidle')
 		
 		// Verify we're on the user detail page - check URL first
 		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 10000 })
@@ -503,7 +453,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -523,7 +473,6 @@ test.describe('Admin User Edit', () => {
 		])
 		
 		// Wait for page to fully load
-		await page.waitForLoadState('networkidle')
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
@@ -538,7 +487,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -558,7 +507,6 @@ test.describe('Admin User Edit', () => {
 		])
 		
 		// Wait for page to fully load
-		await page.waitForLoadState('networkidle')
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
@@ -578,7 +526,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		// Wait for form to be ready - check for a form field or button
 		await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible({ timeout: 10000 })
 
@@ -601,7 +549,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createTestUserWithRoles([testRole.name])
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -615,7 +563,6 @@ test.describe('Admin User Edit', () => {
 
 		// Should redirect to user detail page
 		await page.waitForURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 20000 })
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
 		// Role should not be visible - wait for it to disappear
 		await expect(page.getByText(testRole.name)).not.toBeVisible({ timeout: 5000 })
@@ -634,7 +581,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createTestUserWithRoles([role1.name])
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -651,7 +598,6 @@ test.describe('Admin User Edit', () => {
 
 		// Should redirect to user detail page
 		await page.waitForURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 20000 })
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(role1.name)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(role2.name)).toBeVisible({ timeout: 10000 })
@@ -663,7 +609,7 @@ test.describe('Admin User Edit', () => {
 		const { user: existingUser } = await createPrefixedUser(test.info().testId)
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -677,7 +623,6 @@ test.describe('Admin User Edit', () => {
 		
 		// Submit form - should NOT redirect on validation error
 		await Promise.all([
-			page.waitForLoadState('networkidle'),
 			page.getByRole('button', { name: /save changes/i }).click(),
 		])
 		
@@ -701,7 +646,7 @@ test.describe('Admin User Edit', () => {
 		const { user: existingUser } = await createPrefixedUser(test.info().testId)
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -715,7 +660,6 @@ test.describe('Admin User Edit', () => {
 		
 		// Submit form - should NOT redirect on validation error
 		await Promise.all([
-			page.waitForLoadState('networkidle'),
 			page.getByRole('button', { name: /save changes/i }).click(),
 		])
 
@@ -738,7 +682,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		// Wait for form fields to be visible - more reliable than checking form role
 		await expect(page.getByLabel(/^email/i)).toBeVisible({ timeout: 10000 })
 
@@ -747,7 +691,6 @@ test.describe('Admin User Edit', () => {
 		await page.getByRole('button', { name: /save changes/i }).click()
 
 		// Should stay on edit page and show validation error (no redirect)
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByText(/email.*invalid|invalid.*email/i)).toBeVisible({ timeout: 10000 })
 	})
 
@@ -756,7 +699,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		// Wait for form to be ready - check for username field
 		await expect(page.getByLabel(/^username/i)).toBeVisible({ timeout: 10000 })
 
@@ -765,7 +708,6 @@ test.describe('Admin User Edit', () => {
 		await page.getByRole('button', { name: /save changes/i }).click()
 
 		// Should stay on edit page and show validation error (no redirect)
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByText(/username.*can only include|invalid.*username/i)).toBeVisible({ timeout: 10000 })
 	})
 
@@ -774,7 +716,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// Verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -797,7 +739,6 @@ test.describe('Admin User Edit', () => {
 		])
 
 		// Wait for page to fully load
-		await page.waitForLoadState('networkidle')
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
@@ -814,7 +755,7 @@ test.describe('Admin User Edit', () => {
 
 		const { user: testUser } = await createPrefixedUser(test.info().testId)
 
-		await page.goto(`/admin/users/${testUser.id}/edit`, { waitUntil: 'networkidle' })
+		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// Verify we're on the edit page
 		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
@@ -837,7 +778,6 @@ test.describe('Admin User Edit', () => {
 		])
 
 		// Wait for page to fully load
-		await page.waitForLoadState('networkidle')
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
