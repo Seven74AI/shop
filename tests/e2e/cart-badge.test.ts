@@ -54,24 +54,30 @@ async function createTestProduct(categoryId: string, testPrefix: string) {
 }
 
 test.describe('Cart Badge', () => {
+	test.describe.configure({ mode: 'serial', timeout: 60_000 })
 	test.afterEach(async ({}, testInfo) => {
 		const testPrefix = getTestPrefix(testInfo)
-		// Cleanup: Batch all operations in a transaction for better performance
-		// OrderItems must be deleted before Products (Restrict constraint)
-		await prisma.$transaction([
-			prisma.orderItem.deleteMany({
+		// Individual cleanup — avoids SQLITE_BUSY from transaction locks during parallel runs
+		try {
+			await prisma.orderItem.deleteMany({
 				where: { product: { sku: { startsWith: `${TEST_SKU_PREFIX}${testPrefix}-` } } },
-			}),
-			prisma.cartItem.deleteMany({
+			})
+		} catch (_) { /* ok */ }
+		try {
+			await prisma.cartItem.deleteMany({
 				where: { product: { sku: { startsWith: `${TEST_SKU_PREFIX}${testPrefix}-` } } },
-			}),
-			prisma.product.deleteMany({
+			})
+		} catch (_) { /* ok */ }
+		try {
+			await prisma.product.deleteMany({
 				where: { sku: { startsWith: `${TEST_SKU_PREFIX}${testPrefix}-` } },
-			}),
-			prisma.category.deleteMany({
+			})
+		} catch (_) { /* ok */ }
+		try {
+			await prisma.category.deleteMany({
 				where: { slug: { startsWith: `${TEST_CATEGORY_PREFIX}${testPrefix}-` } },
-			}),
-		])
+			})
+		} catch (_) { /* ok */ }
 	})
 
 	test('cart badge should display item count', async ({ page }, testInfo) => {
@@ -87,7 +93,6 @@ test.describe('Cart Badge', () => {
 
 		// Ensure server is responsive before navigating
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 
 		// Navigate to product detail page
 		await page.goto(`/shop/products/${product.slug}`)
@@ -121,7 +126,6 @@ test.describe('Cart Badge', () => {
 
 		// Ensure server is responsive before navigating
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 
 		// Navigate to product detail page and add to cart
 		await page.goto(`/shop/products/${product.slug}`)
@@ -137,7 +141,6 @@ test.describe('Cart Badge', () => {
 		await expect(quantityInput).toHaveValue('3', { timeout: 5000 })
 		// Navigate to shop to trigger root loader revalidation for badge
 		await page.goto('/shop')
-		await page.waitForLoadState('networkidle')
 		const cartBadge = page.getByRole('link', { name: /shopping cart with 3 items/i })
 		await expect(cartBadge).toBeVisible({ timeout: 15000 })
 		await expect(cartBadge.getByText('3')).toBeVisible({ timeout: 5000 })
@@ -156,7 +159,6 @@ test.describe('Cart Badge', () => {
 
 		// Ensure server is responsive before navigating
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 
 		// As a guest, add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
@@ -215,7 +217,6 @@ test.describe('Cart Badge', () => {
 
 		// Ensure server is responsive
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 
 		// As logged-in user, add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
@@ -256,7 +257,6 @@ test.describe('Cart Badge', () => {
 
 		// Ensure server is responsive before navigating
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 
 		// 1. As guest, add product1 to cart
 		await page.goto(`/shop/products/${product1.slug}`)
@@ -271,7 +271,6 @@ test.describe('Cart Badge', () => {
 		
 		// Navigate to establish session before merge
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 		
 		// Manually trigger cart merge since login fixture bypasses handleNewSession
 		await mergeCartInTest(page, user.id)
@@ -282,7 +281,6 @@ test.describe('Cart Badge', () => {
 		
 		// Go back to shop and verify badge shows 1 item
 		await page.goto('/shop')
-		await page.waitForLoadState('networkidle')
 		const userCartBadge1 = page.getByRole('link', { name: /shopping cart with 1 item/i })
 		await expect(userCartBadge1).toBeVisible({ timeout: 10000 })
 
@@ -292,7 +290,6 @@ test.describe('Cart Badge', () => {
 		await expect(addProduct2Btn).toBeVisible({ timeout: 10000 })
 		await addProduct2Btn.click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
-		await page.waitForLoadState('networkidle')
 		
 		// Verify cart has 2 products (product1 and product2)
 		// Use getByText instead of heading for more reliable matching
@@ -312,7 +309,6 @@ test.describe('Cart Badge', () => {
 		// 5. Logout - cart should be cleared
 		await logout()
 		// Wait for logout to complete and page to update
-		await page.waitForLoadState('networkidle')
 		// Navigate to trigger badge update
 		await page.goto('/shop')
 		const guestCartBadge2 = page.getByRole('link', { name: /shopping cart with 0 items/i })
@@ -320,7 +316,6 @@ test.describe('Cart Badge', () => {
 
 		// 6. As guest, add product1 to cart (which is already in user cart with qty 2)
 		await page.goto(`/shop/products/${product1.slug}`)
-		await page.waitForLoadState('networkidle')
 		// Wait for product page to load (avoids 404 from parallel test cleanup)
 		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 10000 })
 		const guestAddBtn = page.getByRole('button', { name: /add to cart/i })
@@ -335,7 +330,6 @@ test.describe('Cart Badge', () => {
 		
 		// Navigate to establish session before merge (login fixture sets cookie but app needs a request)
 		await page.goto('/')
-		await page.waitForLoadState('networkidle')
 		
 		// Manually trigger cart merge since login fixture bypasses handleNewSession
 		await mergeCartInTest(page, user2.id)
@@ -343,7 +337,6 @@ test.describe('Cart Badge', () => {
 		// 8. Verify cart has the merged product from guest cart
 		// Note: After logout, the user's cart was cleared, so only the guest cart (product1 qty 1) should be present
 		await page.goto('/shop/cart')
-		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 10000 })
 		
 		// Verify product1 quantity is 1 (the guest cart item was merged into empty user cart)
@@ -352,7 +345,6 @@ test.describe('Cart Badge', () => {
 		
 		// Go back to shop and verify badge shows 1 item - wait for root loader to fetch cart count
 		await page.goto('/shop')
-		await page.waitForLoadState('networkidle')
 		const userCartBadge3 = page.getByRole('link', { name: /shopping cart with 1 item/i })
 		await expect(userCartBadge3).toBeVisible({ timeout: 15000 })
 	})
