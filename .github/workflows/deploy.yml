@@ -35,7 +35,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-verify-store
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
@@ -65,7 +65,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-verify-store
 
       - name: 🏗 Build
         run: pnpm build
@@ -98,7 +98,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-verify-store
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
@@ -132,7 +132,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-verify-store
 
       - name: 📥 Install Playwright Browsers
         run: pnpm test:e2e:install
