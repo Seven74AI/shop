@@ -49,7 +49,6 @@ test.describe('Shop Home Page', () => {
 		})
 		
 		await page.goto('/shop')
-		await page.waitForLoadState('networkidle')
 		
 		// Use accessible query - category cards are links to category pages
 		// Find any category link (they contain category names) - allow time for parallel test data
