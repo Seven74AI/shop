@@ -30,7 +30,7 @@ export async function setup() {
 
 	if (needsReset) {
 		await execaCommand(
-			'npx prisma migrate reset --force',
+			'pnpm exec prisma migrate reset --force',
 			{
 				stdio: 'inherit',
 				env: {
