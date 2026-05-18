@@ -10,7 +10,6 @@ const CODE_REGEX = /Here's your verification code: (?<code>[\d\w]+)/
 test('Users can update their basic info', async ({ page, navigate, login }) => {
 	await login()
 	await navigate('/account')
-	await page.waitForLoadState('networkidle')
 
 	// Wait for the profile heading to confirm page is loaded
 	await expect(
@@ -27,8 +26,6 @@ test('Users can update their basic info', async ({ page, navigate, login }) => {
 
 	// Submit the form and wait for it to complete
 	await page.getByRole('button', { name: /save changes/i }).click()
-	// Wait for the form submission to complete (either success or error)
-	await page.waitForLoadState('networkidle')
 })
 
 test('Users can update their password', async ({ page, navigate, login }) => {
@@ -75,7 +72,6 @@ test('Users can update their profile photo', async ({
 	await page.getByRole('link', { name: /change profile photo/i }).click()
 
 	await expect(page).toHaveURL(`/account/profile/photo`)
-	await page.waitForLoadState('networkidle')
 
 	// Use getByLabel with the aria-label - Playwright's getByLabel works with aria-label attributes
 	// This is the recommended approach per Playwright docs for file inputs with aria-label
