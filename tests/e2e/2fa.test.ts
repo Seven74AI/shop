@@ -10,13 +10,11 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	const password = faker.internet.password()
 	const user = await login({ password })
 	await navigate('/account/security/two-factor')
-	await page.waitForLoadState('networkidle')
 
 	await page.getByRole('button', { name: /enable 2fa/i }).click()
 
 	// After clicking enable, should redirect to verify page
 	await page.waitForURL(`/account/security/two-factor/verify`, { timeout: 10000 })
-	await page.waitForLoadState('networkidle')
 	
 	// Use the first main element (the page content) to avoid multiple main elements
 	const main = page.getByRole('main').first()
