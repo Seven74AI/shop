@@ -92,28 +92,8 @@ test('Users can edit note image', async ({ page, navigate, login }) => {
 	await page.getByLabel('image').nth(0).setInputFiles(updatedImage.location)
 	await page.getByLabel('alt text').nth(0).fill(updatedImage.altText)
 	await page.getByRole('button', { name: 'submit' }).click()
-
-	// Wait for navigation - the form might redirect to the note detail page
-	// or stay on edit page if there's an error
-	await page.waitForLoadState('networkidle')
-	
-	// Check if we're on the detail page or edit page
-	const currentUrl = page.url()
-	if (currentUrl.includes('/edit')) {
-		// If still on edit page, wait a bit more for potential redirect
-		await page.waitForTimeout(1000)
-	}
-	
-	// Now check for the expected URL or the image on the current page
-	const finalUrl = page.url()
-	if (finalUrl.includes(`/notes/${note.id}/edit`)) {
-		// If still on edit page, check if image was updated there
-		await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 10000 })
-	} else {
-		// Should be on detail page
-		await expect(page).toHaveURL(`/users/${user.username}/notes/${note.id}`)
-		await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 10000 })
-	}
+	await expect(page).toHaveURL(`/users/${user.username}/notes/${note.id}`, { timeout: 10000 })
+	await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 10000 })
 })
 
 test('Users can delete note image', async ({ page, navigate, login }) => {
