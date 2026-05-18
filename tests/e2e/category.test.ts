@@ -70,7 +70,7 @@ test.describe('Category Page', () => {
 
 		// Navigate to category1 page
 		await page.goto(`/shop/categories/${category1.slug}`, { timeout: 30_000 })
-		await page.waitForLoadState('networkidle')
+		await page.waitForURL(`**/categories/${category1.slug}**`)
 
 		// Should show only product1 (from category1)
 		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 15_000 })
@@ -78,7 +78,7 @@ test.describe('Category Page', () => {
 
 		// Navigate to category2 page
 		await page.goto(`/shop/categories/${category2.slug}`, { timeout: 30_000 })
-		await page.waitForLoadState('networkidle')
+		await page.waitForURL(`**/categories/${category2.slug}**`)
 
 		// Should show only product2 (from category2)
 		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 15_000 })
@@ -97,7 +97,7 @@ test.describe('Category Page', () => {
 		})
 
 		await page.goto(`/shop/categories/${category.slug}`)
-		await page.waitForLoadState('networkidle')
+		await page.waitForURL(`**/categories/${category.slug}**`)
 
 		// Should show empty state message
 		await expect(page.getByText(/no products/i)).toBeVisible({ timeout: 10_000 })
@@ -116,7 +116,7 @@ test.describe('Category Page', () => {
 		})
 
 		await page.goto(`/shop/categories/${category.slug}`)
-		await page.waitForLoadState('networkidle')
+		await page.waitForURL(`**/categories/${category.slug}**`)
 
 		// Should show category name and description
 		await expect(page.getByRole('heading', { name: category.name })).toBeVisible({ timeout: 10_000 })
@@ -170,9 +170,7 @@ test.describe('Category Page', () => {
 
 		// Navigate to category1 page
 		await page.goto(`/shop/categories/${category1.slug}`)
-
-		// Wait for page to load
-		await page.waitForLoadState('networkidle')
+		await page.waitForURL(`**/categories/${category1.slug}**`)
 		
 		// Wait for products to load - check for product name in text (more reliable than heading)
 		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 10000 })
