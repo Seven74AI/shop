@@ -1,12 +1,12 @@
 import { styleText } from 'node:util'
 import { remember } from '@epic-web/remember'
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSql } from '@prisma/adapter-libsql'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 
 export const prisma = remember('prisma', () => {
 	const logThreshold = 20
 
-	const adapter = new PrismaLibSql({
+	const adapter = new PrismaBetterSqlite3({
 		url: process.env.DATABASE_URL ?? 'file:./prisma/data.db',
 	})
 

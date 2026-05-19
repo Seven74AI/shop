@@ -54,7 +54,6 @@
     "@oslojs/crypto": "^1.0.1",
     "@oslojs/encoding": "^1.1.0",
     "@paralleldrive/cuid2": "^3.3.0",
-    "@prisma/adapter-libsql": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@prisma/instrumentation": "^7.8.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -122,7 +121,8 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",
     "vite-env-only": "^3.0.3",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@prisma/adapter-better-sqlite3": "7.8.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
@@ -177,11 +177,13 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
+  "packageManager": "pnpm@10.9.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/engines",
       "@sentry-internal/node-cpu-profiler",
       "@sentry/cli",
+      "better-sqlite3",
       "esbuild",
       "msw",
       "prisma",
