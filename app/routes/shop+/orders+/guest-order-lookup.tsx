@@ -3,7 +3,7 @@ import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4'
 import { data, Form, redirect } from 'react-router'
 import { z } from 'zod'
 import { ErrorList, Field } from '#app/components/forms.tsx'
-import { Card, CardContent, CardHeader, CardTitle } from '#app/components/ui/card.tsx'
+import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
@@ -98,7 +98,7 @@ export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
 						<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center">
 							<Icon name="package" className="w-5 h-5 text-pink-700" />
 						</div>
-						<CardTitle className="text-lg">Look Up Order</CardTitle>
+						<h2 className="text-lg font-semibold leading-none tracking-tight">Look Up Order</h2>
 					</div>
 				</CardHeader>
 				<CardContent className="p-0">

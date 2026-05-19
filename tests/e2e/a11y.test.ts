@@ -163,9 +163,7 @@ test.describe('Accessibility', () => {
 
 		test('products list page should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin/products')
-			await expectPageToBeAccessible(page, {
-				disableRules: ['button-name'], // Radix SelectTrigger buttons have aria-labels but axe-core doesn't always recognize them
-			})
+			await expectPageToBeAccessible(page)
 		})
 
 		test('product detail page should be accessible', async ({ page, login }) => {
@@ -254,9 +252,7 @@ test.describe('Accessibility', () => {
 
 		test('users list page should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin/users')
-			await expectPageToBeAccessible(page, {
-				disableRules: ['button-name'], // Radix SelectTrigger buttons have aria-labels but axe-core doesn't always recognize them
-			})
+			await expectPageToBeAccessible(page)
 		})
 
 		test('user detail page should be accessible', async ({ page, login }) => {
@@ -560,6 +556,46 @@ test.describe('Accessibility', () => {
 			await page.goto('/signup')
 			await page.waitForLoadState('domcontentloaded')
 			await page.waitForSelector('main', { timeout: 10000 })
+			await expectPageToBeAccessible(page)
+		})
+	})
+
+	test.describe('Guest Pages', () => {
+		test('guest order lookup page should be accessible', async ({ page }) => {
+			await page.goto('/shop/orders/guest-order-lookup')
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('h1', { timeout: 10000 })
+			await expectPageToBeAccessible(page)
+		})
+	})
+
+	test.describe('Account Pages', () => {
+		test('account profile page should be accessible', async ({ page, login }) => {
+			await login()
+			await page.goto('/account')
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 15000 })
+			await expectPageToBeAccessible(page)
+		})
+
+		test('account security page should be accessible', async ({ page, login }) => {
+			await login()
+			await page.goto('/account/security')
+			await page.waitForLoadState('domcontentloaded')
+			await page.waitForSelector('main', { timeout: 15000 })
+			await expectPageToBeAccessible(page)
+		})
+	})
+
+	test.describe('Admin Shipping Pages', () => {
+		test('shipping methods list should be accessible', async ({ page, login }) => {
+			await loginAndNavigateToAdminPage(page, login, '/admin/shipping/methods')
+			await expectPageToBeAccessible(page)
+		})
+
+		test('shipping zones list should be accessible', async ({ page, login }) => {
+			await loginAndNavigateToAdminPage(page, login, '/admin/shipping/zones')
 			await expectPageToBeAccessible(page)
 		})
 	})

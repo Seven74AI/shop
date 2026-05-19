@@ -97,6 +97,47 @@ jobs:
       - name: ⚡ Run vitest
         run: pnpm test -- --coverage
 
+  a11y:
+    name: ♿ Accessibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env && echo 'MOCKS=true' >> .env && echo 'RESEND_API_KEY=""' >> .env && echo 'PLAYWRIGHT_TEST_BASE_URL=http://localhost:3000' >> .env
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: ⎔ Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: 📥 Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: 📥 Install Playwright Browsers
+        run: pnpm test:e2e:install
+
+      - name: 🛠 Setup Database
+        run: npx prisma migrate deploy && npx prisma generate --sql
+
+      - name: 🏗 Build
+        run: pnpm build
+
+      - name: ♿ Run a11y tests
+        run: pnpm test:a11y
+
+      - name: 📊 Upload report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-a11y-report
+          path: playwright-report/
+          retention-days: 30
+
   playwright:
     name: 🎭 Playwright
     runs-on: ubuntu-24.04
@@ -201,7 +242,7 @@ jobs:
   deploy:
     name: 🚀 Deploy
     runs-on: ubuntu-24.04
-    needs: [lint, typecheck, vitest, playwright, container]
+    needs: [lint, typecheck, vitest, a11y, playwright, container]
     # only deploy on pushes
     if: ${{ github.event_name == 'push' }}
     steps:
