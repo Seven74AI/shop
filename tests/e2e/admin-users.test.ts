@@ -339,12 +339,16 @@ test.describe('Admin User Edit', () => {
 	test.describe.configure({ mode: 'serial' })
 
 	test.beforeEach(async () => {
-		// Ensure admin role exists
-		await prisma.role.upsert({
-			where: { name: 'admin' },
-			update: {},
-			create: { name: 'admin', description: 'Administrator' },
-		})
+		// Ensure admin role exists (try/catch to avoid Prisma transaction race condition)
+		try {
+			await prisma.role.upsert({
+				where: { name: 'admin' },
+				update: {},
+				create: { name: 'admin', description: 'Administrator' },
+			})
+		} catch {
+			// Role already exists or transaction conflict — safe to ignore
+		}
 	})
 
 	test.afterEach(async ({}, testInfo) => {
