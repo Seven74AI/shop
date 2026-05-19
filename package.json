@@ -30,7 +30,8 @@
     "test:sitemap": "tsx scripts/test-sitemap.ts",
     "typecheck": "react-router typegen && tsc",
     "validate": "run-p \"test -- --run\" lint typecheck test:e2e:run",
-    "stop": "pkill -f \"pnpm run dev\""
+    "stop": "pkill -f \"pnpm run dev\"",
+    "prepare": "sh scripts/setup-hooks.sh"
   },
   "prettier": "@epic-web/config/prettier",
   "eslintIgnore": [
