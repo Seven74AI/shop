@@ -177,7 +177,7 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/engines",
