@@ -84,6 +84,7 @@ export default function AccountLayout() {
 
 	return (
 		<div className="min-h-screen" style={{ backgroundColor: '#FFFFFF' }}>
+			<h1 className="sr-only">Account Settings</h1>
 			<div className="max-w-7xl mx-auto px-4 py-8">
 				{/* Breadcrumb */}
 				{pathname === '/account' ? (
