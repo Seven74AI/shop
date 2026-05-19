@@ -41,7 +41,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: ${{ steps.pm.outputs.manager }}
 
       - name: 📥 Install dependencies (pnpm)
@@ -96,7 +96,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: ${{ steps.pm.outputs.manager }}
 
       - name: 📥 Install dependencies (pnpm)
@@ -159,7 +159,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: ${{ steps.pm.outputs.manager }}
 
       - name: 📥 Install dependencies (pnpm)
@@ -218,7 +218,7 @@ jobs:
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: ${{ steps.pm.outputs.manager }}
 
       - name: 📥 Install dependencies (pnpm)
