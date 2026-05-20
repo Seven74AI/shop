@@ -3,6 +3,28 @@ import { prisma } from '#app/utils/db.server.ts'
 import { test, expect } from '../playwright-utils.ts'
 import { createProductData } from '../product-utils.ts'
 
+interface JsonLdProduct {
+	'@context': string
+	'@type': string
+	name: string
+	sku: string
+	offers: {
+		'@type': string
+		price: string
+		priceCurrency: string
+		availability: string
+	}
+	description?: string
+	image?: string
+	aggregateRating?: {
+		'@type': string
+		ratingValue: number
+		reviewCount: number
+		bestRating: number
+		worstRating: number
+	}
+}
+
 test.describe('Product Detail', () => {
 	let testCategory: Awaited<ReturnType<typeof prisma.category.create>>
 
@@ -123,7 +145,7 @@ test.describe('Product Detail', () => {
 			await expect(jsonLdScript).toBeAttached({ timeout: 10000 })
 
 			const jsonContent = await jsonLdScript.textContent()
-			const parsed = JSON.parse(jsonContent!)
+			const parsed = JSON.parse(jsonContent!) as JsonLdProduct
 
 			// Verify basic Product schema
 			expect(parsed['@context']).toBe('https://schema.org')
@@ -207,7 +229,7 @@ test.describe('Product Detail', () => {
 			await expect(jsonLdScript).toBeAttached({ timeout: 10000 })
 
 			const jsonContent = await jsonLdScript.textContent()
-			const parsed = JSON.parse(jsonContent!)
+			const parsed = JSON.parse(jsonContent!) as JsonLdProduct
 
 			// Verify Product schema
 			expect(parsed['@context']).toBe('https://schema.org')
