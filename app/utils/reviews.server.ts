@@ -68,7 +68,7 @@ export async function createReview({
 			title: title?.trim() || null,
 			body: body.trim(),
 			isVerifiedPurchase: purchased,
-			status: 'APPROVED', // Auto-approve for now; admin moderation added later
+			status: 'PENDING', // Admin moderation required before display
 		},
 		include: {
 			user: {
@@ -115,4 +115,45 @@ export async function getProductRatingStats(productId: string) {
 		averageRating: stats._avg.rating ? Math.round(stats._avg.rating * 10) / 10 : null,
 		reviewCount: stats._count.rating,
 	}
+}
+
+/**
+ * Get all reviews for the admin moderation dashboard.
+ * Supports optional status filter.
+ */
+export async function getAllReviews(options?: { status?: string }) {
+	const where: Record<string, unknown> = {}
+	if (options?.status) {
+		where.status = options.status
+	}
+
+	const reviews = await prisma.review.findMany({
+		where,
+		include: {
+			user: { select: { id: true, username: true, name: true } },
+			product: { select: { id: true, name: true, slug: true } },
+		},
+		orderBy: { createdAt: 'desc' },
+	})
+
+	return { reviews, total: reviews.length }
+}
+
+/**
+ * Update a review's status (APPROVED / REJECTED / PENDING).
+ */
+export async function updateReviewStatus(reviewId: string, status: string) {
+	return prisma.review.update({
+		where: { id: reviewId },
+		data: { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' },
+	})
+}
+
+/**
+ * Permanently delete a review.
+ */
+export async function deleteReview(reviewId: string) {
+	return prisma.review.delete({
+		where: { id: reviewId },
+	})
 }

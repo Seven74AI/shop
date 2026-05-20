@@ -114,6 +114,28 @@ export default function AdminDashboard() {
 						</div>
 					</CardContent>
 				</Card>
+
+				{/* Reviews Moderation Card */}
+				<Card className="rounded-[14px]">
+					<CardContent className="p-6">
+						<div className="flex items-center space-x-4">
+							<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+								<span className="text-yellow-500 text-xl leading-none">★</span>
+							</div>
+							<div className="flex-1">
+								<h2 className="text-base font-normal text-foreground">Reviews</h2>
+								<p className="text-sm text-muted-foreground">
+									Moderate customer reviews
+								</p>
+							</div>
+						</div>
+						<div className="mt-4">
+							<Button asChild className="w-full h-9 rounded-lg font-medium">
+								<a href="/admin/reviews">Moderate Reviews</a>
+							</Button>
+						</div>
+					</CardContent>
+				</Card>
 			</div>
 
 			{/* Quick Actions */}
