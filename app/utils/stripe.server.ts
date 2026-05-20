@@ -114,6 +114,7 @@ export async function createCheckoutSession({
 	shippingMethodId,
 	shippingCost,
 	mondialRelayPickupPointId,
+	customerVatNumber,
 	currency,
 	domainUrl,
 	userId,
@@ -134,6 +135,7 @@ export async function createCheckoutSession({
 	shippingMethodId: string
 	shippingCost: number // in cents
 	mondialRelayPickupPointId?: string | null
+	customerVatNumber?: string | null
 	currency: {
 		code: string
 	}
@@ -193,6 +195,9 @@ export async function createCheckoutSession({
 			shippingCountry: shippingInfo.country,
 			shippingMethodId: shippingMethodId,
 			shippingCost: shippingCost.toString(),
+			...(customerVatNumber && {
+				customerVatNumber,
+			}),
 			...(mondialRelayPickupPointId && {
 				mondialRelayPickupPointId: mondialRelayPickupPointId,
 			}),
