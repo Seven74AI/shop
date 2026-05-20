@@ -10,7 +10,7 @@ import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
 import { Spacer } from '#app/components/spacer.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-import { login, requireAnonymous } from '#app/utils/auth.server.ts'
+import { login, requireAnonymous, isAccountLocked } from '#app/utils/auth.server.ts'
 import {
 	ProviderConnectionForm,
 	providerNames,
@@ -48,9 +48,13 @@ export async function action({ request }: Route.ActionArgs) {
 
 				const session = await login(data)
 				if (!session) {
+					const locked = await isAccountLocked(data.username)
+					const message = locked
+						? 'Account temporarily locked due to too many failed login attempts. Please try again later.'
+						: 'Invalid username or password'
 					ctx.addIssue({
 						code: 'custom',
-						message: 'Invalid username or password',
+						message,
 					})
 					return z.NEVER
 				}

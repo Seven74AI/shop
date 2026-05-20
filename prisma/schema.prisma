@@ -21,6 +21,10 @@ model User {
   orderUpdateEmailsEnabled  Boolean @default(true)
   marketingEmailsEnabled    Boolean @default(false)
 
+  // Account lockout tracking
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
