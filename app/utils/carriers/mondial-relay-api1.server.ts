@@ -20,6 +20,7 @@ import {
   CircuitBreaker,
   CircuitOpenError,
 } from '#app/utils/circuit-breaker.server.ts'
+import { getCircuitBreakerConfig } from '#app/utils/circuit-breaker-config.server.ts'
 
 /**
  * Gets the API1 base URL from environment variable or defaults to production
@@ -42,20 +43,26 @@ function getApi1Credentials() {
 /**
  * Circuit breaker for API1 pickup point search
  */
-export const pickupPointsBreaker = new CircuitBreaker('mondial-relay-api1-pickup', {
-  failureThreshold: 5,
-  resetTimeoutMs: 30_000,
-  halfOpenMaxRequests: 1,
-})
+export const pickupPointsBreaker = new CircuitBreaker(
+  'mondial-relay-api1-pickup',
+  getCircuitBreakerConfig('mondial-relay-api1-pickup', {
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+    halfOpenMaxRequests: 1,
+  }),
+)
 
 /**
  * Circuit breaker for API1 tracking info
  */
-export const trackingBreaker = new CircuitBreaker('mondial-relay-api1-tracking', {
-  failureThreshold: 5,
-  resetTimeoutMs: 30_000,
-  halfOpenMaxRequests: 1,
-})
+export const trackingBreaker = new CircuitBreaker(
+  'mondial-relay-api1-tracking',
+  getCircuitBreakerConfig('mondial-relay-api1-tracking', {
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+    halfOpenMaxRequests: 1,
+  }),
+)
 
 /**
  * Validates that all required API1 credentials are set

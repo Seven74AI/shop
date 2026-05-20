@@ -7,6 +7,7 @@ import {
   CircuitState,
   CircuitOpenError,
 } from './circuit-breaker.server.ts'
+import { breakerRegistry } from './circuit-breaker-registry.server.ts'
 
 describe('CircuitBreaker', () => {
   let breaker: CircuitBreaker<[string], string>
@@ -21,6 +22,10 @@ describe('CircuitBreaker', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    // Clean up registry to prevent cross-test contamination
+    for (const name of breakerRegistry.getNames()) {
+      breakerRegistry.unregister(name)
+    }
   })
 
   describe('initial state', () => {
@@ -295,6 +300,74 @@ describe('CircuitBreaker', () => {
   describe('name property', () => {
     test('stores and returns the circuit name', () => {
       expect(breaker.name).toBe('test-service')
+    })
+  })
+
+  describe('auto-registration with registry', () => {
+    test('registers with breakerRegistry on construction', () => {
+      const registeredBreaker = breakerRegistry.get('test-service')
+      expect(registeredBreaker).toBeDefined()
+      expect(registeredBreaker).toBe(breaker)
+    })
+
+    test('unregisters old instance when name reused', () => {
+      const oldBreaker = breakerRegistry.get('test-service')
+      expect(oldBreaker).toBe(breaker)
+
+      const newBreaker = new CircuitBreaker('test-service')
+      const registered = breakerRegistry.get('test-service')
+      expect(registered).toBe(newBreaker)
+      expect(registered).not.toBe(oldBreaker)
+    })
+  })
+
+  describe('default state change logger', () => {
+    test('logs state transitions via console.warn by default', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const logBreaker = new CircuitBreaker('logged-breaker', {
+        failureThreshold: 1,
+      })
+
+      // Trip to trigger state change
+      logBreaker.trip()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Circuit breaker "logged-breaker" state change: CLOSED → OPEN',
+      )
+
+      // Reset to trigger another state change
+      logBreaker.reset()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Circuit breaker "logged-breaker" state change: OPEN → CLOSED',
+      )
+
+      warnSpy.mockRestore()
+      breakerRegistry.unregister('logged-breaker')
+    })
+
+    test('custom onStateChange takes priority over default logger', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const customCalls: string[] = []
+
+      const customBreaker = new CircuitBreaker('custom-log-breaker', {
+        failureThreshold: 1,
+        onStateChange: (from, to) => customCalls.push(`${from}→${to}`),
+      })
+
+      customBreaker.trip()
+
+      // Custom callback should have been called
+      expect(customCalls).toEqual(['CLOSED→OPEN'])
+      // Default logger should NOT have been called for this breaker
+      const loggedCalls = warnSpy.mock.calls.filter(
+        (call) => call[0]?.toString().includes('custom-log-breaker'),
+      )
+      expect(loggedCalls).toHaveLength(0)
+
+      warnSpy.mockRestore()
+      breakerRegistry.unregister('custom-log-breaker')
     })
   })
 })

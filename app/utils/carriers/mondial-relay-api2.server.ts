@@ -21,6 +21,7 @@ import {
   CircuitBreaker,
   CircuitOpenError,
 } from '#app/utils/circuit-breaker.server.ts'
+import { getCircuitBreakerConfig } from '#app/utils/circuit-breaker-config.server.ts'
 
 /**
  * Gets environment variables dynamically (for testing support)
@@ -38,20 +39,26 @@ function getApi2Credentials() {
 /**
  * Circuit breaker for API2 shipment creation
  */
-export const shipmentBreaker = new CircuitBreaker('mondial-relay-api2-shipment', {
-  failureThreshold: 5,
-  resetTimeoutMs: 30_000,
-  halfOpenMaxRequests: 1,
-})
+export const shipmentBreaker = new CircuitBreaker(
+  'mondial-relay-api2-shipment',
+  getCircuitBreakerConfig('mondial-relay-api2-shipment', {
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+    halfOpenMaxRequests: 1,
+  }),
+)
 
 /**
  * Circuit breaker for API2 label retrieval
  */
-export const labelBreaker = new CircuitBreaker('mondial-relay-api2-label', {
-  failureThreshold: 5,
-  resetTimeoutMs: 30_000,
-  halfOpenMaxRequests: 1,
-})
+export const labelBreaker = new CircuitBreaker(
+  'mondial-relay-api2-label',
+  getCircuitBreakerConfig('mondial-relay-api2-label', {
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+    halfOpenMaxRequests: 1,
+  }),
+)
 
 /**
  * Validates that all required API2 credentials are set
