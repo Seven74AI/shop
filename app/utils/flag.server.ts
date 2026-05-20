@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto'
 import { remember } from '@epic-web/remember'
-import { prisma } from '#app/utils/db.server.ts'
 import {
 	FlagAudienceSchema,
 	type FlagAudience,
 } from '#app/schemas/flag.ts'
+import { prisma } from '#app/utils/db.server.ts'
 
 // ---------------------------------------------------------------------------
 // In-memory cache (30s TTL)
@@ -141,7 +141,7 @@ export async function isFlagEnabled(
 		try {
 			audience = FlagAudienceSchema.parse(JSON.parse(flag.audience))
 		} catch {
-			// Invalid JSON → ignore audience filter
+			// Invalid JSON → deny (fail-closed)
 			return false
 		}
 

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { test, expect } from 'vitest'
-import { isFlagEnabled, invalidateFlagCache } from '#app/utils/flag.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { isFlagEnabled, invalidateFlagCache } from '#app/utils/flag.server.ts'
 
 // Helper to hash the same way the implementation does
 function hashRollout(key: string, userId: string): number {
@@ -133,6 +133,56 @@ test.describe('isFlagEnabled', () => {
 		expect(alice).toBe(false)
 
 		await prisma.flag.delete({ where: { key: 'test_audience_user' } })
+		invalidateFlagCache()
+	})
+
+	test('audience filter matches roles', async () => {
+		await prisma.flag.create({
+			data: {
+				key: 'test_audience_roles',
+				enabled: true,
+				rolloutPercentage: 0,
+				audience: JSON.stringify({ roles: ['admin', 'beta'] }),
+			},
+		})
+		invalidateFlagCache()
+
+		const adminUser = await isFlagEnabled('test_audience_roles', {
+			roles: ['admin'],
+		})
+		expect(adminUser).toBe(true)
+
+		const betaUser = await isFlagEnabled('test_audience_roles', {
+			roles: ['beta'],
+		})
+		expect(betaUser).toBe(true)
+
+		const regularUser = await isFlagEnabled('test_audience_roles', {
+			roles: ['user'],
+		})
+		expect(regularUser).toBe(false)
+
+		await prisma.flag.delete({ where: { key: 'test_audience_roles' } })
+		invalidateFlagCache()
+	})
+
+	test('corrupt audience JSON returns false (fail-closed)', async () => {
+		await prisma.flag.create({
+			data: {
+				key: 'test_corrupt_audience',
+				enabled: true,
+				rolloutPercentage: 0,
+				audience: 'not-json',
+			},
+		})
+		invalidateFlagCache()
+
+		const result = await isFlagEnabled('test_corrupt_audience', {
+			userId: 'alice',
+		})
+		expect(result).toBe(false)
+
+		await prisma.flag.delete({ where: { key: 'test_corrupt_audience' } })
 		invalidateFlagCache()
 	})
 
