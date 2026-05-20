@@ -19,8 +19,8 @@ import {
 	TableHeader,
 	TableRow,
 } from '#app/components/ui/table.tsx'
-import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { getPaginatedOrders } from '#app/utils/order.server.ts'
+import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/index.ts'
