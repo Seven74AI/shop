@@ -19,6 +19,11 @@ export const getSessionExpirationDate = () =>
 
 export const sessionKey = 'sessionId'
 
+/** Account lockout: max failed login attempts before lockout */
+export const MAX_LOGIN_ATTEMPTS = 5
+/** Duration an account stays locked after exceeding MAX_LOGIN_ATTEMPTS */
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+
 export const authenticator = new Authenticator<ProviderUser>()
 
 for (const [providerName, provider] of Object.entries(providers)) {
@@ -82,16 +87,80 @@ export async function login({
 	username: User['username']
 	password: string
 }) {
-	const user = await verifyUserPassword({ username }, password)
-	if (!user) return null
+	// Fetch user with lockout info
+	const userWithPassword = await prisma.user.findUnique({
+		where: { username },
+		select: {
+			id: true,
+			password: { select: { hash: true } },
+			lockedUntil: true,
+			failedLoginAttempts: true,
+		},
+	})
+
+	// User doesn't exist or has no password — don't leak lockout info
+	if (!userWithPassword || !userWithPassword.password) return null
+
+	// Check if account is locked
+	if (
+		userWithPassword.lockedUntil &&
+		userWithPassword.lockedUntil > new Date()
+	) {
+		return null
+	}
+
+	// Verify password
+	const isValid = await bcrypt.compare(
+		password,
+		userWithPassword.password.hash,
+	)
+
+	if (!isValid) {
+		const newAttempts = userWithPassword.failedLoginAttempts + 1
+		const lockedUntil =
+			newAttempts >= MAX_LOGIN_ATTEMPTS
+				? new Date(Date.now() + LOCKOUT_DURATION_MS)
+				: null
+
+		await prisma.user.update({
+			where: { username },
+			data: { failedLoginAttempts: newAttempts, lockedUntil },
+		})
+		return null
+	}
+
+	// Successful login — reset lockout counters
+	if (
+		userWithPassword.failedLoginAttempts > 0 ||
+		userWithPassword.lockedUntil
+	) {
+		await prisma.user.update({
+			where: { username },
+			data: { failedLoginAttempts: 0, lockedUntil: null },
+		})
+	}
+
 	const session = await prisma.session.create({
 		select: { id: true, expirationDate: true, userId: true },
 		data: {
 			expirationDate: getSessionExpirationDate(),
-			userId: user.id,
+			userId: userWithPassword.id,
 		},
 	})
 	return session
+}
+
+/**
+ * Check whether a user account is currently locked due to too many failed
+ * login attempts. Returns false if the user doesn't exist or lockout has expired.
+ */
+export async function isAccountLocked(username: User['username']) {
+	const user = await prisma.user.findUnique({
+		where: { username },
+		select: { lockedUntil: true },
+	})
+	if (!user?.lockedUntil) return false
+	return user.lockedUntil > new Date()
 }
 
 export async function resetUserPassword({
