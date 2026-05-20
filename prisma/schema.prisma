@@ -34,6 +34,7 @@ model User {
   cart        Cart?
   orders      Order[]
   addresses   Address[]
+  reviews     Review[]
 }
 
 model Note {
@@ -288,6 +289,7 @@ model Product {
   tags       ProductToTag[]
   cartItems  CartItem[]
   orderItems OrderItem[]
+  reviews    Review[]
 
   @@index([categoryId])
   @@index([status])
@@ -511,6 +513,7 @@ model Order {
   // See: docs/data-retention.md
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
+  reviews        Review[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -541,6 +544,39 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+model Review {
+  id        String @id @default(cuid())
+  productId String
+  userId    String
+  orderId   String? // The order that verifies this purchase (nullable: set null if order is deleted)
+
+  rating Int    // 1-5 star rating
+  title  String? // Optional review title
+  body   String  // Review text content
+
+  isVerifiedPurchase Boolean @default(false) // Set true when verified against an order
+  status             ReviewStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, userId]) // One review per user per product
+  @@index([productId])
+  @@index([userId])
+  @@index([productId, status])
+  @@index([status])
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model TaxRate {
