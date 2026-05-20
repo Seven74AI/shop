@@ -283,8 +283,8 @@ describe('findAbandonedCarts', () => {
 		})
 		expect(result).toHaveLength(2)
 		// cart1 is older so should come first
-		expect(result[0].id).toBe(cart1.id)
-		expect(result[1].id).toBe(cart2.id)
+		expect(result[0]!.id).toBe(cart1.id)
+		expect(result[1]!.id).toBe(cart2.id)
 	})
 
 	test('handles guest carts (sessionId, no userId)', async () => {
@@ -310,8 +310,8 @@ describe('findAbandonedCarts', () => {
 			abandonmentThresholdHours: 24,
 		})
 		expect(result).toHaveLength(1)
-		expect(result[0].sessionId).toBe(sessionId)
-		expect(result[0].userId).toBeNull()
+		expect(result[0]!.sessionId).toBe(sessionId)
+		expect(result[0]!.userId).toBeNull()
 	})
 })
 
