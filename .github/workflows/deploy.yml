@@ -344,6 +344,13 @@ jobs:
           file: 'fly.toml'
           field: 'app'
 
+      - name: 👀 Read staging app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: staging_app_name
+        with:
+          file: 'fly.staging.toml'
+          field: 'app'
+
       - name: 🎈 Setup Fly
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
@@ -351,7 +358,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/dev' }}
         run: |
           flyctl deploy \
-            --image "registry.fly.io/${{ steps.app_name.outputs.value }}-staging:${{ github.sha }}" \
+            --image "registry.fly.io/${{ steps.staging_app_name.outputs.value }}:${{ github.sha }}" \
             --config fly.staging.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

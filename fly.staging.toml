@@ -5,6 +5,7 @@ primary_region = "cdg"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
+swap_size_mb = 512
 
 # No auto-rollback on staging — breakage is acceptable
 # Auto-rollback is enabled on production (fly.toml)
