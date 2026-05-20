@@ -16,6 +16,7 @@ import { type Route } from './+types/root.ts'
 import appleTouchIconAssetUrl from './assets/favicons/apple-touch-icon.png'
 import faviconAssetUrl from './assets/favicons/favicon.svg'
 import { CartBadge } from './components/cart-badge.tsx'
+import { CookieConsentBanner } from './components/cookie-consent-banner.tsx'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import { EpicProgress } from './components/progress-bar.tsx'
 import { SearchBar } from './components/search-bar.tsx'
@@ -33,6 +34,7 @@ import tailwindStyleSheetUrl from './styles/tailwind.css?url'
 import { getUserId, logout } from './utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from './utils/cart.server.ts'
 import { ClientHintCheck, getHints } from './utils/client-hints.tsx'
+import { getConsent } from './utils/consent.server.ts'
 import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { pipeHeaders } from './utils/headers.server.ts'
@@ -135,9 +137,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 				hints: getHints(request),
 				origin: getDomainUrl(request),
 				path: new URL(request.url).pathname,
-				userPrefs: {
-					theme: getTheme(request),
-				},
+		userPrefs: {
+				theme: getTheme(request),
+				consent: getConsent(request),
+			},
 			},
 			ENV: getEnv(),
 			toast,
@@ -226,6 +229,7 @@ function App() {
 				<div className="min-h-screen bg-background">
 					<Outlet />
 				</div>
+				<CookieConsentBanner />
 				<EpicToaster closeButton position="bottom-center" theme={theme} />
 				<EpicProgress />
 			</OpenImgContextProvider>
@@ -271,6 +275,7 @@ function App() {
 				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 			</footer>
 			</div>
+			<CookieConsentBanner />
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
 			<EpicProgress />
 		</OpenImgContextProvider>
