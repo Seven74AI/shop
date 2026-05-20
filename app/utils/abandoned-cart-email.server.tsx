@@ -9,12 +9,12 @@
 
 import * as E from '@react-email/components'
 import { type ReactElement } from 'react'
-import { sendEmail } from './email.server.ts'
-import { getDomainUrl } from './misc.tsx'
 import {
 	type AbandonedCart,
 	markRecoveryEmailSent,
 } from './abandoned-cart.server.ts'
+import { sendEmail } from './email.server.ts'
+import { getDomainUrl } from './misc.tsx'
 
 export interface AbandonedCartEmailData {
 	/** Display name for the customer (username, name, or "Valued Customer") */

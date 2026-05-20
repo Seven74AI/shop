@@ -4,13 +4,15 @@
  * Tests for abandoned cart recovery email template and send function.
  */
 import { describe, expect, test, beforeEach, vi } from 'vitest'
-import { sendEmail } from './email.server.ts'
-import { markRecoveryEmailSent } from './abandoned-cart.server.ts'
 import {
 	sendAbandonedCartEmail,
 	AbandonedCartEmail,
 } from './abandoned-cart-email.server.tsx'
-import type { AbandonedCart } from './abandoned-cart.server.ts'
+import {
+	markRecoveryEmailSent,
+	type AbandonedCart,
+} from './abandoned-cart.server.ts'
+import { sendEmail } from './email.server.ts'
 
 // Mock the email service
 vi.mock('./email.server.ts', () => ({

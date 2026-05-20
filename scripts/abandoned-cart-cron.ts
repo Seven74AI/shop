@@ -17,8 +17,8 @@
  *   1 - Error during detection or email sending
  */
 
-import { findAbandonedCarts } from '#app/utils/abandoned-cart.server.ts'
 import { sendAbandonedCartEmail } from '#app/utils/abandoned-cart-email.server.tsx'
+import { findAbandonedCarts } from '#app/utils/abandoned-cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 
 async function main() {
