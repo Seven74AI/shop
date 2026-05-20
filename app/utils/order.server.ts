@@ -666,6 +666,13 @@ export async function createOrderFromStripeSession(
 			const mondialRelayPickupPointId =
 				session.metadata?.mondialRelayPickupPointId || null
 
+			// Extract coupon/promotion information from metadata
+			const couponCode = session.metadata?.couponCode || null
+			const discountCents = session.metadata?.discountCents
+				? parseInt(session.metadata.discountCents, 10)
+				: 0
+			const promotionId = session.metadata?.promotionId || null
+
 			// Get shipping method details if available
 			let shippingMethodName: string | null = null
 			let shippingCarrierName: string | null = null
@@ -689,7 +696,8 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
-			// Calculate subtotal (total - shipping)
+			// Calculate subtotal: total from Stripe minus shipping, plus discount
+			// (Stripe sees the discount as a negative line item, so amount_subtotal already includes it)
 			const calculatedSubtotal = (session.amount_subtotal ?? 0) - shippingCost
 
 			const newOrder = await tx.order.create({
@@ -718,8 +726,20 @@ export async function createOrderFromStripeSession(
 					stripePaymentIntentId: paymentIntentId,
 					stripeChargeId: chargeId,
 					status: 'CONFIRMED',
+					// Promotion / coupon fields
+					promotionId,
+					discountCents,
+					couponCode,
 				},
 			})
+
+			// Increment promotion usage counter if a promotion was applied
+			if (promotionId) {
+				await tx.promotion.update({
+					where: { id: promotionId },
+					data: { currentUses: { increment: 1 } },
+				})
+			}
 
 			// 5. Create order items
 			await Promise.all(

@@ -471,6 +471,11 @@ model Order {
   shippingPostal  String
   shippingCountry String
 
+  // Promotion / coupon
+  promotionId   String? // Applied promotion reference
+  discountCents Int     @default(0) // Discount amount in cents (snapshot at order time)
+  couponCode    String? // Snapshot of coupon code applied
+
   // VAT information
   vatBreakdown       Json    @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
   vatTotalCents      Int     @default(0) // Total VAT in cents
@@ -512,6 +517,7 @@ model Order {
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  promotion      Promotion?      @relation(fields: [promotionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([orderNumber])
@@ -521,6 +527,8 @@ model Order {
   @@index([stripeCheckoutSessionId])
   @@index([stripePaymentIntentId])
   @@index([shippingMethodId])
+  @@index([promotionId])
+  @@index([couponCode])
 }
 
 model OrderItem {
@@ -677,4 +685,34 @@ enum ShippingRateType {
   WEIGHT_BASED // Rate based on total weight
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
+}
+
+enum PromotionType {
+  PERCENTAGE // Percentage discount (value in basis points, e.g. 1000 = 10.00%)
+  FIXED_AMOUNT // Fixed amount discount (value in cents)
+}
+
+model Promotion {
+  id            String        @id @default(cuid())
+  code          String        @unique // Coupon code, e.g. "SUMMER2026"
+  description   String?       // Human-readable description
+  type          PromotionType // PERCENTAGE or FIXED_AMOUNT
+  value         Int           // Discount value (basis points for %, cents for fixed)
+  minOrderAmount Int?         // Minimum order subtotal in cents (null = no minimum)
+  maxUses       Int?          // Maximum total uses (null = unlimited)
+  maxUsesPerUser Int?         // Maximum uses per user (null = unlimited)
+  currentUses   Int           @default(0) // Total uses so far
+  isActive      Boolean       @default(true)
+  startsAt      DateTime?     // null = always valid
+  expiresAt     DateTime?     // null = never expires
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([expiresAt])
 }

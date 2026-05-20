@@ -117,6 +117,9 @@ export async function createCheckoutSession({
 	currency,
 	domainUrl,
 	userId,
+	couponCode,
+	discountCents,
+	promotionId,
 }: {
 	cart: {
 		id: string
@@ -139,6 +142,9 @@ export async function createCheckoutSession({
 	}
 	domainUrl: string
 	userId?: string | null
+	couponCode?: string | null
+	discountCents?: number
+	promotionId?: string | null
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -159,6 +165,21 @@ export async function createCheckoutSession({
 			}
 		},
 	)
+
+	// Add discount as a negative line item if applicable
+	if (discountCents && discountCents > 0) {
+		lineItems.push({
+			price_data: {
+				currency: currency.code.toLowerCase(),
+				product_data: {
+					name: couponCode ? `Discount (${couponCode})` : 'Discount',
+					description: 'Coupon discount',
+				},
+				unit_amount: -discountCents,
+			},
+			quantity: 1,
+		})
+	}
 
 	// Add shipping as a line item if cost > 0
 	if (shippingCost > 0) {
@@ -196,6 +217,9 @@ export async function createCheckoutSession({
 			...(mondialRelayPickupPointId && {
 				mondialRelayPickupPointId: mondialRelayPickupPointId,
 			}),
+			...(couponCode && { couponCode }),
+			...(discountCents !== undefined && { discountCents: discountCents.toString() }),
+			...(promotionId && { promotionId }),
 		},
 		payment_intent_data: {
 			metadata: {

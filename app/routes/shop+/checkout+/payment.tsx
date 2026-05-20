@@ -7,6 +7,7 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { getCheckoutData } from '#app/utils/checkout.server.ts'
+import { validateCoupon } from '#app/utils/coupon.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
@@ -32,6 +33,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const shippingMethodId = url.searchParams.get('shippingMethodId')
 	const shippingCostParam = url.searchParams.get('shippingCost')
 	const mondialRelayPickupPointId = url.searchParams.get('mondialRelayPickupPointId')
+	const couponCode = url.searchParams.get('coupon')
 
 	// Validate required fields
 	if (!name || !email || !street || !city || !postal || !country || !shippingMethodId || !shippingCostParam) {
@@ -43,9 +45,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirect('/shop/checkout/delivery')
 	}
 
-	const checkoutData = await getCheckoutData(request)
+	const checkoutData = await getCheckoutData(request, couponCode)
 	if (!checkoutData) {
 		return redirectDocument('/shop/cart')
+	}
+
+	// Re-validate coupon if present (defensive: coupon may have become invalid)
+	let couponResult = checkoutData.couponResult
+	if (couponCode && (!couponResult || !couponResult.valid)) {
+		couponResult = await validateCoupon(couponCode, checkoutData.subtotal)
 	}
 
 	return {
@@ -62,6 +70,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 		shippingMethodId,
 		shippingCost,
 		mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+		couponCode: couponCode || undefined,
+		couponResult,
 	}
 }
 
@@ -79,6 +89,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const shippingMethodId = url.searchParams.get('shippingMethodId')
 	const shippingCostParam = url.searchParams.get('shippingCost')
 	const mondialRelayPickupPointId = url.searchParams.get('mondialRelayPickupPointId')
+	const couponCode = url.searchParams.get('coupon')
 
 	// Validate required fields
 	if (!name || !email || !street || !city || !postal || !country || !shippingMethodId || !shippingCostParam) {
@@ -153,6 +164,28 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const userId = await getUserId(request)
 
+	// Calculate subtotal for coupon validation
+	const subtotal = cartWithItems.items.reduce((sum, item) => {
+		const price = item.variant?.price ?? item.product.price
+		return sum + (price ?? 0) * item.quantity
+	}, 0)
+
+	// Validate coupon if provided
+	let couponValid = false
+	let discountCents = 0
+	let promotionId: string | undefined = undefined
+
+	if (couponCode) {
+		const result = await validateCoupon(couponCode, subtotal)
+		if (result.valid) {
+			couponValid = true
+			discountCents = result.discountCents
+			promotionId = result.promotion.id
+		}
+		// If coupon is invalid, we silently ignore it (user may have applied it earlier
+		// but it expired between review and payment - don't block the purchase)
+	}
+
 	// Create Stripe Checkout Session
 	try {
 		const domainUrl = getDomainUrl(request)
@@ -173,6 +206,9 @@ export async function action({ request }: Route.ActionArgs) {
 			currency,
 			domainUrl,
 			userId: userId || undefined,
+			couponCode: couponCode || undefined,
+			discountCents,
+			promotionId,
 		})
 
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
@@ -226,7 +262,10 @@ export default function CheckoutPayment() {
 		subtotal,
 		shippingInfo,
 		shippingCost,
+		couponResult,
 	} = loaderData
+
+	const discountCents = couponResult?.valid ? couponResult.discountCents : 0
 
 	if (actionData?.error) {
 		return (
@@ -257,6 +296,7 @@ export default function CheckoutPayment() {
 										country: loaderData.shippingInfo.country,
 										shippingMethodId: loaderData.shippingMethodId,
 										shippingCost: loaderData.shippingCost.toString(),
+										...(loaderData.couponCode ? { coupon: loaderData.couponCode } : {}),
 									}).toString()}`}>
 										Back to Delivery
 									</Link>
@@ -303,6 +343,12 @@ export default function CheckoutPayment() {
 						<span>Subtotal</span>
 						<span>{formatPrice(subtotal, currency)}</span>
 					</div>
+					{discountCents > 0 && (
+						<div className="flex justify-between text-green-600">
+							<span>Discount</span>
+							<span>-{formatPrice(discountCents, currency)}</span>
+						</div>
+					)}
 					<div className="flex justify-between">
 						<span>Shipping</span>
 						<span>
@@ -315,7 +361,7 @@ export default function CheckoutPayment() {
 					</div>
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
 						<span>Total</span>
-						<span>{formatPrice(subtotal + shippingCost, currency)}</span>
+						<span>{formatPrice(subtotal - discountCents + shippingCost, currency)}</span>
 					</div>
 				</div>
 			</div>
@@ -335,4 +381,3 @@ export default function CheckoutPayment() {
 		</div>
 	)
 }
-

@@ -1,11 +1,43 @@
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getCartSessionIdFromRequest } from '#app/utils/cart-session.server.ts'
 import { getCart } from '#app/utils/cart.server.ts'
+import { validateCoupon, type CouponValidationResult } from '#app/utils/coupon.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { getShippingMethodsForCountry } from '#app/utils/shipping.server.ts'
 
-export async function getCheckoutData(request: Request) {
+export interface CheckoutData {
+	cart: NonNullable<Awaited<ReturnType<typeof getCart>>>
+	currency: NonNullable<Awaited<ReturnType<typeof getStoreCurrency>>>
+	subtotal: number
+	userEmail?: string
+	savedAddresses: Array<{
+		id: string
+		name: string
+		street: string
+		city: string
+		state: string | null
+		postal: string
+		country: string
+		label: string | null
+		isDefaultShipping: boolean
+	}>
+	defaultShippingAddress: ReturnType<typeof getDefaultShippingAddress>
+	shippingMethods: Awaited<ReturnType<typeof getShippingMethodsForCountry>>
+	// Coupon fields
+	couponResult?: CouponValidationResult
+}
+
+function getDefaultShippingAddress(
+	addresses: CheckoutData['savedAddresses'],
+): CheckoutData['savedAddresses'][number] | null {
+	return addresses.find((a) => a.isDefaultShipping) || null
+}
+
+export async function getCheckoutData(
+	request: Request,
+	couponCode?: string | null,
+): Promise<CheckoutData | null> {
 	// Check for existing cart first without creating one
 	const requestUserId = await getUserId(request)
 	let cart = null
@@ -71,20 +103,16 @@ export async function getCheckoutData(request: Request) {
 		return sum + (price ?? 0) * item.quantity
 	}, 0)
 
+	// Validate coupon if provided
+	let couponResult: CouponValidationResult | undefined = undefined
+	if (couponCode) {
+		couponResult = await validateCoupon(couponCode, subtotal)
+	}
+
 	// Get user email and saved addresses if authenticated
 	let userEmail: string | undefined = undefined
-	let savedAddresses: Array<{
-		id: string
-		name: string
-		street: string
-		city: string
-		state: string | null
-		postal: string
-		country: string
-		label: string | null
-		isDefaultShipping: boolean
-	}> = []
-	let defaultShippingAddress: (typeof savedAddresses)[number] | null = null
+	let savedAddresses: CheckoutData['savedAddresses'] = []
+	let defaultShippingAddress: CheckoutData['savedAddresses'][number] | null = null
 
 	const userId = await getUserId(request)
 	if (userId) {
@@ -113,7 +141,7 @@ export async function getCheckoutData(request: Request) {
 			label: addr.label,
 			isDefaultShipping: addr.isDefaultShipping,
 		}))
-		defaultShippingAddress = savedAddresses.find((a) => a.isDefaultShipping) || null
+		defaultShippingAddress = getDefaultShippingAddress(savedAddresses)
 	}
 
 	// Get available shipping methods for default country (or US as fallback)
@@ -128,6 +156,6 @@ export async function getCheckoutData(request: Request) {
 		savedAddresses,
 		defaultShippingAddress,
 		shippingMethods,
+		couponResult,
 	}
 }
-
