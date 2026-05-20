@@ -216,6 +216,7 @@ function App() {
 	const isOnSearchPage = matches.find((m) => m.id === 'routes/users+/index')
 	const isOnAdminPage = matches.some((m) => m.id?.includes('routes/admin+'))
 	const searchBar = isOnSearchPage ? null : <SearchBar status="idle" />
+	const consentAlreadyGiven = data.requestInfo.userPrefs.consent !== null
 	useToast(data.toast)
 
 	// If we're on an admin page, render without the main site header/footer
@@ -229,7 +230,7 @@ function App() {
 				<div className="min-h-screen bg-background">
 					<Outlet />
 				</div>
-				<CookieConsentBanner consent={data.requestInfo.userPrefs.consent} />
+				{!consentAlreadyGiven && <CookieConsentBanner consent={data.requestInfo.userPrefs.consent} />}
 				<EpicToaster closeButton position="bottom-center" theme={theme} />
 				<EpicProgress />
 			</OpenImgContextProvider>
@@ -275,7 +276,7 @@ function App() {
 				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 			</footer>
 			</div>
-			<CookieConsentBanner consent={data.requestInfo.userPrefs.consent} />
+			{!consentAlreadyGiven && <CookieConsentBanner consent={data.requestInfo.userPrefs.consent} />}
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
 			<EpicProgress />
 		</OpenImgContextProvider>
