@@ -146,12 +146,18 @@ export default function AccountLayout() {
 									to="/account/security"
 									active={isSecurity}
 								/>
-								<SidebarButton
-									icon={<Icon name="database" className="w-5 h-5" />}
-									label="Privacy & Data"
-									to="/account/privacy"
-									active={isPrivacy}
-								/>
+				<SidebarButton
+					icon={<Icon name="package" className="w-5 h-5" />}
+					label="Returns"
+					to="/account/returns"
+					active={pathname.startsWith('/account/returns')}
+				/>
+				<SidebarButton
+					icon={<Icon name="database" className="w-5 h-5" />}
+					label="Privacy & Data"
+					to="/account/privacy"
+					active={isPrivacy}
+				/>
 							</nav>
 						</Card>
 					</aside>
