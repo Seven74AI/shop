@@ -502,9 +502,16 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Orders persist after user deletion (User.id → Order.userId becomes null).
+  // This is intentional: French tax law (CGI art. L. 102 B) requires 6-year
+  // retention of all sales documents. Orders are anonymised on user delete:
+  // userId set to null, but shipping address fields and contact email
+  // (legitimate interest for audit) remain. Customers can request full
+  // anonymisation only after the 6-year retention expires.
+  // See: docs/data-retention.md
+
   // Return deadline (EU 14-day right of withdrawal)
   returnDeadlineAt DateTime? // Computed as deliveredAt + 14 days; null until DELIVERED
-
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
   returnRequests ReturnRequest[]
