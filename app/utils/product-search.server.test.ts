@@ -4,7 +4,6 @@ import {
 	searchProducts,
 	searchProductIds,
 	getFtsStatus,
-	type SearchFilters,
 } from './product-search.server.ts'
 
 // ─── FTS5 Migration Helper ──────────────────────────────────────────────
@@ -215,14 +214,14 @@ describe('product-search.server.ts — FTS5 Search', () => {
 		it('returns all ACTIVE products when no filters are provided', async () => {
 			const result = await searchProducts()
 			expect(result.totalCount).toBe(6) // 7 total minus 1 DRAFT
-			expect(result.products.length).toBe(6)
+			expect(result.products).toHaveLength(6)
 			expect(result.products.every((p) => p.status === 'ACTIVE')).toBe(true)
 		})
 
 		it('searches by name with FTS5 full-text matching', async () => {
 			const result = await searchProducts({ query: 'headphones' })
 			expect(result.totalCount).toBe(1)
-			expect(result.products[0].name).toBe('Wireless Bluetooth Headphones')
+			expect(result.products[0]!.name).toBe('Wireless Bluetooth Headphones')
 		})
 
 		it('matches partial words with prefix search', async () => {
@@ -244,11 +243,11 @@ describe('product-search.server.ts — FTS5 Search', () => {
 				status: 'DRAFT',
 			})
 			expect(result.totalCount).toBe(1)
-			expect(result.products[0].name).toBe('Advanced TypeScript Patterns')
+			expect(result.products[0]!.name).toBe('Advanced TypeScript Patterns')
 		})
 
 		it('filters by category', async () => {
-			const result = await searchProducts({ categoryId: '' })
+			await searchProducts({ categoryId: '' })
 			// Find the electronics category ID
 			const electronics = await prisma.category.findFirst({
 				where: { name: 'Electronics' },
@@ -265,13 +264,13 @@ describe('product-search.server.ts — FTS5 Search', () => {
 		it('filters by minimum price', async () => {
 			const result = await searchProducts({ minPriceCents: 10000 })
 			expect(result.totalCount).toBe(1) // Only Winter Wool Jacket at $149.99
-			expect(result.products[0].name).toBe('Winter Wool Jacket')
+			expect(result.products[0]!.name).toBe('Winter Wool Jacket')
 		})
 
 		it('filters by maximum price', async () => {
 			const result = await searchProducts({ maxPriceCents: 2000 })
 			expect(result.totalCount).toBe(1) // Only USB-C Cable at $12.99
-			expect(result.products[0].name).toBe('USB-C Charging Cable 2m')
+			expect(result.products[0]!.name).toBe('USB-C Charging Cable 2m')
 		})
 
 		it('filters by price range', async () => {
@@ -293,51 +292,51 @@ describe('product-search.server.ts — FTS5 Search', () => {
 				categoryId: electronics!.id,
 			})
 			expect(result.totalCount).toBe(1) // Only "USB-C Charging Cable 2m" matches "cable"
-			expect(result.products[0].name).toBe('USB-C Charging Cable 2m')
+			expect(result.products[0]!.name).toBe('USB-C Charging Cable 2m')
 		})
 
 		it('returns rank ordering with most relevant first', async () => {
 			const result = await searchProducts({ query: 'leather bag laptop' })
 			expect(result.totalCount).toBeGreaterThanOrEqual(1)
 			// "Premium Leather Laptop Bag" should be first because it matches more terms
-			expect(result.products[0].name).toContain('Leather')
+			expect(result.products[0]!.name).toContain('Leather')
 		})
 
 		it('sorts by price ascending', async () => {
 			const result = await searchProducts({ sort: 'price_asc' })
 			expect(result.products.length).toBeGreaterThan(0)
-			for (let i = 1; i < result.products.length; i++) {
-				expect(result.products[i].price).toBeGreaterThanOrEqual(
-					result.products[i - 1].price,
-				)
+for (let i = 1; i < result.products.length; i++) {
+			expect(result.products[i]!.price).toBeGreaterThanOrEqual(
+				result.products[i - 1]!.price,
+			)
 			}
 		})
 
 		it('sorts by price descending', async () => {
 			const result = await searchProducts({ sort: 'price_desc' })
 			expect(result.products.length).toBeGreaterThan(0)
-			for (let i = 1; i < result.products.length; i++) {
-				expect(result.products[i].price).toBeLessThanOrEqual(
-					result.products[i - 1].price,
-				)
+for (let i = 1; i < result.products.length; i++) {
+			expect(result.products[i]!.price).toBeLessThanOrEqual(
+				result.products[i - 1]!.price,
+			)
 			}
 		})
 
 		it('sorts by name ascending', async () => {
 			const result = await searchProducts({ sort: 'name_asc' })
 			expect(result.products.length).toBeGreaterThan(0)
-			for (let i = 1; i < result.products.length; i++) {
-				expect(
-					result.products[i].name.localeCompare(result.products[i - 1].name),
-				).toBeGreaterThanOrEqual(0)
+for (let i = 1; i < result.products.length; i++) {
+			expect(
+				result.products[i]!.name.localeCompare(result.products[i - 1]!.name),
+			).toBeGreaterThanOrEqual(0)
 			}
 		})
 
 		it('supports pagination with limit and offset', async () => {
 			const page1 = await searchProducts({ limit: 2, offset: 0 })
 			const page2 = await searchProducts({ limit: 2, offset: 2 })
-			expect(page1.products.length).toBe(2)
-			expect(page2.products.length).toBe(2)
+			expect(page1.products).toHaveLength(2)
+			expect(page2.products).toHaveLength(2)
 			expect(page1.totalCount).toBe(6)
 			expect(page2.totalCount).toBe(6)
 			// No overlap
@@ -349,7 +348,7 @@ describe('product-search.server.ts — FTS5 Search', () => {
 		it('returns empty results for no-match query', async () => {
 			const result = await searchProducts({ query: 'xyznonexistent' })
 			expect(result.totalCount).toBe(0)
-			expect(result.products.length).toBe(0)
+			expect(result.products).toHaveLength(0)
 		})
 
 		it('handles empty query string gracefully', async () => {
@@ -395,14 +394,14 @@ describe('product-search.server.ts — FTS5 Search', () => {
 
 		it('updates category facets when search query narrows results', async () => {
 			const result = await searchProducts({ query: 'headphones' })
-			expect(result.facets.categories.length).toBe(1)
-			expect(result.facets.categories[0].name).toBe('Electronics')
-			expect(result.facets.categories[0].count).toBe(1)
+			expect(result.facets.categories).toHaveLength(1)
+			expect(result.facets.categories[0]!.name).toBe('Electronics')
+			expect(result.facets.categories[0]!.count).toBe(1)
 		})
 
 		it('returns price range facet counts', async () => {
 			const result = await searchProducts()
-			expect(result.facets.priceRanges.length).toBe(5)
+			expect(result.facets.priceRanges).toHaveLength(5)
 
 			// $12.99 → Under $25 (1)
 			const under25 = result.facets.priceRanges.find(
@@ -447,18 +446,18 @@ describe('product-search.server.ts — FTS5 Search', () => {
 	describe('searchProductIds', () => {
 		it('returns matching product IDs with rank', async () => {
 			const results = await searchProductIds('headphones')
-			expect(results.length).toBe(1)
-			expect(results[0].rank).toBeDefined()
+			expect(results).toHaveLength(1)
+			expect(results[0]!.rank).toBeDefined()
 		})
 
 		it('returns empty array for empty query', async () => {
 			const results = await searchProductIds('')
-			expect(results.length).toBe(0)
+			expect(results).toHaveLength(0)
 		})
 
 		it('excludes DRAFT products', async () => {
 			const results = await searchProductIds('typeScript')
-			expect(results.length).toBe(0) // TypeScript book is DRAFT
+			expect(results).toHaveLength(0) // TypeScript book is DRAFT
 		})
 	})
 
