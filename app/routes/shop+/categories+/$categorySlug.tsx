@@ -2,11 +2,13 @@ import { invariantResponse } from '@epic-web/invariant'
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
+import { getOgMetas } from '#app/utils/og-metas.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$categorySlug.ts'
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
 	const category = await prisma.category.findUnique({
 		where: {
 			slug: params.categorySlug,
@@ -40,8 +42,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 	})
 
 	const currency = await getStoreCurrency()
+	const baseUrl = getDomainUrl(request)
 
-	return { category, products, allCategories, currency: currency || { symbol: '$', decimals: 2 } }
+	return { category, products, allCategories, currency: currency || { symbol: '$', decimals: 2 }, baseUrl }
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
@@ -49,9 +52,20 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 		return [{ title: 'Category not found' }]
 	}
 
+	const description =
+		loaderData.category.description || `Browse ${loaderData.category.name} products`
+	const baseUrl = loaderData.baseUrl
+
 	return [
 		{ title: `${loaderData.category.name} - Shop` },
-		{ name: 'description', content: loaderData.category.description || `Browse ${loaderData.category.name} products` },
+		{ name: 'description', content: description },
+		...(baseUrl
+			? getOgMetas(baseUrl, {
+					title: `${loaderData.category.name} | Epic Shop`,
+					description,
+					type: 'website',
+				})
+			: []),
 	]
 }
 

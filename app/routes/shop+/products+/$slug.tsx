@@ -3,11 +3,13 @@ import { Link, redirect } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
 import { addToCart, getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
+import { getOgMetas } from '#app/utils/og-metas.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$slug.ts'
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
 	const product = await prisma.product.findUnique({
 		where: {
 			slug: params.slug,
@@ -26,8 +28,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 	invariantResponse(product, 'Product not found', { status: 404 })
 
 	const currency = await getStoreCurrency()
+	const baseUrl = getDomainUrl(request)
 
-	return { product, currency }
+	return { product, currency, baseUrl }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -67,8 +70,22 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
 	const product = loaderData?.product
-	if (!product) return [{ title: 'Product Not Found | Shop | Epic Shop' }]
-	return [{ title: `${product.name} | Products | Shop | Epic Shop` }]
+	const baseUrl = loaderData?.baseUrl
+	if (!product || !baseUrl) return [{ title: 'Product Not Found | Shop | Epic Shop' }]
+
+	const imageUrl = product.images?.[0]
+		? `/resources/images?objectKey=${encodeURIComponent(product.images[0].objectKey)}`
+		: undefined
+
+	return [
+		{ title: `${product.name} | Products | Shop | Epic Shop` },
+		...getOgMetas(baseUrl, {
+			title: `${product.name} | Epic Shop`,
+			description: product.description ?? `View ${product.name} at Epic Shop`,
+			type: 'product',
+			image: imageUrl,
+		}),
+	]
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {

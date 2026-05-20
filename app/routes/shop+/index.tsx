@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
+import { getOgMetas } from '#app/utils/og-metas.ts'
 import { type Route } from './+types/index.ts'
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
 	const categories = await prisma.category.findMany({
 		where: {
 			parentId: null, // Only get root categories
@@ -19,13 +21,25 @@ export async function loader() {
 		},
 	})
 
-	return { categories }
+	const baseUrl = getDomainUrl(request)
+
+	return { categories, baseUrl }
 }
 
-export const meta: Route.MetaFunction = () => [
-	{ title: 'Shop | Epic Shop' },
-	{ name: 'description', content: 'Browse our product catalog' },
-]
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const baseUrl = loaderData?.baseUrl
+	return [
+		{ title: 'Shop | Epic Shop' },
+		{ name: 'description', content: 'Browse our product catalog' },
+		...(baseUrl
+			? getOgMetas(baseUrl, {
+					title: 'Epic Shop',
+					description: 'Discover our amazing selection of products. Browse by category or explore our full catalog.',
+					type: 'website',
+				})
+			: []),
+	]
+}
 
 export default function ShopIndex({ loaderData }: Route.ComponentProps) {
 	const { categories } = loaderData
