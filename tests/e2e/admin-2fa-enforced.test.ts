@@ -8,7 +8,7 @@ test('Admin without 2FA is redirected to enrollment on login', async ({
 	login,
 }) => {
 	const password = faker.internet.password({ length: 12 })
-	const user = await login({ password, asAdmin: true })
+	const user = await login({ password, asAdmin: true, skipAdmin2FA: true })
 	await navigate('/')
 
 	// Logout to clear the cookie-based session
@@ -39,7 +39,7 @@ test('Admin without 2FA cannot access admin pages', async ({
 	login,
 }) => {
 	const password = faker.internet.password({ length: 12 })
-	await login({ password, asAdmin: true })
+	await login({ password, asAdmin: true, skipAdmin2FA: true })
 
 	// Try to access admin dashboard — should be redirected to enrollment
 	await navigate('/admin')
@@ -56,7 +56,7 @@ test('Admin with 2FA enrolled gets full admin access', async ({
 	login,
 }) => {
 	const password = faker.internet.password({ length: 12 })
-	await login({ password, asAdmin: true })
+	await login({ password, asAdmin: true, skipAdmin2FA: true })
 
 	// Enroll 2FA
 	await navigate('/account/security/two-factor')

@@ -11,6 +11,8 @@ import { prisma } from '#app/utils/db.server.ts'
 import { MOCK_CODE_GITHUB_HEADER } from '#app/utils/providers/constants.js'
 import { normalizeEmail } from '#app/utils/providers/provider.js'
 import { authSessionStorage } from '#app/utils/session.server.ts'
+import { generateTOTP } from '#app/utils/totp.server.ts'
+import { twoFAVerificationType } from '#app/routes/account+/security+/two-factor.tsx'
 import { createUser } from './db-utils.ts'
 import {
 	type GitHubUser,
@@ -29,6 +31,8 @@ type GetOrInsertUserOptions = {
 	email?: UserModel['email']
 	roles?: { connect: { name: string } }
 	asAdmin?: boolean
+	/** Skip automatic 2FA enrollment for admin users. Use when testing the "no 2FA" enforcement path. */
+	skipAdmin2FA?: boolean
 }
 
 type User = {
@@ -45,6 +49,7 @@ async function getOrInsertUser({
 	email,
 	roles,
 	asAdmin,
+	skipAdmin2FA = false,
 }: GetOrInsertUserOptions = {}): Promise<User> {
 	const select = { id: true, email: true, username: true, name: true }
 	if (id) {
@@ -61,7 +66,7 @@ async function getOrInsertUser({
 		const finalRoles = asAdmin 
 			? { connect: { name: 'admin' } }
 			: roles || { connect: { name: 'user' } }
-		return await prisma.user.create({
+		const user = await prisma.user.create({
 			select,
 			data: {
 				...userData,
@@ -71,6 +76,21 @@ async function getOrInsertUser({
 				password: { create: { hash: await getPasswordHash(password) } },
 			},
 		})
+
+		// Admin users must have 2FA enrolled to access admin routes.
+		// Skip when testing the enforcement path (admin-2fa-enforced tests).
+		if (asAdmin && !skipAdmin2FA) {
+			const { otp: _otp, ...totpConfig } = await generateTOTP()
+			await prisma.verification.create({
+				data: {
+					type: twoFAVerificationType,
+					target: user.id,
+					...totpConfig,
+				},
+			})
+		}
+
+		return user
 	}
 }
 
