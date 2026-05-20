@@ -305,7 +305,7 @@ describe('product-search.server.ts — FTS5 Search', () => {
 		it('sorts by price ascending', async () => {
 			const result = await searchProducts({ sort: 'price_asc' })
 			expect(result.products.length).toBeGreaterThan(0)
-for (let i = 1; i < result.products.length; i++) {
+			for (let i = 1; i < result.products.length; i++) {
 			expect(result.products[i]!.price).toBeGreaterThanOrEqual(
 				result.products[i - 1]!.price,
 			)
@@ -315,7 +315,7 @@ for (let i = 1; i < result.products.length; i++) {
 		it('sorts by price descending', async () => {
 			const result = await searchProducts({ sort: 'price_desc' })
 			expect(result.products.length).toBeGreaterThan(0)
-for (let i = 1; i < result.products.length; i++) {
+			for (let i = 1; i < result.products.length; i++) {
 			expect(result.products[i]!.price).toBeLessThanOrEqual(
 				result.products[i - 1]!.price,
 			)
@@ -325,7 +325,7 @@ for (let i = 1; i < result.products.length; i++) {
 		it('sorts by name ascending', async () => {
 			const result = await searchProducts({ sort: 'name_asc' })
 			expect(result.products.length).toBeGreaterThan(0)
-for (let i = 1; i < result.products.length; i++) {
+			for (let i = 1; i < result.products.length; i++) {
 			expect(
 				result.products[i]!.name.localeCompare(result.products[i - 1]!.name),
 			).toBeGreaterThanOrEqual(0)
