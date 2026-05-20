@@ -1,5 +1,5 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { Link, redirect, data, useFetcher } from 'react-router'
+import { Link, redirect, data } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
 import { Input } from '#app/components/ui/input.tsx'
