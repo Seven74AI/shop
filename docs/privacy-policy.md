@@ -144,9 +144,8 @@ We use the following types of cookies:
 
 | Cookie Type | Purpose | Duration |
 |---|---|---|
-| Session cookie | Maintain login state | Session |
+| Session cookie | Maintain login state, CSRF protection via `SameSite: lax` | Session |
 | Remember-me cookie | Persistent login across visits | 30 days |
-| CSRF token | Security (Cross-Site Request Forgery protection) | Session |
 | Honeypot token | Anti-spam protection | Per-form |
 | Verification tokens | Email verification, password reset | Limited (minutes to hours) |
 
