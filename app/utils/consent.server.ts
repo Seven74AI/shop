@@ -20,7 +20,7 @@ export function getConsent(request: Request): ConsentState | null {
 	if (!raw) return null
 
 	try {
-		const state = JSON.parse(decodeURIComponent(raw)) as ConsentState
+		const state = JSON.parse(raw) as ConsentState
 		// Validate structure
 		if (
 			typeof state.timestamp !== 'string' ||
@@ -42,7 +42,7 @@ export function getConsent(request: Request): ConsentState | null {
  * Use empty granted array to record a refusal (timestamp proves user saw the banner).
  */
 export function setConsent(state: ConsentState): string {
-	const value = encodeURIComponent(JSON.stringify(state))
+	const value = JSON.stringify(state)
 	return cookie.serialize(cookieName, value, {
 		path: '/',
 		maxAge: 60 * 60 * 24 * 180, // 6 months
