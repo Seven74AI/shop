@@ -5,8 +5,8 @@ on:
     branches: [main]
     paths-ignore: ['**.md', '**.txt']
   pull_request:
-    branches: [main]
     paths-ignore: ['**.md', '**.txt']
+  workflow_dispatch: {}
 
 jobs:
   ci:
@@ -27,10 +27,18 @@ jobs:
 
       - run: npx playwright install --with-deps
 
+      - run: cp .env.example .env
+
       - run: pnpm vitest run
 
-      - run: pnpm tsc --noEmit
+      - run: pnpm build
 
-      - run: pnpm lint
+      - run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
+
+      - name: 🔎 Type check
+        run: pnpm typecheck
+
+      - name: 🔬 Lint
+        run: pnpm lint
 
       - run: npx playwright test --workers=1
