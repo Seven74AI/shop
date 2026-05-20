@@ -74,6 +74,11 @@ const navData = {
 			title: 'System',
 			items: [
 				{
+					title: 'Settings',
+					url: '/admin/settings',
+					icon: 'settings' as IconName,
+				},
+				{
 					title: 'View Store',
 					url: '/',
 					icon: 'store' as IconName,

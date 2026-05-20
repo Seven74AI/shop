@@ -236,6 +236,17 @@ model Settings {
   id         String @id @default("settings")
   currencyId String
 
+  // Company legal info for Mentions Légales (FR law LCEN art. 6)
+  companyLegalName      String?
+  companyLegalForm      String? // e.g. SARL, SAS
+  companyCapital        String? // e.g. "10 000 €"
+  siret                 String? // 14 digits
+  rcs                   String? // e.g. "RCS Paris 123 456 789"
+  vatNumber             String? // FR + 11 digits
+  headOfficeAddress     String?
+  directorName          String?
+  directorContactEmail  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
