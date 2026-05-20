@@ -7,6 +7,7 @@
  * @see https://github.com/mnlamart/shop/issues/145
  */
 
+import { Prisma } from '@prisma/client'
 import * as Sentry from '@sentry/react-router'
 import { prisma } from '#app/utils/db.server.ts'
 
@@ -50,8 +51,8 @@ export async function auditLog(args: AuditLogArgs): Promise<void> {
 				entityId: args.entityId,
 				actorUserId: args.actorUserId ?? null,
 				actorEmail: args.actorEmail ?? null,
-				before: args.before != null ? (args.before as object) : null,
-				after: args.after != null ? (args.after as object) : null,
+				before: args.before != null ? (args.before as object) : Prisma.JsonNull,
+				after: args.after != null ? (args.after as object) : Prisma.JsonNull,
 				requestId: args.requestId ?? null,
 			},
 		})
@@ -148,8 +149,8 @@ export async function withAudit<T>(
 		}
 	}
 
-	// 4. Fire-and-forget audit log (never block or throw)
-	void auditLog({
+	// 4. Audit log (errors caught internally, never propagated)
+	await auditLog({
 		action: config.action,
 		entityType: config.entityType,
 		entityId: config.entityId,

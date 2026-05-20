@@ -48,7 +48,7 @@ describe('auditLog', () => {
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
 
-		const log = logs[0]
+		const log = logs[0]!
 		expect(log.action).toBe('order.statusUpdated')
 		expect(log.entityType).toBe('Order')
 		expect(log.entityId).toBe('order-123')
@@ -70,7 +70,7 @@ describe('auditLog', () => {
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
 
-		const log = logs[0]
+		const log = logs[0]!
 		expect(log.action).toBe('product.deleted')
 		expect(log.entityType).toBe('Product')
 		expect(log.entityId).toBe('product-456')
@@ -192,12 +192,12 @@ describe('withAudit', () => {
 		// Audit log was written
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
-		expect(logs[0].action).toBe('test.action')
-		expect(logs[0].entityType).toBe('Test')
-		expect(logs[0].entityId).toBe('test-1')
-		expect(logs[0].actorUserId).toBe(testUserId)
-		expect(logs[0].before).toEqual({ state: 'before' })
-		expect(logs[0].after).toEqual({ state: 'after' })
+		expect(logs[0]!.action).toBe('test.action')
+		expect(logs[0]!.entityType).toBe('Test')
+		expect(logs[0]!.entityId).toBe('test-1')
+		expect(logs[0]!.actorUserId).toBe(testUserId)
+		expect(logs[0]!.before).toEqual({ state: 'before' })
+		expect(logs[0]!.after).toEqual({ state: 'after' })
 	})
 
 	test('returns mutation result unchanged', async () => {
@@ -250,8 +250,8 @@ describe('withAudit', () => {
 
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
-		expect(logs[0].before).toBeNull()
-		expect(logs[0].after).toBeNull()
+		expect(logs[0]!.before).toBeNull()
+		expect(logs[0]!.after).toBeNull()
 	})
 
 	test('catches getBefore errors gracefully (does not block mutation)', async () => {
@@ -274,8 +274,8 @@ describe('withAudit', () => {
 		// Audit log written with null before, valid after
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
-		expect(logs[0].before).toBeNull()
-		expect(logs[0].after).toEqual({ state: 'after' })
+		expect(logs[0]!.before).toBeNull()
+		expect(logs[0]!.after).toEqual({ state: 'after' })
 	})
 
 	test('catches getAfter errors gracefully (does not block mutation)', async () => {
@@ -296,8 +296,8 @@ describe('withAudit', () => {
 
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
-		expect(logs[0].before).toEqual({ state: 'before' })
-		expect(logs[0].after).toBeNull()
+		expect(logs[0]!.before).toEqual({ state: 'before' })
+		expect(logs[0]!.after).toBeNull()
 	})
 
 	test('does not throw if auditLog itself fails inside withAudit', async () => {
@@ -337,7 +337,7 @@ describe('withAudit', () => {
 
 		const logs = await prisma.auditLog.findMany()
 		expect(logs).toHaveLength(1)
-		expect(logs[0].actorUserId).toBeNull()
-		expect(logs[0].actorEmail).toBeNull()
+		expect(logs[0]!.actorUserId).toBeNull()
+		expect(logs[0]!.actorEmail).toBeNull()
 	})
 })
