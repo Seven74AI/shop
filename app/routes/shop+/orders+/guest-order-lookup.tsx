@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
+import { createGuestOrderToken } from '#app/utils/guest-order-token.server.ts'
 import { getGuestOrder } from '#app/utils/order-queries.server.ts'
 import { type Route } from './+types/index.ts'
 
@@ -56,9 +57,10 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
-	// Redirect to order detail page with email query param for guest access
+	// Redirect to order detail page with signed token for guest access
 	// Guest orders can be viewed at /shop/orders/$orderNumber
-	return redirect(`/shop/orders/${orderNumber}?email=${encodeURIComponent(email)}`)
+	const token = createGuestOrderToken(orderNumber, email)
+	return redirect(`/shop/orders/${orderNumber}?token=${encodeURIComponent(token)}`)
 }
 
 export const meta: Route.MetaFunction = () => [

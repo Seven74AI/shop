@@ -5,6 +5,7 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
+import { verifyGuestOrderToken } from '#app/utils/guest-order-token.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order-queries.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { type BreadcrumbHandle } from '../account.tsx'
@@ -18,6 +19,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const { orderNumber } = params
 	const userId = await getUserId(request)
 	const url = new URL(request.url)
+
+	// Support both new signed token and legacy email query param
+	const token = url.searchParams.get('token')
 	const email = url.searchParams.get('email')
 
 	// Try to get order by order number
@@ -31,13 +35,30 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		// Order belongs to a user - require authentication
 		invariantResponse(userId === order.userId, 'Unauthorized', { status: 403 })
 	} else {
-		// Guest order - require email verification
-		invariantResponse(email, 'Email required to view guest order', { status: 400 })
-		invariantResponse(
-			email.toLowerCase() === order.email.toLowerCase(),
-			'Email does not match order',
-			{ status: 403 },
-		)
+		// Guest order - require verification via token or email
+		if (token) {
+			const tokenPayload = verifyGuestOrderToken(token)
+			invariantResponse(tokenPayload, 'Invalid or expired order access token', { status: 403 })
+			invariantResponse(
+				tokenPayload.orderNumber === orderNumber,
+				'Token does not match order',
+				{ status: 403 },
+			)
+			invariantResponse(
+				tokenPayload.email === order.email.toLowerCase(),
+				'Token does not match order',
+				{ status: 403 },
+			)
+		} else if (email) {
+			// Legacy email-based verification
+			invariantResponse(
+				email.toLowerCase() === order.email.toLowerCase(),
+				'Email does not match order',
+				{ status: 403 },
+			)
+		} else {
+			invariantResponse(false, 'Access token required to view guest order', { status: 400 })
+		}
 	}
 
 	return { order }
