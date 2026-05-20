@@ -48,6 +48,8 @@ test.describe('Product Catalog', () => {
 
 	test('product catalog should support search by name', async ({ page }) => {
 		await page.goto('/shop/products')
+		await page.waitForLoadState('domcontentloaded')
+		await page.waitForSelector('main', { timeout: 10000 })
 		const searchInput = page.getByPlaceholder(/search products by name/i)
 		await expect(searchInput).toBeVisible()
 	})
