@@ -172,6 +172,19 @@ export default function InvoicesList({ loaderData }: Route.ComponentProps) {
 												/>
 											</Link>
 										</Button>
+										<Button variant="ghost" size="sm" asChild>
+											<a
+												href={`/admin/invoices/${invoice.id}.pdf`}
+												download={`invoice-${invoiceNumber(invoice)}.pdf`}
+												aria-label={`Download invoice ${invoiceNumber(invoice)} as PDF`}
+											>
+												<Icon
+													name="download"
+													className="h-4 w-4"
+													aria-hidden="true"
+												/>
+											</a>
+										</Button>
 									</div>
 								</TableCell>
 							</TableRow>
