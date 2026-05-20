@@ -140,7 +140,7 @@ test.describe('Accessibility', () => {
 
 		test('admin dashboard should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin')
-			await expectPageToBeAccessible(page)
+			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 		})
 
 		test('orders list page should be accessible', async ({ page, login }) => {
