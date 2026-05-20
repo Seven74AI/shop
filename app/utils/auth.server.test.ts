@@ -13,98 +13,7 @@ vi.mock('@sentry/react-router', async () => {
 	}
 })
 
-// Mock prisma for lockout tests — use alias path so global setup is also mocked
-const fn = () => vi.fn()
-
-const mockPrisma = {
-	user: {
-		findUnique: vi.fn(),
-		findFirst: fn(),
-		findMany: fn(),
-		create: fn(),
-		update: vi.fn(),
-		updateMany: fn(),
-		delete: fn(),
-		deleteMany: fn(),
-		upsert: fn(),
-		count: fn(),
-		aggregate: fn(),
-		groupBy: fn(),
-	},
-	session: {
-		findUnique: fn(),
-		findFirst: fn(),
-		findMany: fn(),
-		create: vi.fn(),
-		update: fn(),
-		updateMany: fn(),
-		delete: fn(),
-		deleteMany: fn(),
-		upsert: fn(),
-		count: fn(),
-		aggregate: fn(),
-		groupBy: fn(),
-	},
-	settings: {
-		findUnique: fn().mockResolvedValue({ id: 'settings', currencyId: 'currency-usd' }),
-		findFirst: fn(),
-		findMany: fn(),
-		create: fn(),
-		update: fn(),
-		updateMany: fn(),
-		delete: fn(),
-		deleteMany: fn(),
-		upsert: fn().mockResolvedValue({}),
-		count: fn(),
-		aggregate: fn(),
-		groupBy: fn(),
-	},
-	currency: {
-		findUnique: fn(),
-		findFirst: fn(),
-		findMany: fn(),
-		create: fn(),
-		update: fn(),
-		updateMany: fn(),
-		delete: fn(),
-		deleteMany: fn(),
-		upsert: fn().mockResolvedValue({ id: 'currency-usd' }),
-		count: fn(),
-		aggregate: fn(),
-		groupBy: fn(),
-	},
-	password: mockModel(),
-	connection: mockModel(),
-	role: mockModel(),
-	permission: mockModel(),
-	verification: mockModel(),
-	$disconnect: fn().mockResolvedValue(undefined),
-	$on: fn(),
-}
-
-function mockModel(overrides: Record<string, any> = {}) {
-	return {
-		findUnique: fn(),
-		findFirst: fn(),
-		findMany: fn(),
-		create: fn(),
-		update: fn(),
-		updateMany: fn(),
-		delete: fn(),
-		deleteMany: fn(),
-		upsert: fn(),
-		count: fn(),
-		aggregate: fn(),
-		groupBy: fn(),
-		...overrides,
-	}
-}
-
-vi.mock('#app/utils/db.server.ts', () => ({
-	prisma: mockPrisma,
-}))
-
-// Static imports (vi.mock is hoisted, so these will use mocked versions)
+import { prisma } from './db.server.ts'
 import {
 	checkIsCommonPassword,
 	getPasswordHashParts,
@@ -113,6 +22,11 @@ import {
 	MAX_LOGIN_ATTEMPTS,
 	LOCKOUT_DURATION_MS,
 } from './auth.server.ts'
+
+// Spy on prisma methods for lockout tests
+const userFindUnique = vi.spyOn(prisma.user, 'findUnique')
+const userUpdate = vi.spyOn(prisma.user, 'update')
+const sessionCreate = vi.spyOn(prisma.session, 'create')
 
 beforeEach(() => {
 	vi.clearAllMocks()
@@ -213,14 +127,14 @@ describe('account lockout', () => {
 		test('returns session on correct password and resets lockout', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: new Date(Date.now() - 1000),
 				failedLoginAttempts: 3,
 			})
-			mockPrisma.user.update.mockResolvedValue({})
-			mockPrisma.session.create.mockResolvedValue({
+			userUpdate.mockResolvedValue({})
+			sessionCreate.mockResolvedValue({
 				id: 'session-1',
 				expirationDate: new Date(),
 				userId: 'user-1',
@@ -231,7 +145,7 @@ describe('account lockout', () => {
 			expect(session).not.toBeNull()
 			expect(session!.id).toBe('session-1')
 
-			expect(mockPrisma.user.update).toHaveBeenCalledWith({
+			expect(userUpdate).toHaveBeenCalledWith({
 				where: { username },
 				data: { failedLoginAttempts: 0, lockedUntil: null },
 			})
@@ -240,13 +154,13 @@ describe('account lockout', () => {
 		test('returns session with no lockout reset for clean account', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: 0,
 			})
-			mockPrisma.session.create.mockResolvedValue({
+			sessionCreate.mockResolvedValue({
 				id: 'session-2',
 				expirationDate: new Date(),
 				userId: 'user-1',
@@ -255,7 +169,7 @@ describe('account lockout', () => {
 			const session = await login({ username, password: validPassword })
 
 			expect(session).not.toBeNull()
-			expect(mockPrisma.user.update).not.toHaveBeenCalled()
+			expect(userUpdate).not.toHaveBeenCalled()
 		})
 	})
 
@@ -263,18 +177,18 @@ describe('account lockout', () => {
 		test('returns null and increments failed count', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: 0,
 			})
-			mockPrisma.user.update.mockResolvedValue({})
+			userUpdate.mockResolvedValue({})
 
 			const session = await login({ username, password: wrongPassword })
 
 			expect(session).toBeNull()
-			expect(mockPrisma.user.update).toHaveBeenCalledWith({
+			expect(userUpdate).toHaveBeenCalledWith({
 				where: { username },
 				data: { failedLoginAttempts: 1, lockedUntil: null },
 			})
@@ -283,19 +197,19 @@ describe('account lockout', () => {
 		test('locks account when max attempts reached', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS - 1,
 			})
-			mockPrisma.user.update.mockResolvedValue({})
+			userUpdate.mockResolvedValue({})
 
 			const session = await login({ username, password: wrongPassword })
 
 			expect(session).toBeNull()
 
-			const updateCall = mockPrisma.user.update.mock.calls[0][0]
+			const updateCall = userUpdate.mock.calls[0][0]
 			expect(updateCall.where).toEqual({ username })
 			expect(updateCall.data.failedLoginAttempts).toBe(MAX_LOGIN_ATTEMPTS)
 			expect(updateCall.data.lockedUntil).toBeInstanceOf(Date)
@@ -310,7 +224,7 @@ describe('account lockout', () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 			const futureDate = new Date(Date.now() + 5 * 60 * 1000)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: futureDate,
@@ -320,22 +234,22 @@ describe('account lockout', () => {
 			const session = await login({ username, password: validPassword })
 
 			expect(session).toBeNull()
-			expect(mockPrisma.user.update).not.toHaveBeenCalled()
-			expect(mockPrisma.session.create).not.toHaveBeenCalled()
+			expect(userUpdate).not.toHaveBeenCalled()
+			expect(sessionCreate).not.toHaveBeenCalled()
 		})
 
 		test('allows login after lockout expires', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 			const pastDate = new Date(Date.now() - 60 * 1000)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: pastDate,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS,
 			})
-			mockPrisma.user.update.mockResolvedValue({})
-			mockPrisma.session.create.mockResolvedValue({
+			userUpdate.mockResolvedValue({})
+			sessionCreate.mockResolvedValue({
 				id: 'session-3',
 				expirationDate: new Date(),
 				userId: 'user-1',
@@ -344,7 +258,7 @@ describe('account lockout', () => {
 			const session = await login({ username, password: validPassword })
 
 			expect(session).not.toBeNull()
-			expect(mockPrisma.user.update).toHaveBeenCalledWith({
+			expect(userUpdate).toHaveBeenCalledWith({
 				where: { username },
 				data: { failedLoginAttempts: 0, lockedUntil: null },
 			})
@@ -353,16 +267,16 @@ describe('account lockout', () => {
 
 	describe('login() - edge cases', () => {
 		test('returns null for nonexistent user', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue(null)
+			userFindUnique.mockResolvedValue(null)
 
 			const session = await login({ username: 'ghost', password: 'test' })
 
 			expect(session).toBeNull()
-			expect(mockPrisma.user.update).not.toHaveBeenCalled()
+			expect(userUpdate).not.toHaveBeenCalled()
 		})
 
 		test('returns null for user with no password', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: null,
 				lockedUntil: null,
@@ -372,24 +286,24 @@ describe('account lockout', () => {
 			const session = await login({ username, password: 'test' })
 
 			expect(session).toBeNull()
-			expect(mockPrisma.user.update).not.toHaveBeenCalled()
+			expect(userUpdate).not.toHaveBeenCalled()
 		})
 
 		test('increments counter without locking at max-1 attempts', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS - 2,
 			})
-			mockPrisma.user.update.mockResolvedValue({})
+			userUpdate.mockResolvedValue({})
 
 			const session = await login({ username, password: wrongPassword })
 
 			expect(session).toBeNull()
-			expect(mockPrisma.user.update).toHaveBeenCalledWith({
+			expect(userUpdate).toHaveBeenCalledWith({
 				where: { username },
 				data: {
 					failedLoginAttempts: MAX_LOGIN_ATTEMPTS - 1,
@@ -401,21 +315,21 @@ describe('account lockout', () => {
 
 	describe('isAccountLocked()', () => {
 		test('returns false for nonexistent user', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue(null)
+			userFindUnique.mockResolvedValue(null)
 
 			const result = await isAccountLocked('ghost')
 			expect(result).toBe(false)
 		})
 
 		test('returns false when lockedUntil is null', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue({ lockedUntil: null })
+			userFindUnique.mockResolvedValue({ lockedUntil: null })
 
 			const result = await isAccountLocked(username)
 			expect(result).toBe(false)
 		})
 
 		test('returns false when lockedUntil is in the past', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				lockedUntil: new Date(Date.now() - 60 * 1000),
 			})
 
@@ -424,19 +338,12 @@ describe('account lockout', () => {
 		})
 
 		test('returns true when lockedUntil is in the future', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue({
+			userFindUnique.mockResolvedValue({
 				lockedUntil: new Date(Date.now() + 60 * 1000),
 			})
 
 			const result = await isAccountLocked(username)
 			expect(result).toBe(true)
-		})
-
-		test('does not leak lockout info for nonexistent user', async () => {
-			mockPrisma.user.findUnique.mockResolvedValue(null)
-
-			const locked = await isAccountLocked('nonexistent')
-			expect(locked).toBe(false)
 		})
 	})
 })
