@@ -74,6 +74,11 @@ const navData = {
 			title: 'System',
 			items: [
 				{
+					title: 'Audit Log',
+					url: '/admin/audit-log',
+					icon: 'clock' as IconName,
+				},
+				{
 					title: 'View Store',
 					url: '/',
 					icon: 'store' as IconName,
