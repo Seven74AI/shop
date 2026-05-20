@@ -210,9 +210,11 @@ function App() {
 	const user = useOptionalUser()
 	const theme = useTheme()
 	const matches = useMatches()
-	const isOnSearchPage = matches.find((m) => m.id === 'routes/users+/index')
+	const isOnSearchPage = matches.find((m) => m.id === 'routes/users+/index' || m.id === 'routes/shop+/products+/index')
 	const isOnAdminPage = matches.some((m) => m.id?.includes('routes/admin+'))
-	const searchBar = isOnSearchPage ? null : <SearchBar status="idle" />
+	const searchBar = isOnSearchPage ? null : (
+		<SearchBar status="idle" action="/shop/products" />
+	)
 	useToast(data.toast)
 
 	// If we're on an admin page, render without the main site header/footer

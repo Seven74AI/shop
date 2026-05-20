@@ -5,7 +5,10 @@ import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/index.ts'
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
+	const searchParams = new URL(request.url).searchParams
+	const search = searchParams.get('search') || undefined
+
 	const products = await prisma.product.findMany({
 		where: {
 			status: 'ACTIVE',
@@ -30,7 +33,7 @@ export async function loader() {
 
 	const currency = await getStoreCurrency()
 
-	return { products, categories, currency }
+	return { products, categories, currency, search }
 }
 
 export const meta: Route.MetaFunction = () => [
@@ -39,9 +42,9 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function ProductsIndex({ loaderData }: Route.ComponentProps) {
-	const { products, categories, currency } = loaderData
+	const { products, categories, currency, search } = loaderData
 
-	const [searchTerm, setSearchTerm] = useState('')
+	const [searchTerm, setSearchTerm] = useState(search || '')
 	const [selectedCategory, setSelectedCategory] = useState('all')
 
 	// Memoize category options to avoid recreating on every render
