@@ -91,6 +91,138 @@ test.describe('Product Detail', () => {
 		])
 	})
 
+	test.describe('JSON-LD structured data', () => {
+		test('should include Product JSON-LD without aggregateRating when no reviews exist', async ({
+			page,
+		}) => {
+			// Ensure testCategory exists (created in beforeEach)
+			if (!testCategory?.id) {
+				throw new Error('testCategory was not created in beforeEach')
+			}
+
+			// Create a test product without reviews
+			const productData = createProductData()
+			const uniqueId = randomUUID().slice(0, 8)
+
+			const product = await prisma.product.create({
+				data: {
+					name: productData.name,
+					slug: `${productData.slug}-${uniqueId}`,
+					description: productData.description,
+					sku: `${productData.sku}-${uniqueId}`,
+					price: productData.price,
+					status: 'ACTIVE',
+					categoryId: testCategory.id,
+				},
+			})
+
+			await page.goto(`/shop/products/${product.slug}`)
+
+			// Check JSON-LD script tag exists
+			const jsonLdScript = page.locator('script[type="application/ld+json"]')
+			await expect(jsonLdScript).toBeAttached({ timeout: 10000 })
+
+			const jsonContent = await jsonLdScript.textContent()
+			const parsed = JSON.parse(jsonContent!)
+
+			// Verify basic Product schema
+			expect(parsed['@context']).toBe('https://schema.org')
+			expect(parsed['@type']).toBe('Product')
+			expect(parsed.name).toBe(product.name)
+			expect(parsed.sku).toBe(product.sku)
+			expect(parsed.offers['@type']).toBe('Offer')
+			expect(parsed.offers.priceCurrency).toBe('USD')
+
+			// AggregateRating should NOT be present (no reviews)
+			expect(parsed.aggregateRating).toBeUndefined()
+		})
+
+		test('should include aggregateRating in JSON-LD when reviews exist', async ({
+			page,
+		}) => {
+			// Ensure testCategory exists (created in beforeEach)
+			if (!testCategory?.id) {
+				throw new Error('testCategory was not created in beforeEach')
+			}
+
+			const uniqueId = randomUUID().slice(0, 8)
+			const productData = createProductData()
+
+			const product = await prisma.product.create({
+				data: {
+					name: productData.name,
+					slug: `${productData.slug}-${uniqueId}`,
+					description: productData.description,
+					sku: `${productData.sku}-${uniqueId}`,
+					price: productData.price,
+					status: 'ACTIVE',
+					categoryId: testCategory.id,
+				},
+			})
+
+			// Create two test users (unique constraint: one review per user per product)
+			const user1 = await prisma.user.create({
+				data: {
+					username: `testuser-a-${uniqueId}`,
+					email: `testuser-a-${uniqueId}@example.com`,
+					name: 'Reviewer One',
+					roles: { connect: { name: 'user' } },
+				},
+			})
+			const user2 = await prisma.user.create({
+				data: {
+					username: `testuser-b-${uniqueId}`,
+					email: `testuser-b-${uniqueId}@example.com`,
+					name: 'Reviewer Two',
+					roles: { connect: { name: 'user' } },
+				},
+			})
+
+			// Create reviews with ratings 4 and 5 (avg = 4.5)
+			await prisma.review.createMany({
+				data: [
+					{
+						productId: product.id,
+						userId: user1.id,
+						rating: 4,
+						title: 'Good product',
+						body: 'I enjoyed this product.',
+						status: 'APPROVED',
+					},
+					{
+						productId: product.id,
+						userId: user2.id,
+						rating: 5,
+						title: 'Great!',
+						body: 'Excellent!',
+						status: 'APPROVED',
+					},
+				],
+			})
+
+			await page.goto(`/shop/products/${product.slug}`)
+
+			// Check JSON-LD script tag exists
+			const jsonLdScript = page.locator('script[type="application/ld+json"]')
+			await expect(jsonLdScript).toBeAttached({ timeout: 10000 })
+
+			const jsonContent = await jsonLdScript.textContent()
+			const parsed = JSON.parse(jsonContent!)
+
+			// Verify Product schema
+			expect(parsed['@context']).toBe('https://schema.org')
+			expect(parsed['@type']).toBe('Product')
+
+			// Verify aggregateRating is present
+			expect(parsed.aggregateRating).toBeDefined()
+			expect(parsed.aggregateRating['@type']).toBe('AggregateRating')
+			expect(parsed.aggregateRating.reviewCount).toBe(2)
+			expect(parsed.aggregateRating.ratingValue).toBe(4.5)
+			expect(parsed.aggregateRating.bestRating).toBe(5)
+			expect(parsed.aggregateRating.worstRating).toBe(1)
+		})
+	})
+
 	test.afterEach(async () => {
 		// Scoped cleanup: only delete products in OUR category (not SKU-* which matches all tests!)
 		const categoryId = testCategory?.id

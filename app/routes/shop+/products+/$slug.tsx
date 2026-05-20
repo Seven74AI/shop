@@ -171,11 +171,72 @@ function ReviewForm() {
 	)
 }
 
+function ProductJsonLd({
+	product,
+	currency,
+	ratingStats,
+}: {
+	product: {
+		name: string
+		description: string | null
+		sku: string
+		price: number
+		status: string
+		images: Array<{ objectKey: string; altText: string | null }> | null
+	}
+	currency: { code: string; symbol: string; decimals: number }
+	ratingStats: { averageRating: number | null; reviewCount: number }
+}) {
+	const mainImage = product.images?.[0]
+	const priceValue = (product.price / 100).toFixed(currency.decimals)
+	const jsonLd: Record<string, unknown> = {
+		'@context': 'https://schema.org',
+		'@type': 'Product',
+		name: product.name,
+		sku: product.sku,
+		offers: {
+			'@type': 'Offer',
+			price: priceValue,
+			priceCurrency: currency.code,
+			availability:
+				product.status === 'ACTIVE'
+					? 'https://schema.org/InStock'
+					: 'https://schema.org/OutOfStock',
+		},
+	}
+
+	if (product.description) {
+		jsonLd.description = product.description
+	}
+
+	if (mainImage) {
+		jsonLd.image = `/resources/images?objectKey=${encodeURIComponent(mainImage.objectKey)}`
+	}
+
+	if (ratingStats.reviewCount > 0 && ratingStats.averageRating != null) {
+		jsonLd.aggregateRating = {
+			'@type': 'AggregateRating',
+			ratingValue: ratingStats.averageRating,
+			reviewCount: ratingStats.reviewCount,
+			bestRating: 5,
+			worstRating: 1,
+		}
+	}
+
+	return (
+		<script
+			type="application/ld+json"
+			dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+		/>
+	)
+}
+
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 	const { product, currency, reviews, ratingStats } = loaderData
 
 	return (
 		<div className="container mx-auto px-4 py-8">
+			<ProductJsonLd product={product} currency={currency} ratingStats={ratingStats} />
 			<div className="grid gap-8 md:grid-cols-2">
 				{/* Product Images */}
 				<div>
