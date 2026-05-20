@@ -134,6 +134,18 @@ export default function InvoiceDetail({ loaderData }: Route.ComponentProps) {
 							` · Issued ${new Date(invoice.issuedAt).toLocaleDateString()}`}
 					</p>
 				</div>
+				<div className="flex items-center gap-2">
+					<Button variant="outline" size="sm" asChild>
+						<a
+							href={`/admin/invoices/${invoice.id}.pdf`}
+							download={`invoice-${num}.pdf`}
+							aria-label={`Download invoice ${num} as PDF`}
+						>
+							<Icon name="download" className="h-4 w-4 mr-2" aria-hidden="true" />
+							PDF
+						</a>
+					</Button>
+				</div>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
