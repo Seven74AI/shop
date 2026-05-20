@@ -20,10 +20,25 @@ interface OgMetasInput {
 	 */
 	image?: string
 	/**
+	 * Image width in pixels. Recommended for product cards (og:type=product).
+	 * Emitted as og:image:width when provided.
+	 */
+	imageWidth?: number
+	/**
+	 * Image height in pixels. Recommended for product cards (og:type=product).
+	 * Emitted as og:image:height when provided.
+	 */
+	imageHeight?: number
+	/**
 	 * Canonical URL. If relative, will be resolved to absolute using the request origin.
 	 * If omitted, og:url is not emitted.
 	 */
 	url?: string
+	/**
+	 * Site name for og:site_name meta tag.
+	 * @default 'Epic Shop'
+	 */
+	siteName?: string
 }
 
 /**
@@ -44,9 +59,11 @@ interface OgMetasInput {
  *     : undefined
  *   return getOgMetas(loaderData.baseUrl, {
  *     title: product.name,
- *     description: product.description ?? 'View this product',
+ *     description: product.description ?? `View ${product.name} at Epic Shop`,
  *     type: 'product',
  *     image: imageUrl,
+ *     imageWidth: 1200,
+ *     imageHeight: 630,
  *     url: location.pathname,
  *   })
  * }
@@ -56,7 +73,7 @@ export function getOgMetas(
 	baseUrl: string,
 	input: OgMetasInput,
 ): Array<Record<string, string>> {
-	const { title, description, type = 'website', image, url } = input
+	const { title, description, type = 'website', image, imageWidth, imageHeight, url, siteName = 'Epic Shop' } = input
 
 	const resolveUrl = (path?: string) => {
 		if (!path) return undefined
@@ -73,6 +90,7 @@ export function getOgMetas(
 		{ property: 'og:description', content: description },
 		{ property: 'og:type', content: type },
 		{ property: 'og:image', content: ogImage },
+		{ property: 'og:site_name', content: siteName },
 		// Twitter Card
 		{ name: 'twitter:card', content: 'summary_large_image' },
 		{ name: 'twitter:title', content: title },
@@ -82,6 +100,14 @@ export function getOgMetas(
 
 	if (ogUrl) {
 		tags.push({ property: 'og:url', content: ogUrl })
+	}
+
+	if (imageWidth !== undefined) {
+		tags.push({ property: 'og:image:width', content: String(imageWidth) })
+	}
+
+	if (imageHeight !== undefined) {
+		tags.push({ property: 'og:image:height', content: String(imageHeight) })
 	}
 
 	return tags

@@ -7,15 +7,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return { baseUrl }
 }
 
-export const meta: Route.MetaFunction = ({ loaderData }) => {
+export const meta: Route.MetaFunction = ({ loaderData, location }) => {
 	const baseUrl = loaderData?.baseUrl
 	return [
 		{ title: 'Terms of Service | Epic Shop' },
+		{ name: 'description', content: 'Review our terms of service to understand the rules and guidelines for using Epic Shop.' },
 		...(baseUrl
 			? getOgMetas(baseUrl, {
 					title: 'Terms of Service | Epic Shop',
 					description: 'Review our terms of service to understand the rules and guidelines for using Epic Shop.',
 					type: 'website',
+					url: location.pathname,
 				})
 			: []),
 	]

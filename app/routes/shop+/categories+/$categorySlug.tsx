@@ -47,7 +47,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	return { category, products, allCategories, currency: currency || { symbol: '$', decimals: 2 }, baseUrl }
 }
 
-export const meta: Route.MetaFunction = ({ loaderData }) => {
+export const meta: Route.MetaFunction = ({ loaderData, location }) => {
 	if (!loaderData?.category) {
 		return [{ title: 'Category not found' }]
 	}
@@ -64,6 +64,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 					title: `${loaderData.category.name} | Epic Shop`,
 					description,
 					type: 'website',
+					url: location.pathname,
 				})
 			: []),
 	]

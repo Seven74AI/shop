@@ -26,7 +26,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return { categories, baseUrl }
 }
 
-export const meta: Route.MetaFunction = ({ loaderData }) => {
+export const meta: Route.MetaFunction = ({ loaderData, location }) => {
 	const baseUrl = loaderData?.baseUrl
 	return [
 		{ title: 'Shop | Epic Shop' },
@@ -36,6 +36,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 					title: 'Epic Shop',
 					description: 'Discover our amazing selection of products. Browse by category or explore our full catalog.',
 					type: 'website',
+					url: location.pathname,
 				})
 			: []),
 	]

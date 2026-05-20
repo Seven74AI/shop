@@ -68,7 +68,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 	invariantResponse(false, 'Bad Request', { status: 400 })
 }
 
-export const meta: Route.MetaFunction = ({ loaderData }) => {
+export const meta: Route.MetaFunction = ({ loaderData, location }) => {
 	const product = loaderData?.product
 	const baseUrl = loaderData?.baseUrl
 	if (!product || !baseUrl) return [{ title: 'Product Not Found | Shop | Epic Shop' }]
@@ -84,6 +84,9 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 			description: product.description ?? `View ${product.name} at Epic Shop`,
 			type: 'product',
 			image: imageUrl,
+			imageWidth: 1200,
+			imageHeight: 630,
+			url: location.pathname,
 		}),
 	]
 }
