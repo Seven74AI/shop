@@ -104,3 +104,94 @@ export async function getTaxRate(
 
 	return rate?.rate ?? 0
 }
+
+/**
+ * Calculate VAT for a set of taxable items with a given shipping destination.
+ *
+ * Handles all OSS scenarios:
+ * - Domestic (FR → FR): French VAT rates
+ * - EU B2B (reverse charge): 0% VAT recorded under destination country
+ * - EU B2C (OSS): destination country rates
+ * - Export (non-EU): 0% VAT
+ *
+ * Rates are cached per tax kind to avoid redundant database lookups.
+ * Line items with the same (kind, rate) are aggregated in the breakdown.
+ */
+export async function calculateVat(
+	items: TaxableItem[],
+	shippingCountry: string,
+	customerVatNumber?: string | null,
+): Promise<VatCalculation> {
+	const { taxCountry, reverseCharge } = resolveTaxCountry(
+		shippingCountry,
+		customerVatNumber,
+	)
+
+	if (items.length === 0) {
+		return { breakdown: [], totalVatCents: 0, totalBaseCents: 0, taxCountry }
+	}
+
+	// Reverse charge → all VAT is 0 regardless of tax kind
+	if (reverseCharge) {
+		const breakdown: VatLineItem[] = items.map((item) => {
+			const baseCents = item.priceCents * item.quantity
+			return {
+				kind: item.taxKind,
+				rate: 0,
+				baseCents,
+				vatCents: 0,
+			}
+		})
+		return {
+			breakdown: aggregateBreakdown(breakdown),
+			totalVatCents: 0,
+			totalBaseCents: breakdown.reduce((sum, li) => sum + li.baseCents, 0),
+			taxCountry,
+		}
+	}
+
+	// Cache rates to avoid repeated DB calls for the same tax kind
+	const rateCache = new Map<TaxKind, number>()
+	const breakdown: VatLineItem[] = []
+
+	for (const item of items) {
+		const baseCents = item.priceCents * item.quantity
+
+		if (!rateCache.has(item.taxKind)) {
+			rateCache.set(item.taxKind, await getTaxRate(taxCountry, item.taxKind))
+		}
+
+		const rate = rateCache.get(item.taxKind)!
+		// rate is in basis points (e.g. 2000 = 20%); convert to fraction
+		const vatCents = Math.round((baseCents * rate) / 10_000)
+
+		breakdown.push({ kind: item.taxKind, rate, baseCents, vatCents })
+	}
+
+	const aggregated = aggregateBreakdown(breakdown)
+
+	return {
+		breakdown: aggregated,
+		totalVatCents: aggregated.reduce((sum, li) => sum + li.vatCents, 0),
+		totalBaseCents: aggregated.reduce((sum, li) => sum + li.baseCents, 0),
+		taxCountry,
+	}
+}
+
+/**
+ * Aggregate line items that share the same (kind, rate) pair.
+ */
+export function aggregateBreakdown(items: VatLineItem[]): VatLineItem[] {
+	const map = new Map<string, VatLineItem>()
+	for (const item of items) {
+		const key = `${item.kind}:${item.rate}`
+		const existing = map.get(key)
+		if (existing) {
+			existing.baseCents += item.baseCents
+			existing.vatCents += item.vatCents
+		} else {
+			map.set(key, { ...item })
+		}
+	}
+	return [...map.values()]
+}
