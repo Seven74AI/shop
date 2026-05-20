@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  */
-import { describe, expect, test, beforeEach, afterEach } from 'vitest'
+import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest'
 import { getCircuitBreakerConfig } from './circuit-breaker-config.server.ts'
 import type { CircuitBreakerConfig } from './circuit-breaker.server.ts'
 
@@ -114,6 +114,10 @@ describe('getCircuitBreakerConfig', () => {
   })
 
   describe('invalid env var values', () => {
+    beforeEach(() => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+
     test('falls back to default for non-numeric values', () => {
       process.env.CIRCUIT_BREAKER_FAILURE_THRESHOLD = 'not-a-number'
       const config = getCircuitBreakerConfig('test-breaker')
