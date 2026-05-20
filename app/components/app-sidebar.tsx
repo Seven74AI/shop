@@ -68,6 +68,11 @@ const navData = {
 						{ title: 'Add Attribute', url: '/admin/attributes/new' },
 					],
 				},
+				{
+					title: 'Feature Flags',
+					url: '/admin/flags',
+					icon: 'flag' as IconName,
+				},
 			],
 		},
 		{

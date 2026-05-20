@@ -639,3 +639,15 @@ enum ShippingRateType {
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
 }
+
+// Feature Flag System
+
+model Flag {
+  key               String   @id
+  enabled           Boolean  @default(false)
+  rolloutPercentage Int?     @default(0)
+  audience          String?  // JSON: user filters (e.g., {"userIds": ["..."], "countries": ["FR", "BE"]})
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
