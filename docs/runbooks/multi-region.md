@@ -1,7 +1,7 @@
 # Multi-Region Read Replica Setup — Runbook
 
-> **Status:** SHIPPABLE — Staging-smoked ✓  
-> **Last verified:** (pending staging smoke test per P2.5)  
+> **Status:** UNVERIFIED  
+> **Last verified:** Pending staging smoke test (P2.5)  
 > **Trigger condition:** P5.1 (traffic threshold met)  
 > **Owner:** Platform / Infra team  
 > **Target runtime:** < 30 minutes for first region, < 10 per additional region  
@@ -55,10 +55,10 @@ Before adding a region, confirm these are in place:
 
 | # | Item | How to verify | Must be true? |
 |---|------|---------------|---------------|
-| 1 | **LiteFS is running** in the current region | `fly ssh console -a shop-3ecf` then `litefs export -name sqlite.db /tmp/test.db` | Yes |
+| 1 | **LiteFS is running** in the current region | `fly ssh console -a shop-3ecf --command "litefs export -name sqlite.db /tmp/test.db"` | Yes |
 | 2 | **Consul lease is healthy** | `fly checks list -a shop-3ecf` — `/litefs/health` returns 200 | Yes |
 | 3 | **`PRIMARY_REGION` env var set** | `fly secrets list -a shop-3ecf` | Yes |
-| 4 | **`FLY_CONSUL_URL` is populated** | Auto-set by Fly.io — verify via `fly ssh console -a shop-3ecf` then `echo $FLY_CONSUL_URL` | Yes |
+| 4 | **`FLY_CONSUL_URL` is populated** | Auto-set by Fly.io — verify via `fly ssh console -a shop-3ecf --command "echo \$FLY_CONSUL_URL"` | Yes |
 | 5 | **Current fly.toml has single region** | `grep primary_region fly.toml` shows one region | Yes |
 | 6 | **Staging environment exists** (P2.5) | `fly status -a shop-3ecf-staging` | For smoke test only |
 | 7 | **Rollback tested** | Run the rollback section below in staging first | For production |
@@ -497,7 +497,7 @@ These questions were identified during the architecture research and should be a
 - `app/utils/litefs.server.ts` — Server-side LiteFS integration (`ensurePrimary`, `getInstanceInfo`)
 - `app/entry.server.tsx` — Fly instance headers injection
 - `other/Dockerfile` — LiteFS binary inclusion and environment setup
-- `docs/decisions/` — Architecture Decision Records (create a new ADR for the first multi-region rollout)
+- `docs/decisions/` — Architecture Decision Records (create this directory and add an ADR for the first multi-region rollout)
 
 ## External References
 
