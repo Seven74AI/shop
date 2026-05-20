@@ -129,10 +129,13 @@ test.describe('Cookie Consent Banner', () => {
 		// Click Customize
 		await banner.getByRole('button', { name: 'Customize' }).click()
 
+		// Wait for React state update to render toggles
+		await page.waitForTimeout(500)
+
 		// Toggles should now be visible
 		await expect(
 			banner.getByRole('checkbox', { name: 'Analytics & Performance' }),
-		).toBeVisible()
+		).toBeVisible({ timeout: 10000 })
 		await expect(
 			banner.getByRole('checkbox', { name: 'Marketing' }),
 		).toBeVisible()

@@ -13,3 +13,22 @@ export type ConsentState = {
 	/** Which categories the user has consented to */
 	granted: ConsentCategory[]
 }
+
+/**
+ * Check if consent has been granted for a specific category.
+ */
+export function hasConsent(
+	consent: ConsentState | null,
+	category: ConsentCategory,
+): boolean {
+	if (!consent) return false
+	return consent.granted.includes(category)
+}
+
+/**
+ * Check if any consent decision has been made (user has either accepted or refused).
+ * Used to determine whether to show the banner.
+ */
+export function hasConsentDecision(consent: ConsentState | null): boolean {
+	return consent !== null
+}
