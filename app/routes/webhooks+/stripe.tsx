@@ -9,11 +9,13 @@ import {
 } from '#app/utils/order.server.ts'
 import { type StoreAddress } from '#app/utils/shipment.server.ts'
 import { stripe } from '#app/utils/stripe.server.ts'
+import { prisma } from '#app/utils/db.server.ts'
 import { type Route } from './+types/stripe.ts'
 
 /**
  * Webhook handler for Stripe events.
- * Handles checkout.session.completed events to create orders.
+ * Implements idempotency via StripeEvent table to prevent duplicate processing
+ * when Stripe retries undelivered webhooks.
  */
 export async function action({ request }: Route.ActionArgs) {
 	const body = await request.text()
@@ -44,6 +46,17 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
+	// Idempotency check — skip already-processed events
+	const existing = await prisma.stripeEvent.findUnique({
+		where: { id: event.id },
+	})
+	if (existing) {
+		return data(
+			{ received: true, idempotent: true, eventType: event.type },
+			{ status: 200 },
+		)
+	}
+
 	// Handle checkout.session.completed event
 	if (event.type === 'checkout.session.completed') {
 		const session = event.data.object as Stripe.Checkout.Session
@@ -64,6 +77,12 @@ export async function action({ request }: Route.ActionArgs) {
 				extra: { sessionId: session.id, paymentStatus: fullSession.payment_status },
 			},
 		)
+			// Record event as processed (even though payment not completed)
+			void prisma.stripeEvent.create({
+				data: { id: event.id, type: event.type },
+			}).catch(() => {
+				// Silently ignore — failing idempotency record shouldn't fail webhook
+			})
 			return data(
 				{
 					received: true,
@@ -110,6 +129,12 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 
 			// Cart is already deleted within the transaction above
+			// Record event as successfully processed
+			void prisma.stripeEvent.create({
+				data: { id: event.id, type: event.type },
+			}).catch(() => {
+				// Silently ignore — failing idempotency record shouldn't fail webhook
+			})
 			return data({ received: true, orderId: order.id })
 		} catch (error) {
 			// Log critical errors to Sentry
@@ -173,6 +198,12 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	// Return success for unhandled event types
+	// Record event as processed to prevent re-delivery
+	void prisma.stripeEvent.create({
+		data: { id: event.id, type: event.type },
+	}).catch(() => {
+		// Silently ignore — failing idempotency record shouldn't fail webhook
+	})
 	return data({ received: true })
 }
 

@@ -560,6 +560,18 @@ model TaxRate {
   @@index([isActive])
 }
 
+// Stripe webhook event idempotency — tracks processed events to prevent
+// duplicate processing when Stripe retries undelivered webhooks.
+model StripeEvent {
+  id        String   @id // Stripe event ID (e.g., "evt_1AbCdEfGhIjKlMnOpQrStUv")
+  type      String   // Stripe event type (e.g., "checkout.session.completed")
+  processedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([processedAt])
+}
+
 enum OrderStatus {
   PENDING // Order created, awaiting confirmation
   CONFIRMED // Order confirmed, processing
