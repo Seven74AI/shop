@@ -4,11 +4,11 @@
  * Verifies that the checkout flow displays French translations
  * when the locale is set to FR (via cookie).
  */
-import { type BrowserContext, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import { expect, test } from '#tests/playwright-utils.ts'
 
 /**
- * Set the locale cookie to French for the given context/page.
+ * Set the locale cookie to French for the given page.
  */
 async function setLocaleFr(page: Page) {
 	await page.context().addCookies([
@@ -34,34 +34,16 @@ test.describe('Checkout FR locale', () => {
 
 		// Verify global nav is translated
 		await expect(page.getByRole('link', { name: 'Boutique' })).toBeVisible()
-
-		// The checkout review page requires items in cart — test that FR strings
-		// appear where possible. The redirect-to-cart behavior is the same, but
-		// the nav/shop link should be in French.
-	})
-
-	test('should display French checkout step labels', async ({
-		page,
-	}) => {
-		await page.goto('/')
-		await setLocaleFr(page)
-
-		// Verify global nav is in French
-		const shopLink = page.getByRole('link', { name: 'Boutique' })
-		await expect(shopLink).toBeVisible()
-
-		// Verify that the page is being served with French locale
-		// (the nav link being "Boutique" instead of "Shop" proves locale works)
 	})
 
 	test('should serve French locale from Accept-Language header', async ({
 		context,
-		page,
 	}) => {
 		// Create a new context with French Accept-Language
-		const frContext = await context.browser().newContext({
+		const frContext = await context.browser()?.newContext({
 			locale: 'fr-FR',
 		})
+		if (!frContext) throw new Error('Browser context not available')
 		const frPage = await frContext.newPage()
 
 		await frPage.goto('/')
