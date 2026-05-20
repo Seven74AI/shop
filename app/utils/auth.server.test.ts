@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test, vi, beforeEach } from 'vitest'
 import { server } from '#tests/mocks'
-import { prisma } from '#app/utils/db.server.ts'
+import { prisma } from './db.server.ts'
 
 // Mock Sentry first
 vi.mock('@sentry/react-router', async () => {
@@ -244,7 +244,8 @@ describe('account lockout', () => {
 			expect(updateCall.where).toEqual({ username })
 			expect(updateCall.data.failedLoginAttempts).toBe(MAX_LOGIN_ATTEMPTS)
 			expect(updateCall.data.lockedUntil).toBeInstanceOf(Date)
-			expect(updateCall.data.lockedUntil.getTime()).toBeGreaterThan(
+			const lockedUntil = updateCall.data.lockedUntil as Date
+			expect(lockedUntil.getTime()).toBeGreaterThan(
 				Date.now() + LOCKOUT_DURATION_MS - 5000,
 			)
 		})
