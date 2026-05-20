@@ -1,6 +1,6 @@
 import { data } from 'react-router'
 import { z } from 'zod'
-import { sendEmail } from '#app/utils/email.server.ts'
+import { sendNewsletterConfirmationEmail } from '#app/utils/newsletter-email.server.tsx'
 import { createSubscription } from '#app/utils/newsletter.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import { type Route } from './+types/newsletter-subscribe.ts'
@@ -70,13 +70,8 @@ export async function action({ request }: Route.ActionArgs) {
 		const domain = getDomainUrl(request)
 		const confirmUrl = `${domain}/resources/newsletter-confirm?token=${encodeURIComponent(result.confirmationToken)}`
 
-		// Send confirmation email (fire-and-forget — don't block the response)
-		void sendEmail({
-			to: email,
-			subject: 'Confirm your newsletter subscription',
-			html: `<p>Thanks for subscribing to our newsletter!</p><p><a href="${confirmUrl}">Click here to confirm your subscription</a></p><p>This link expires in 7 days.</p><p>If you didn't request this, please ignore this email.</p>`,
-			text: `Thanks for subscribing to our newsletter!\n\nClick this link to confirm your subscription: ${confirmUrl}\n\nThis link expires in 7 days.\n\nIf you didn't request this, please ignore this email.`,
-		})
+		// Send confirmation email using React Email template (fire-and-forget)
+		void sendNewsletterConfirmationEmail(email, confirmUrl)
 
 		return data({
 			success: true,
