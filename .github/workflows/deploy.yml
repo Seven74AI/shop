@@ -202,8 +202,8 @@ jobs:
     name: 🚀 Deploy
     runs-on: ubuntu-24.04
     needs: [lint, typecheck, vitest, playwright]
-    # only deploy on pushes
-    if: ${{ github.event_name == 'push' }}
+    # Disabled — container build not needed for PR CI
+    if: false
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
