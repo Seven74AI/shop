@@ -68,6 +68,31 @@ export async function handleNewSession(
 		)
 		authSession.set(sessionKey, session.id)
 
+		// Enforce mandatory 2FA for admin users
+		const user = await prisma.user.findUnique({
+			select: { roles: { select: { name: true } } },
+			where: { id: session.userId },
+		})
+		const isAdmin = user?.roles.some((role: { name: string }) => role.name === 'admin')
+		if (isAdmin) {
+			return redirect(
+				'/account/security/two-factor',
+				combineResponseInits(
+					{
+						headers: {
+							'set-cookie': await authSessionStorage.commitSession(
+								authSession,
+								{
+									expires: remember ? session.expirationDate : undefined,
+								},
+							),
+						},
+					},
+					responseInit,
+				),
+			)
+		}
+
 		return redirect(
 			safeRedirect(redirectTo),
 			combineResponseInits(

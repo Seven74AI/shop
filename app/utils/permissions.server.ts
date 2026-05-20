@@ -1,4 +1,4 @@
-import { data } from 'react-router'
+import { data, redirect } from 'react-router'
 import { requireUserId } from './auth.server.ts'
 import { prisma } from './db.server.ts'
 import { type PermissionString, parsePermissionString } from './user.ts'
@@ -56,5 +56,17 @@ export async function requireUserWithRole(request: Request, name: string) {
 			{ status: 403 },
 		)
 	}
+
+	// Enforce mandatory 2FA for admin role
+	if (name === 'admin') {
+		const twoFAVerification = await prisma.verification.findUnique({
+			select: { id: true },
+			where: { target_type: { target: userId, type: '2fa' } },
+		})
+		if (!twoFAVerification) {
+			throw redirect('/account/security/two-factor')
+		}
+	}
+
 	return user.id
 }
