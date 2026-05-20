@@ -16,7 +16,10 @@
  */
 
 import { invariant } from '@epic-web/invariant'
+import { BrokenCircuitError } from 'cockatiel'
 import { XMLParser } from 'fast-xml-parser'
+
+import { api2Breaker } from './mondial-relay-circuit-breaker.server'
 
 /**
  * Gets environment variables dynamically (for testing support)
@@ -268,14 +271,16 @@ export async function createShipment(request: ShipmentRequest): Promise<Shipment
 
 	try {
 		const api2BaseUrl = getApi2BaseUrl()
-		const response = await fetch(`${api2BaseUrl}/shipment`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'text/xml; charset=utf-8',
-				'Accept': 'application/xml',
-			},
-			body: xmlBody,
-		})
+		const response = await api2Breaker.execute(() =>
+			fetch(`${api2BaseUrl}/shipment`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'text/xml; charset=utf-8',
+					'Accept': 'application/xml',
+				},
+				body: xmlBody,
+			}),
+		)
 
 		// Read the full response text first (before parsing)
 		const responseText = await response.text()
@@ -358,6 +363,9 @@ export async function createShipment(request: ShipmentRequest): Promise<Shipment
 			statusMessage: undefined,
 		}
 	} catch (error) {
+		if (error instanceof BrokenCircuitError) {
+			throw new Error('Shipment creation temporarily unavailable, please retry in a minute')
+		}
 		console.error('Mondial Relay API2 createShipment error:', error)
 		throw new Error(`Failed to create shipment: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
@@ -374,9 +382,11 @@ export async function getLabel(shipmentNumber: string): Promise<LabelResponse> {
 
 	try {
 		const api2BaseUrl = getApi2BaseUrl()
-		const response = await fetch(`${api2BaseUrl}/Label/${shipmentNumber}`, {
-			method: 'GET',
-		})
+		const response = await api2Breaker.execute(() =>
+			fetch(`${api2BaseUrl}/Label/${shipmentNumber}`, {
+				method: 'GET',
+			}),
+		)
 
 		if (!response.ok) {
 			throw new Error(`Mondial Relay API2 error: ${response.status} ${response.statusText}`)
@@ -384,6 +394,9 @@ export async function getLabel(shipmentNumber: string): Promise<LabelResponse> {
 
 		return await response.blob()
 	} catch (error) {
+		if (error instanceof BrokenCircuitError) {
+			throw new Error('Label generation temporarily unavailable, please retry in a minute')
+		}
 		console.error('Mondial Relay API2 getLabel error:', error)
 		throw new Error(`Failed to get label: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}

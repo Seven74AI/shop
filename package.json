@@ -85,6 +85,7 @@
     "class-variance-authority": "^0.7.1",
     "close-with-grace": "^2.5.0",
     "clsx": "^2.1.1",
+    "cockatiel": "^3.2.1",
     "compression": "^1.8.1",
     "cookie": "^1.1.1",
     "cross-env": "^10.1.0",
