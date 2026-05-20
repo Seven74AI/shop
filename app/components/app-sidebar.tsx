@@ -48,17 +48,27 @@ const navData = {
 						{ title: 'Add Product', url: '/admin/products/new' },
 					],
 				},
-				{
-					title: 'Categories',
-					url: '/admin/categories',
-					icon: 'folder' as IconName,
-					hasSubmenu: true,
-					items: [
-						{ title: 'All Categories', url: '/admin/categories' },
-						{ title: 'Add Category', url: '/admin/categories/new' },
-					],
-				},
-				{
+			{
+				title: 'Categories',
+				url: '/admin/categories',
+				icon: 'folder' as IconName,
+				hasSubmenu: true,
+				items: [
+					{ title: 'All Categories', url: '/admin/categories' },
+					{ title: 'Add Category', url: '/admin/categories/new' },
+				],
+			},
+			{
+				title: 'Promotions',
+				url: '/admin/promotions',
+				icon: 'tags' as IconName,
+				hasSubmenu: true,
+				items: [
+					{ title: 'All Promotions', url: '/admin/promotions' },
+					{ title: 'Add Promotion', url: '/admin/promotions/new' },
+				],
+			},
+			{
 					title: 'Attributes',
 					url: '/admin/attributes',
 					icon: 'sliders' as IconName,
