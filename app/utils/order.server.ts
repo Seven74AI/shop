@@ -698,7 +698,7 @@ export async function createOrderFromStripeSession(
 
 			// Calculate subtotal: total from Stripe minus shipping, plus discount
 			// (Stripe sees the discount as a negative line item, so amount_subtotal already includes it)
-			const calculatedSubtotal = (session.amount_subtotal ?? 0) - shippingCost
+			const calculatedSubtotal = (session.amount_subtotal ?? 0) - shippingCost + discountCents
 
 			const newOrder = await tx.order.create({
 				data: {

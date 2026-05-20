@@ -261,6 +261,7 @@ describe('hasUserReachedPromotionLimit', () => {
 	test('returns false when per-user limit is null (no limit)', async () => {
 		const result = await hasUserReachedPromotionLimit(validPromo?.id ?? '', testUserId)
 		// TEST10 has no per-user limit
+		expect(result).toBe(false)
 	})
 
 	test('returns false when user has not used the promotion', async () => {
