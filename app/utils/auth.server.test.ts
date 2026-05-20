@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test, vi, beforeEach } from 'vitest'
 import { server } from '#tests/mocks'
-import { prisma } from './db.server.ts'
 
 // Mock Sentry first
 vi.mock('@sentry/react-router', async () => {
@@ -14,10 +13,96 @@ vi.mock('@sentry/react-router', async () => {
 	}
 })
 
-// Spy on prisma methods for lockout tests
-const userFindUnique = vi.spyOn(prisma.user, 'findUnique')
-const userUpdate = vi.spyOn(prisma.user, 'update')
-const sessionCreate = vi.spyOn(prisma.session, 'create')
+// Mock prisma for lockout tests — use alias path so global setup is also mocked
+const fn = () => vi.fn()
+
+const mockPrisma = {
+	user: {
+		findUnique: vi.fn(),
+		findFirst: fn(),
+		findMany: fn(),
+		create: fn(),
+		update: vi.fn(),
+		updateMany: fn(),
+		delete: fn(),
+		deleteMany: fn(),
+		upsert: fn(),
+		count: fn(),
+		aggregate: fn(),
+		groupBy: fn(),
+	},
+	session: {
+		findUnique: fn(),
+		findFirst: fn(),
+		findMany: fn(),
+		create: vi.fn(),
+		update: fn(),
+		updateMany: fn(),
+		delete: fn(),
+		deleteMany: fn(),
+		upsert: fn(),
+		count: fn(),
+		aggregate: fn(),
+		groupBy: fn(),
+	},
+	settings: {
+		findUnique: fn().mockResolvedValue({ id: 'settings', currencyId: 'currency-usd' }),
+		findFirst: fn(),
+		findMany: fn(),
+		create: fn(),
+		update: fn(),
+		updateMany: fn(),
+		delete: fn(),
+		deleteMany: fn(),
+		upsert: fn().mockResolvedValue({}),
+		count: fn(),
+		aggregate: fn(),
+		groupBy: fn(),
+	},
+	currency: {
+		findUnique: fn(),
+		findFirst: fn(),
+		findMany: fn(),
+		create: fn(),
+		update: fn(),
+		updateMany: fn(),
+		delete: fn(),
+		deleteMany: fn(),
+		upsert: fn().mockResolvedValue({ id: 'currency-usd' }),
+		count: fn(),
+		aggregate: fn(),
+		groupBy: fn(),
+	},
+	password: mockModel(),
+	connection: mockModel(),
+	role: mockModel(),
+	permission: mockModel(),
+	verification: mockModel(),
+	$disconnect: fn().mockResolvedValue(undefined),
+	$on: fn(),
+}
+
+function mockModel(overrides: Record<string, any> = {}) {
+	return {
+		findUnique: fn(),
+		findFirst: fn(),
+		findMany: fn(),
+		create: fn(),
+		update: fn(),
+		updateMany: fn(),
+		delete: fn(),
+		deleteMany: fn(),
+		upsert: fn(),
+		count: fn(),
+		aggregate: fn(),
+		groupBy: fn(),
+		...overrides,
+	}
+}
+
+vi.mock('#app/utils/db.server.ts', () => ({
+	prisma: mockPrisma,
+}))
 
 // Static imports (vi.mock is hoisted, so these will use mocked versions)
 import {
@@ -40,12 +125,11 @@ test('checkIsCommonPassword returns true when password is found in breach databa
 	const [prefix, suffix] = getPasswordHashParts(password)
 
 	server.use(
-		http.get(`https://api.pwnedpasswords.com/range/:prefix`, () => {
-			const body = suffix.toUpperCase() + ':42'
-			return new HttpResponse(body, {
-				status: 200,
-				headers: { 'Content-Type': 'text/plain' },
-			})
+		http.get(`https://api.pwnedpasswords.com/range/${prefix}`, () => {
+			return new HttpResponse(
+				`1234567890123456789012345678901234A:1\n${suffix}:1234`,
+				{ status: 200 },
+			)
 		}),
 	)
 
@@ -54,15 +138,16 @@ test('checkIsCommonPassword returns true when password is found in breach databa
 })
 
 test('checkIsCommonPassword returns false when password is not found in breach database', async () => {
-	const password = 'uniquepassword123'
+	const password = 'sup3r-dup3r-s3cret'
 	const [prefix] = getPasswordHashParts(password)
 
 	server.use(
-		http.get(`https://api.pwnedpasswords.com/range/:prefix`, () => {
-			return new HttpResponse('', {
-				status: 200,
-				headers: { 'Content-Type': 'text/plain' },
-			})
+		http.get(`https://api.pwnedpasswords.com/range/${prefix}`, () => {
+			return new HttpResponse(
+				'1234567890123456789012345678901234A:1\n' +
+					'1234567890123456789012345678901234B:2',
+				{ status: 200 },
+			)
 		}),
 	)
 
@@ -72,10 +157,11 @@ test('checkIsCommonPassword returns false when password is not found in breach d
 
 test('checkIsCommonPassword returns false when API returns 500', async () => {
 	const password = 'testpassword'
+	const [prefix] = getPasswordHashParts(password)
 
 	server.use(
-		http.get(`https://api.pwnedpasswords.com/range/:prefix`, () => {
-			return new HttpResponse('Internal Server Error', { status: 500 })
+		http.get(`https://api.pwnedpasswords.com/range/${prefix}`, () => {
+			return new HttpResponse(null, { status: 500 })
 		}),
 	)
 
@@ -85,13 +171,11 @@ test('checkIsCommonPassword returns false when API returns 500', async () => {
 
 test('checkIsCommonPassword returns false when response has invalid format', async () => {
 	const password = 'testpassword'
+	const [prefix] = getPasswordHashParts(password)
 
 	server.use(
-		http.get(`https://api.pwnedpasswords.com/range/:prefix`, () => {
-			return new HttpResponse('invalid-data', {
-				status: 200,
-				headers: { 'Content-Type': 'text/plain' },
-			})
+		http.get(`https://api.pwnedpasswords.com/range/${prefix}`, () => {
+			return new Response(null, { status: 200 })
 		}),
 	)
 
@@ -101,82 +185,53 @@ test('checkIsCommonPassword returns false when response has invalid format', asy
 
 describe('timeout handling', () => {
 	test('checkIsCommonPassword times out after 1 second', async () => {
-		const password = 'testpassword'
-
 		server.use(
-			http.get(`https://api.pwnedpasswords.com/range/:prefix`, async () => {
-				await new Promise((resolve) => setTimeout(resolve, 2000))
-				return new HttpResponse('', { status: 200 })
+			http.get('https://api.pwnedpasswords.com/range/:prefix', async () => {
+				const twoSecondDelay = 2000
+				await new Promise((resolve) => setTimeout(resolve, twoSecondDelay))
+				return new HttpResponse(
+					'1234567890123456789012345678901234A:1\n' +
+						'1234567890123456789012345678901234B:2',
+					{ status: 200 },
+				)
 			}),
 		)
 
-		const result = await checkIsCommonPassword(password)
+		const result = await checkIsCommonPassword('testpassword')
 		expect(result).toBe(false)
-	})
+	}, 5000)
 })
 
 // --- Account lockout tests ---
 
-const username = 'testuser'
-const validPassword = 'correct-password'
-const wrongPassword = 'wrong-password'
-
 describe('account lockout', () => {
-	describe('isAccountLocked()', () => {
-		test('returns false when user has no lockout', async () => {
-			userFindUnique.mockResolvedValue({
-				id: 'user-1',
-				lockedUntil: null,
-			} as any)
-
-			const result = await isAccountLocked(username)
-			expect(result).toBe(false)
-		})
-
-		test('returns false when lockedUntil is in the past', async () => {
-			const pastDate = new Date(Date.now() - 60 * 1000)
-			userFindUnique.mockResolvedValue({
-				id: 'user-1',
-				lockedUntil: pastDate,
-			} as any)
-
-			const result = await isAccountLocked(username)
-			expect(result).toBe(false)
-		})
-
-		test('returns true when lockedUntil is in the future', async () => {
-			const futureDate = new Date(Date.now() + 5 * 60 * 1000)
-			userFindUnique.mockResolvedValue({
-				id: 'user-1',
-				lockedUntil: futureDate,
-			} as any)
-
-			const result = await isAccountLocked(username)
-			expect(result).toBe(true)
-		})
-	})
+	const validPassword = 'correct-horse-battery-staple'
+	const wrongPassword = 'wrong-password'
+	const username = 'testuser'
 
 	describe('login() - successful path', () => {
 		test('returns session on correct password and resets lockout', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
-				lockedUntil: null,
+				lockedUntil: new Date(Date.now() - 1000),
 				failedLoginAttempts: 3,
-			} as any)
-			userUpdate.mockResolvedValue({} as any)
-			sessionCreate.mockResolvedValue({
+			})
+			mockPrisma.user.update.mockResolvedValue({})
+			mockPrisma.session.create.mockResolvedValue({
 				id: 'session-1',
 				expirationDate: new Date(),
 				userId: 'user-1',
-			} as any)
+			})
 
 			const session = await login({ username, password: validPassword })
 
 			expect(session).not.toBeNull()
-			expect(userUpdate).toHaveBeenCalledWith({
+			expect(session!.id).toBe('session-1')
+
+			expect(mockPrisma.user.update).toHaveBeenCalledWith({
 				where: { username },
 				data: { failedLoginAttempts: 0, lockedUntil: null },
 			})
@@ -185,22 +240,22 @@ describe('account lockout', () => {
 		test('returns session with no lockout reset for clean account', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: 0,
-			} as any)
-			sessionCreate.mockResolvedValue({
+			})
+			mockPrisma.session.create.mockResolvedValue({
 				id: 'session-2',
 				expirationDate: new Date(),
 				userId: 'user-1',
-			} as any)
+			})
 
 			const session = await login({ username, password: validPassword })
 
 			expect(session).not.toBeNull()
-			expect(userUpdate).not.toHaveBeenCalled()
+			expect(mockPrisma.user.update).not.toHaveBeenCalled()
 		})
 	})
 
@@ -208,18 +263,18 @@ describe('account lockout', () => {
 		test('returns null and increments failed count', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: 0,
-			} as any)
-			userUpdate.mockResolvedValue({} as any)
+			})
+			mockPrisma.user.update.mockResolvedValue({})
 
 			const session = await login({ username, password: wrongPassword })
 
 			expect(session).toBeNull()
-			expect(userUpdate).toHaveBeenCalledWith({
+			expect(mockPrisma.user.update).toHaveBeenCalledWith({
 				where: { username },
 				data: { failedLoginAttempts: 1, lockedUntil: null },
 			})
@@ -228,24 +283,23 @@ describe('account lockout', () => {
 		test('locks account when max attempts reached', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS - 1,
-			} as any)
-			userUpdate.mockResolvedValue({} as any)
+			})
+			mockPrisma.user.update.mockResolvedValue({})
 
 			const session = await login({ username, password: wrongPassword })
 
 			expect(session).toBeNull()
 
-			const updateCall = userUpdate.mock.calls[0]![0]
+			const updateCall = mockPrisma.user.update.mock.calls[0][0]
 			expect(updateCall.where).toEqual({ username })
 			expect(updateCall.data.failedLoginAttempts).toBe(MAX_LOGIN_ATTEMPTS)
 			expect(updateCall.data.lockedUntil).toBeInstanceOf(Date)
-			const lockedUntil = updateCall.data.lockedUntil as Date
-			expect(lockedUntil.getTime()).toBeGreaterThan(
+			expect(updateCall.data.lockedUntil.getTime()).toBeGreaterThan(
 				Date.now() + LOCKOUT_DURATION_MS - 5000,
 			)
 		})
@@ -256,41 +310,41 @@ describe('account lockout', () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 			const futureDate = new Date(Date.now() + 5 * 60 * 1000)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: futureDate,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS,
-			} as any)
+			})
 
 			const session = await login({ username, password: validPassword })
 
 			expect(session).toBeNull()
-			expect(userUpdate).not.toHaveBeenCalled()
-			expect(sessionCreate).not.toHaveBeenCalled()
+			expect(mockPrisma.user.update).not.toHaveBeenCalled()
+			expect(mockPrisma.session.create).not.toHaveBeenCalled()
 		})
 
 		test('allows login after lockout expires', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 			const pastDate = new Date(Date.now() - 60 * 1000)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: pastDate,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS,
-			} as any)
-			userUpdate.mockResolvedValue({} as any)
-			sessionCreate.mockResolvedValue({
+			})
+			mockPrisma.user.update.mockResolvedValue({})
+			mockPrisma.session.create.mockResolvedValue({
 				id: 'session-3',
 				expirationDate: new Date(),
 				userId: 'user-1',
-			} as any)
+			})
 
 			const session = await login({ username, password: validPassword })
 
 			expect(session).not.toBeNull()
-			expect(userUpdate).toHaveBeenCalledWith({
+			expect(mockPrisma.user.update).toHaveBeenCalledWith({
 				where: { username },
 				data: { failedLoginAttempts: 0, lockedUntil: null },
 			})
@@ -299,41 +353,43 @@ describe('account lockout', () => {
 
 	describe('login() - edge cases', () => {
 		test('returns null for nonexistent user', async () => {
-			userFindUnique.mockResolvedValue(null)
+			mockPrisma.user.findUnique.mockResolvedValue(null)
 
-			const session = await login({ username, password: validPassword })
+			const session = await login({ username: 'ghost', password: 'test' })
 
 			expect(session).toBeNull()
-			expect(userUpdate).not.toHaveBeenCalled()
+			expect(mockPrisma.user.update).not.toHaveBeenCalled()
 		})
 
-		test('returns null for user without password', async () => {
-			userFindUnique.mockResolvedValue({
+		test('returns null for user with no password', async () => {
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: null,
-			} as any)
+				lockedUntil: null,
+				failedLoginAttempts: 0,
+			})
 
-			const session = await login({ username, password: validPassword })
+			const session = await login({ username, password: 'test' })
 
 			expect(session).toBeNull()
-			expect(userUpdate).not.toHaveBeenCalled()
+			expect(mockPrisma.user.update).not.toHaveBeenCalled()
 		})
 
 		test('increments counter without locking at max-1 attempts', async () => {
 			const hash = await bcrypt.hash(validPassword, 4)
 
-			userFindUnique.mockResolvedValue({
+			mockPrisma.user.findUnique.mockResolvedValue({
 				id: 'user-1',
 				password: { hash },
 				lockedUntil: null,
 				failedLoginAttempts: MAX_LOGIN_ATTEMPTS - 2,
-			} as any)
-			userUpdate.mockResolvedValue({} as any)
+			})
+			mockPrisma.user.update.mockResolvedValue({})
 
 			const session = await login({ username, password: wrongPassword })
 
 			expect(session).toBeNull()
-			expect(userUpdate).toHaveBeenCalledWith({
+			expect(mockPrisma.user.update).toHaveBeenCalledWith({
 				where: { username },
 				data: {
 					failedLoginAttempts: MAX_LOGIN_ATTEMPTS - 1,
@@ -341,9 +397,43 @@ describe('account lockout', () => {
 				},
 			})
 		})
+	})
+
+	describe('isAccountLocked()', () => {
+		test('returns false for nonexistent user', async () => {
+			mockPrisma.user.findUnique.mockResolvedValue(null)
+
+			const result = await isAccountLocked('ghost')
+			expect(result).toBe(false)
+		})
+
+		test('returns false when lockedUntil is null', async () => {
+			mockPrisma.user.findUnique.mockResolvedValue({ lockedUntil: null })
+
+			const result = await isAccountLocked(username)
+			expect(result).toBe(false)
+		})
+
+		test('returns false when lockedUntil is in the past', async () => {
+			mockPrisma.user.findUnique.mockResolvedValue({
+				lockedUntil: new Date(Date.now() - 60 * 1000),
+			})
+
+			const result = await isAccountLocked(username)
+			expect(result).toBe(false)
+		})
+
+		test('returns true when lockedUntil is in the future', async () => {
+			mockPrisma.user.findUnique.mockResolvedValue({
+				lockedUntil: new Date(Date.now() + 60 * 1000),
+			})
+
+			const result = await isAccountLocked(username)
+			expect(result).toBe(true)
+		})
 
 		test('does not leak lockout info for nonexistent user', async () => {
-			userFindUnique.mockResolvedValue(null)
+			mockPrisma.user.findUnique.mockResolvedValue(null)
 
 			const locked = await isAccountLocked('nonexistent')
 			expect(locked).toBe(false)
