@@ -21,6 +21,36 @@ if (SENTRY_ENABLED) {
 	void import('./utils/monitoring.js').then(({ init }) => init())
 }
 
+// ── Process-level error handlers ──────────────────────────────────────
+
+// Handle otherwise-unhandled promise rejections.
+// In Node.js v16+ these terminate the process, but we want to log them first.
+process.on('unhandledRejection', (reason: unknown) => {
+	console.error('💥 Unhandled Rejection:', reason)
+	if (reason instanceof Error) {
+		console.error(reason.stack)
+	}
+	if (SENTRY_ENABLED) {
+		Sentry.captureException(
+			reason instanceof Error ? reason : new Error(String(reason)),
+		)
+	}
+})
+
+// Handle uncaught exceptions — the process is in an undefined state.
+// Log, report to Sentry, and exit. Do NOT attempt to continue.
+process.on('uncaughtException', (error: Error) => {
+	console.error('💥 Uncaught Exception:', error.message)
+	console.error(error.stack)
+	if (SENTRY_ENABLED) {
+		Sentry.captureException(error)
+		// Give Sentry a moment to flush, then exit
+		void Sentry.flush(2000).finally(() => process.exit(1))
+	} else {
+		process.exit(1)
+	}
+})
+
 const viteDevServer = IS_PROD
 	? undefined
 	: await import('vite').then((vite) =>
