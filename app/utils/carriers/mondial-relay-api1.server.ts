@@ -16,6 +16,10 @@
 import { createHash } from 'crypto'
 import { invariant } from '@epic-web/invariant'
 import { XMLParser } from 'fast-xml-parser'
+import {
+  CircuitBreaker,
+  CircuitOpenError,
+} from '#app/utils/circuit-breaker.server.ts'
 
 /**
  * Gets the API1 base URL from environment variable or defaults to production
@@ -34,6 +38,24 @@ function getApi1Credentials() {
 		brandCode: process.env.MONDIAL_RELAY_API1_BRAND_CODE,
 	}
 }
+
+/**
+ * Circuit breaker for API1 pickup point search
+ */
+export const pickupPointsBreaker = new CircuitBreaker('mondial-relay-api1-pickup', {
+  failureThreshold: 5,
+  resetTimeoutMs: 30_000,
+  halfOpenMaxRequests: 1,
+})
+
+/**
+ * Circuit breaker for API1 tracking info
+ */
+export const trackingBreaker = new CircuitBreaker('mondial-relay-api1-tracking', {
+  failureThreshold: 5,
+  resetTimeoutMs: 30_000,
+  halfOpenMaxRequests: 1,
+})
 
 /**
  * Validates that all required API1 credentials are set
@@ -163,25 +185,33 @@ export async function searchPickupPoints({
 </soap:Envelope>`
 
 	try {
-		const response = await fetch(getApi1BaseUrl(), {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'text/xml; charset=utf-8',
-				'SOAPAction': 'http://www.mondialrelay.fr/webservice/WSI2_RecherchePointRelais',
-			},
-			body: soapBody,
+		const result = await pickupPointsBreaker.fire(async () => {
+			const response = await fetch(getApi1BaseUrl(), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'text/xml; charset=utf-8',
+					'SOAPAction': 'http://www.mondialrelay.fr/webservice/WSI2_RecherchePointRelais',
+				},
+				body: soapBody,
+			})
+
+			if (!response.ok) {
+				throw new Error(`Mondial Relay API1 error: ${response.status} ${response.statusText}`)
+			}
+
+			const xmlText = await response.text()
+			const pickupPoints = parsePickupPointsResponse(xmlText, latitude, longitude)
+			
+			// Limit results if maxResults is specified
+			return maxResults ? pickupPoints.slice(0, maxResults) : pickupPoints
 		})
 
-		if (!response.ok) {
-			throw new Error(`Mondial Relay API1 error: ${response.status} ${response.statusText}`)
-		}
-
-		const xmlText = await response.text()
-		const pickupPoints = parsePickupPointsResponse(xmlText, latitude, longitude)
-		
-		// Limit results if maxResults is specified
-		return maxResults ? pickupPoints.slice(0, maxResults) : pickupPoints
+		return result as PickupPoint[]
 	} catch (error) {
+		if (error instanceof CircuitOpenError) {
+			console.warn(`Mondial Relay API1 circuit breaker OPEN: ${error.message}`)
+			throw error
+		}
 		console.error('Mondial Relay API1 searchPickupPoints error:', error)
 		throw new Error(`Failed to search pickup points: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
@@ -376,22 +406,30 @@ export async function getTrackingInfo(shipmentNumber: string): Promise<{
 </soap:Envelope>`
 
 	try {
-		const response = await fetch(getApi1BaseUrl(), {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'text/xml; charset=utf-8',
-				'SOAPAction': 'http://www.mondialrelay.fr/webservice/WSI2_TracingColisDetaille',
-			},
-			body: soapBody,
+		const result = await trackingBreaker.fire(async () => {
+			const response = await fetch(getApi1BaseUrl(), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'text/xml; charset=utf-8',
+					'SOAPAction': 'http://www.mondialrelay.fr/webservice/WSI2_TracingColisDetaille',
+				},
+				body: soapBody,
+			})
+
+			if (!response.ok) {
+				throw new Error(`Mondial Relay API1 error: ${response.status} ${response.statusText}`)
+			}
+
+			const xmlText = await response.text()
+			return parseTrackingResponse(xmlText)
 		})
 
-		if (!response.ok) {
-			throw new Error(`Mondial Relay API1 error: ${response.status} ${response.statusText}`)
-		}
-
-		const xmlText = await response.text()
-		return parseTrackingResponse(xmlText)
+		return result as Awaited<ReturnType<typeof parseTrackingResponse>>
 	} catch (error) {
+		if (error instanceof CircuitOpenError) {
+			console.warn(`Mondial Relay API1 circuit breaker OPEN: ${error.message}`)
+			throw error
+		}
 		console.error('Mondial Relay API1 getTrackingInfo error:', error)
 		throw new Error(`Failed to get tracking info: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
