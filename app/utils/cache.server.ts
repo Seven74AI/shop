@@ -38,8 +38,8 @@
  *      • settings:currency — invalidated in getStoreCurrency() when cached
  *        value is corrupt (self-healing), but NOT wired on settings mutations
  *        (see audit below — settings mutations currently have no admin UI).
- *      • Product mutations — wired in __edit.server.tsx (product:*) and
- *        $productSlug.delete.ts (product:*).
+ *      • Product mutations — wired in __new.server.tsx (products:list),
+ *        __edit.server.tsx (product:*), and $productSlug.delete.ts (product:*).
  *
  * 3. LRU eviction (automatic):
  *    Memory cache evicts least-recently-used entries when cap (5000) is hit.

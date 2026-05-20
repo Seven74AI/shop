@@ -4,6 +4,7 @@ import { type Prisma } from '@prisma/client'
 import { data } from 'react-router'
 import { MAX_UPLOAD_SIZE } from '#app/schemas/constants'
 import { productSchema } from '#app/schemas/product.ts'
+import * as Sentry from '@sentry/react-router'
 import { cache } from '#app/utils/cache.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
@@ -71,8 +72,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const { newImages, ...productData } = submission.value
 
+	let result
 	try {
-		const result = await prisma.$transaction(async (tx) => {
+		result = await prisma.$transaction(async (tx) => {
 			// Prepare product data
 			const { variants = [], tags = [], categoryId, ...productDataWithoutVariantsAndCategory } = productData
 			const productCreateData: Prisma.ProductCreateInput = { 
@@ -144,13 +146,6 @@ export async function action({ request }: Route.ActionArgs) {
 			
 			return createdProduct
 		})
-
-		// Invalidate product list cache — new product added
-		await cache.delete('products:list')
-
-		return redirectWithToast(`/admin/products/${result.slug}`, {
-			description: 'Product created successfully',
-		})
 	} catch (error: unknown) {
 		const prismaError = handlePrismaError(error)
 		
@@ -161,4 +156,19 @@ export async function action({ request }: Route.ActionArgs) {
 			{ status: 400 },
 		)
 	}
+
+	// Invalidate product list cache — new product added.
+	// Wrapped in its own try-catch so cache failures don't surface
+	// as product errors to the admin.
+	try {
+		await cache.delete('products:list')
+	} catch (cacheError: unknown) {
+		Sentry.captureException(cacheError, {
+			tags: { context: 'cache-invalidation' },
+		})
+	}
+
+	return redirectWithToast(`/admin/products/${result.slug}`, {
+		description: 'Product created successfully',
+	})
 }
