@@ -7,6 +7,7 @@ import { sendEmail } from './email.server.ts'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { stripe } from './stripe.server.ts'
+import { calculateVat, type TaxableItem } from './tax.server.ts'
 
 /**
  * Type for stock availability issues
@@ -548,6 +549,7 @@ export async function createOrderFromStripeSession(
 							description: true,
 							price: true,
 							stockQuantity: true,
+							taxKind: true,
 						},
 					},
 					variant: {
@@ -692,6 +694,27 @@ export async function createOrderFromStripeSession(
 			// Calculate subtotal (total - shipping)
 			const calculatedSubtotal = (session.amount_subtotal ?? 0) - shippingCost
 
+			// Calculate VAT for the order
+			const shippingCountry = session.metadata?.shippingCountry || 'US'
+			const customerVatNumber = session.metadata?.customerVatNumber || null
+
+			// Build taxable items from cart
+			const taxableItems: TaxableItem[] = cart.items.map((item) => ({
+				priceCents:
+					item.variantId && item.variant
+						? item.variant.price ?? item.product.price
+						: item.product.price,
+				quantity: item.quantity,
+				taxKind: item.product.taxKind,
+			}))
+
+			// Calculate VAT (separate DB read - TaxRate table is read-only, not part of transaction)
+			const vatCalculation = await calculateVat(
+				taxableItems,
+				shippingCountry,
+				customerVatNumber,
+			)
+
 			const newOrder = await tx.order.create({
 				data: {
 					orderNumber,
@@ -707,13 +730,19 @@ export async function createOrderFromStripeSession(
 					shippingCity: session.metadata?.shippingCity || '',
 					shippingState: session.metadata?.shippingState || null,
 					shippingPostal: session.metadata?.shippingPostal || '',
-					shippingCountry: session.metadata?.shippingCountry || 'US',
+					shippingCountry,
 					shippingMethodId,
 					shippingCost,
 					shippingMethodName,
 					shippingCarrierName,
 					mondialRelayPickupPointId,
 					mondialRelayPickupPointName,
+					// VAT data
+					vatBreakdown: vatCalculation.breakdown,
+					vatTotalCents: vatCalculation.totalVatCents,
+					taxCountry: vatCalculation.taxCountry,
+					customerVatNumber,
+					vatValidationStatus: 'UNCHECKED',
 					stripeCheckoutSessionId: session.id,
 					stripePaymentIntentId: paymentIntentId,
 					stripeChargeId: chargeId,
