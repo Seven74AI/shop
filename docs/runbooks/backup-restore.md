@@ -4,7 +4,7 @@
 
 The Shop database (SQLite via LiteFS) is backed up daily at 3am UTC to a Tigris S3 bucket (`db-backups`). Backups are retained for 30 days.
 
-The backup workflow runs via GitHub Actions (`.github/workflows/db-backup.yml`), which SSHs into the production Fly machine and executes `scripts/backup-db.js`.
+The backup workflow runs via GitHub Actions (`.github/workflows/db-backup.yml`), which SSHs into the production Fly machine and executes `scripts/backup-db.cjs`.
 
 ## Backup Details
 
@@ -149,7 +149,7 @@ To run a backup outside the scheduled window:
 
 ```bash
 APP="shop-3ecf"
-flyctl ssh console --app "${APP}" --command 'node /myapp/scripts/backup-db.js'
+flyctl ssh console --app "${APP}" --command 'node /myapp/scripts/backup-db.cjs'
 ```
 
 Or trigger the GitHub Actions workflow manually:

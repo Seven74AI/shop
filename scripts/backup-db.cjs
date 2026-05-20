@@ -2,7 +2,7 @@
 /**
  * Daily LiteFS snapshot backup script.
  *
- * Usage: node scripts/backup-db.js
+ * Usage: node scripts/backup-db.cjs
  *
  * Environment variables required:
  *   AWS_ACCESS_KEY_ID        S3 access key (Tigris)
@@ -19,7 +19,7 @@
  *   4. Prune backups older than 30 days
  */
 
-const { execSync } = require('child_process')
+const { execFileSync } = require('child_process')
 const { createReadStream, createWriteStream, readFileSync, unlinkSync, statSync, existsSync } = require('fs')
 const { createGzip } = require('zlib')
 const { createHmac, createHash } = require('crypto')
@@ -235,7 +235,7 @@ async function main() {
     // litefs export -name <dbname> <output-path>
     // DATABASE_FILENAME is extracted from DATABASE_PATH
     const dbFilename = path.basename(DATABASE_PATH)
-    execSync(`litefs export -name ${dbFilename} ${exportPath}`, {
+    execFileSync('litefs', ['export', '-name', dbFilename, exportPath], {
       stdio: 'pipe',
       timeout: 120_000,
     })
