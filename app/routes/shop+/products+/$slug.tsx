@@ -1,5 +1,5 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { Link, redirect, data } from 'react-router'
+import { Link, redirect, data, useActionData } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
 import { Input } from '#app/components/ui/input.tsx'
@@ -78,15 +78,21 @@ export async function action({ request, params }: Route.ActionArgs) {
 		const title = formData.get('title') as string | null
 		const body = formData.get('body') as string
 
-		const review = await createReview({
-			userId,
-			productId: product.id,
-			rating,
-			title: title || undefined,
-			body,
-		})
-
-		return data({ success: true, review }, { status: 201 })
+		try {
+			const review = await createReview({
+				userId,
+				productId: product.id,
+				rating,
+				title: title || undefined,
+				body,
+			})
+			return data({ success: true, review }, { status: 201 })
+		} catch (error) {
+			if (error instanceof Error) {
+				return data({ success: false, error: error.message }, { status: 400 })
+			}
+			throw error
+		}
 	}
 
 	invariantResponse(false, 'Bad Request', { status: 400 })
@@ -107,10 +113,18 @@ function StarRating({ rating, size = 'md' }: { rating: number; size?: 'sm' | 'md
 	)
 }
 
-function ReviewForm({ productSlug }: { productSlug: string }) {
+function ReviewForm() {
+	const actionData = useActionData<typeof action>()
+	const formError = actionData && !actionData.success && 'error' in actionData ? (actionData as { error: string }).error : null
+
 	return (
 		<div className="border rounded-lg p-6 space-y-4">
 			<h3 className="text-lg font-semibold">Write a Review</h3>
+			{formError && (
+				<p className="text-red-600 bg-red-50 border border-red-200 rounded p-3 text-sm" role="alert">
+					{typeof formError === 'string' ? formError : 'Something went wrong. Please try again.'}
+				</p>
+			)}
 			<form method="post" className="space-y-4">
 				<input type="hidden" name="intent" value="submit-review" />
 
@@ -269,7 +283,7 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 
 						{/* Review form */}
 						<div>
-							<ReviewForm productSlug={product.slug} />
+							<ReviewForm />
 						</div>
 					</div>
 				</div>
