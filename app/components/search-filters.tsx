@@ -89,7 +89,6 @@ export function SearchFilters({
 								value=""
 								label="All Categories"
 								checked={!activeCategoryId}
-								formAction="/shop/products"
 							/>
 						</Form>
 						{facets.categories.map((cat) => (
@@ -137,7 +136,6 @@ export function SearchFilters({
 									activeMinPrice === undefined &&
 									activeMaxPrice === undefined
 								}
-								formAction="/shop/products"
 							/>
 						</Form>
 						{facets.priceRanges.map((pr) => (
@@ -182,34 +180,55 @@ export function SearchFilters({
 	)
 }
 
+/**
+ * Filter checkbox that submits its parent form on change.
+ * Uses a native hidden checkbox input alongside the Radix UI checkbox
+ * so the value participates in form submission.
+ */
 function FilterCheckbox({
 	id,
 	name,
 	value,
 	label,
 	checked,
-	formAction,
 }: {
 	id: string
 	name?: string
 	value?: string
 	label: string
 	checked: boolean
-	formAction?: string
 }) {
 	return (
 		<div className="flex items-center gap-2">
+			{/* Native hidden checkbox: participates in form submission.
+			    unchecked = not sent. checked = sent with name+value. */}
+			{name && value && (
+				<input
+					id={`${id}-native`}
+					type="checkbox"
+					name={name}
+					value={value}
+					defaultChecked={checked}
+					className="hidden"
+					aria-hidden="true"
+					tabIndex={-1}
+				/>
+			)}
 			<Checkbox
 				id={id}
-				name={name}
-				value={value}
-				formAction={formAction}
+				name={undefined}
 				checked={checked}
 				onCheckedChange={() => {
-					// Submit the parent form on checkbox change
+					// Click the native checkbox to toggle it, then submit the form
+					const native = document.getElementById(
+						`${id}-native`,
+					) as HTMLInputElement | null
+					if (native) {
+						native.checked = !native.checked
+					}
 					const form = document.getElementById(id)?.closest('form')
 					if (form instanceof HTMLFormElement) {
-						form.requestSubmit()
+						form.submit()
 					}
 				}}
 			/>
