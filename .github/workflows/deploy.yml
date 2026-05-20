@@ -69,7 +69,7 @@ jobs:
         run: npx prisma migrate deploy && npx prisma generate --sql
 
       - name: 🔎 Type check
-        run: pnpm typecheck || true
+        run: pnpm typecheck
 
   vitest:
     name: ⚡ Vitest
