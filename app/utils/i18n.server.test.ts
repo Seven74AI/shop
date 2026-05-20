@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, expect, test } from 'vitest'
-import { getLocale } from './i18n.server.ts'
+import { getLocale, setLocaleCookie } from './i18n.server.ts'
 
 function makeRequest(headers: Record<string, string> = {}): Request {
 	return new Request('https://epicnotes.fly.dev/', { headers })
@@ -78,5 +78,21 @@ describe('getLocale', () => {
 			'accept-language': 'en-US,en;q=0.9',
 		})
 		expect(getLocale(request)).toBe('en')
+	})
+})
+
+describe('setLocaleCookie', () => {
+	test('serializes "fr" locale cookie', () => {
+		const cookie = setLocaleCookie('fr')
+		expect(cookie).toContain('localePreference=fr')
+		expect(cookie).toContain('Max-Age=31536000')
+		expect(cookie).toContain('Path=/')
+		expect(cookie).toContain('SameSite=Lax')
+	})
+
+	test('serializes "en" locale cookie', () => {
+		const cookie = setLocaleCookie('en')
+		expect(cookie).toContain('localePreference=en')
+		expect(cookie).toContain('Max-Age=31536000')
 	})
 })
