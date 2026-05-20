@@ -15,6 +15,44 @@ interface SearchFiltersProps {
 }
 
 /**
+ * Hidden inputs that preserve all active filter params inside a GET Form.
+ * Passed to every search filter form so toggling one filter doesn't drop the others.
+ */
+function HiddenFilterParams({
+	query,
+	categoryId,
+	minPrice,
+	maxPrice,
+	sort,
+}: {
+	query?: string
+	categoryId?: string
+	minPrice?: number
+	maxPrice?: number
+	sort?: string
+}) {
+	return (
+		<>
+			{query && (
+				<input type="hidden" name="q" value={query} />
+			)}
+			{categoryId && (
+				<input type="hidden" name="category" value={categoryId} />
+			)}
+			{minPrice !== undefined && (
+				<input type="hidden" name="minPrice" value={minPrice} />
+			)}
+			{maxPrice !== undefined && (
+				<input type="hidden" name="maxPrice" value={maxPrice} />
+			)}
+			{sort && sort !== 'relevance' && (
+				<input type="hidden" name="sort" value={sort} />
+			)}
+		</>
+	)
+}
+
+/**
  * Filter sidebar component for the product search page.
  * Uses <Form method="GET"> so filter changes update the URL
  * and trigger server-side search via the loader.
@@ -25,6 +63,7 @@ export function SearchFilters({
 	activeCategoryId,
 	activeMinPrice,
 	activeMaxPrice,
+	activeSort,
 }: SearchFiltersProps) {
 	const id = useId()
 
@@ -38,13 +77,12 @@ export function SearchFilters({
 					</legend>
 					<div className="space-y-2">
 						<Form method="GET" action="/shop/products">
-							{activeQuery && (
-								<input
-									type="hidden"
-									name="q"
-									value={activeQuery}
-								/>
-							)}
+							<HiddenFilterParams
+								query={activeQuery}
+								minPrice={activeMinPrice}
+								maxPrice={activeMaxPrice}
+								sort={activeSort}
+							/>
 							<FilterCheckbox
 								id={`${id}-cat-all`}
 								name="category"
@@ -60,13 +98,12 @@ export function SearchFilters({
 								method="GET"
 								action="/shop/products"
 							>
-								{activeQuery && (
-									<input
-										type="hidden"
-										name="q"
-										value={activeQuery}
-									/>
-								)}
+								<HiddenFilterParams
+									query={activeQuery}
+									minPrice={activeMinPrice}
+									maxPrice={activeMaxPrice}
+									sort={activeSort}
+								/>
 								<FilterCheckbox
 									id={`${id}-cat-${cat.id}`}
 									name="category"
@@ -88,20 +125,11 @@ export function SearchFilters({
 					</legend>
 					<div className="space-y-2">
 						<Form method="GET" action="/shop/products">
-							{activeQuery && (
-								<input
-									type="hidden"
-									name="q"
-									value={activeQuery}
-								/>
-							)}
-							{activeCategoryId && (
-								<input
-									type="hidden"
-									name="category"
-									value={activeCategoryId}
-								/>
-							)}
+							<HiddenFilterParams
+								query={activeQuery}
+								categoryId={activeCategoryId}
+								sort={activeSort}
+							/>
 							<FilterCheckbox
 								id={`${id}-price-all`}
 								label="All Prices"
@@ -118,20 +146,11 @@ export function SearchFilters({
 								method="GET"
 								action="/shop/products"
 							>
-								{activeQuery && (
-									<input
-										type="hidden"
-										name="q"
-										value={activeQuery}
-									/>
-								)}
-								{activeCategoryId && (
-									<input
-										type="hidden"
-										name="category"
-										value={activeCategoryId}
-									/>
-								)}
+								<HiddenFilterParams
+									query={activeQuery}
+									categoryId={activeCategoryId}
+									sort={activeSort}
+								/>
 								{pr.min !== null && (
 									<input
 										type="hidden"

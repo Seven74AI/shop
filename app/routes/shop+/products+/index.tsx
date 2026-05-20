@@ -12,8 +12,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const result = await searchProducts({
 		...filters,
-		// Always default to ACTIVE for public search unless explicitly set
-		status: filters.status ?? 'ACTIVE',
+		// searchProducts defaults to ACTIVE when no status is specified
+		status: filters.status,
 	})
 
 	const currency = await getStoreCurrency()

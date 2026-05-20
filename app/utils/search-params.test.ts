@@ -77,6 +77,35 @@ describe('search-params', () => {
 			expect(filters.limit).toBe(10)
 			expect(filters.offset).toBe(20)
 		})
+
+		it('returns undefined for non-numeric price params', () => {
+			const request = new Request(
+				'http://localhost/shop/products?minPrice=abc&maxPrice=xyz',
+			)
+			const filters = parseSearchParams(request)
+			expect(filters.minPriceCents).toBeUndefined()
+			expect(filters.maxPriceCents).toBeUndefined()
+		})
+
+		it('returns undefined for empty string numeric params', () => {
+			const request = new Request(
+				'http://localhost/shop/products?minPrice=&maxPrice=&limit=&offset=',
+			)
+			const filters = parseSearchParams(request)
+			expect(filters.minPriceCents).toBeUndefined()
+			expect(filters.maxPriceCents).toBeUndefined()
+			expect(filters.limit).toBeUndefined()
+			expect(filters.offset).toBeUndefined()
+		})
+
+		it('parses zero as a valid numeric value', () => {
+			const request = new Request(
+				'http://localhost/shop/products?minPrice=0&maxPrice=0',
+			)
+			const filters = parseSearchParams(request)
+			expect(filters.minPriceCents).toBe(0)
+			expect(filters.maxPriceCents).toBe(0)
+		})
 	})
 
 	describe('serializeSearchParams', () => {

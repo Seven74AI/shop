@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Form, useSearchParams } from 'react-router'
 import {
 	Select,
@@ -25,13 +26,20 @@ interface SortSelectProps {
  */
 export function SortSelect({ activeSort }: SortSelectProps) {
 	const [searchParams] = useSearchParams()
+	const formRef = useRef<HTMLFormElement>(null)
+	const sortInputRef = useRef<HTMLInputElement>(null)
 
 	const activeValue = SORT_OPTIONS.some((o) => o.value === activeSort)
 		? activeSort
 		: 'relevance'
 
 	return (
-		<Form method="GET" action="/shop/products" data-testid="sort-form">
+		<Form
+			ref={formRef}
+			method="GET"
+			action="/shop/products"
+			data-testid="sort-form"
+		>
 			{/* Preserve existing search and filter params */}
 			{['q', 'category', 'minPrice', 'maxPrice', 'status'].map(
 				(param) => {
@@ -46,21 +54,14 @@ export function SortSelect({ activeSort }: SortSelectProps) {
 					) : null
 				},
 			)}
+			<input ref={sortInputRef} type="hidden" name="sort" value={activeValue} />
 			<Select
 				name="sort"
 				value={activeValue}
 				onValueChange={(value) => {
-					// Submit the form when sort changes
-					const form = document.querySelector<HTMLFormElement>(
-						'[data-testid="sort-form"]',
-					)
-					if (form) {
-						const selectInput = form.querySelector<HTMLInputElement>(
-							'input[name="sort"]',
-						)
-						if (selectInput) selectInput.value = value
-						form.requestSubmit()
-					}
+					// Update hidden input before submitting the form
+					if (sortInputRef.current) sortInputRef.current.value = value
+					formRef.current?.requestSubmit()
 				}}
 			>
 				<SelectTrigger

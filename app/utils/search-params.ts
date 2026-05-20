@@ -9,6 +9,16 @@ const VALID_SORTS = [
 ] as const
 
 /**
+ * Safely parse a URL search param to a number.
+ * Returns undefined for null, empty string, and NaN values.
+ */
+function parseNumericParam(val: string | null): number | undefined {
+	if (val === null || val === '') return undefined
+	const n = Number(val)
+	return Number.isNaN(n) ? undefined : n
+}
+
+/**
  * Parse URL search params into SearchFilters.
  * Used in loaders to convert URL state to server search parameters.
  */
@@ -32,12 +42,12 @@ export function parseSearchParams(request: Request): SearchFilters {
 	return {
 		query,
 		categoryId,
-		minPriceCents: minPriceStr ? Number(minPriceStr) : undefined,
-		maxPriceCents: maxPriceStr ? Number(maxPriceStr) : undefined,
+		minPriceCents: parseNumericParam(minPriceStr),
+		maxPriceCents: parseNumericParam(maxPriceStr),
 		status,
 		sort,
-		limit: limitStr ? Number(limitStr) : undefined,
-		offset: offsetStr ? Number(offsetStr) : undefined,
+		limit: parseNumericParam(limitStr),
+		offset: parseNumericParam(offsetStr),
 	}
 }
 
