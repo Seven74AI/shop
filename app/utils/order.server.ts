@@ -738,7 +738,7 @@ export async function createOrderFromStripeSession(
 					mondialRelayPickupPointId,
 					mondialRelayPickupPointName,
 					// VAT data
-					vatBreakdown: vatCalculation.breakdown,
+					vatBreakdown: vatCalculation.breakdown as any,
 					vatTotalCents: vatCalculation.totalVatCents,
 					taxCountry: vatCalculation.taxCountry,
 					customerVatNumber,
@@ -788,6 +788,23 @@ export async function createOrderFromStripeSession(
 	// Send confirmation email (non-blocking - don't fail order creation if email fails)
 	try {
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
+		
+		// Build VAT details for email
+		let vatHtml = ''
+		let vatText = ''
+		if (order.vatTotalCents > 0 && order.vatBreakdown) {
+			const breakdown = typeof order.vatBreakdown === 'string'
+				? JSON.parse(order.vatBreakdown)
+				: order.vatBreakdown
+			if (Array.isArray(breakdown)) {
+				for (const line of breakdown as Array<{ kind: string; rate: number; vatCents: number }>) {
+					const pct = (line.rate / 100).toFixed(1)
+					vatHtml += `<p><strong>VAT (${line.kind} ${pct}%):</strong> €${(line.vatCents / 100).toFixed(2)}</p>\n`
+					vatText += `VAT (${line.kind} ${pct}%): €${(line.vatCents / 100).toFixed(2)}\n`
+				}
+			}
+		}
+		
 		await sendEmail({
 			to: order.email,
 			subject: `Order Confirmation - ${order.orderNumber}`,
@@ -795,7 +812,9 @@ export async function createOrderFromStripeSession(
 				<h1>Order Confirmation</h1>
 				<p>Thank you for your order!</p>
 				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				<p><strong>Total:</strong> ${(order.total / 100).toFixed(2)}</p>
+				<p><strong>Subtotal:</strong> €${(order.subtotal / 100).toFixed(2)}</p>
+				${vatHtml}
+				<p><strong>Total:</strong> €${(order.total / 100).toFixed(2)}</p>
 				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
 			`,
 			text: `
@@ -804,7 +823,9 @@ Order Confirmation
 Thank you for your order!
 
 Order Number: ${order.orderNumber}
-Total: ${(order.total / 100).toFixed(2)}
+Subtotal: €${(order.subtotal / 100).toFixed(2)}
+${vatText}
+Total: €${(order.total / 100).toFixed(2)}
 
 View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,

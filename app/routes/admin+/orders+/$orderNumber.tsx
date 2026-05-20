@@ -730,9 +730,23 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 													</p>
 												)}
 											</div>
-										)}
-										<div className="flex items-center justify-between pt-2 border-t border-border">
-											<span className="text-base font-normal text-foreground">Total</span>
+									)}
+									{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
+										<>
+											{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
+												<div key={i} className="flex items-center justify-between">
+													<span className="text-xs text-[var(--text-medium)]">
+														VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)
+													</span>
+													<span className="text-xs font-normal text-[var(--text-dark)]">
+														{formatPrice(line.vatCents, currency)}
+													</span>
+												</div>
+											))}
+										</>
+									)}
+									<div className="flex items-center justify-between pt-2 border-t border-border">
+										<span className="text-base font-normal text-foreground">Total</span>
 											<span className="text-lg font-normal text-foreground">
 												{formatPrice(order.total, currency)}
 											</span>
