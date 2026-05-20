@@ -1,4 +1,3 @@
-import { styleText } from 'node:util'
 import { helmet } from '@nichtsam/helmet/node-http'
 import { createRequestHandler } from '@react-router/express'
 import * as Sentry from '@sentry/react-router'
@@ -8,8 +7,9 @@ import compression from 'compression'
 import express from 'express'
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
-import morgan from 'morgan'
 import { type ServerBuild } from 'react-router'
+import { logger } from '#app/utils/logger.server.js'
+import { requestIdMiddleware } from '#app/utils/request-id.server.js'
 
 const MODE = process.env.NODE_ENV ?? 'development'
 const IS_PROD = MODE === 'production'
@@ -41,6 +41,10 @@ const getHost = (req: { get: (key: string) => string | undefined }) =>
 
 // fly is our proxy
 app.set('trust proxy', true)
+
+// Request ID propagation — extract or generate a request ID and attach to req/res.
+// Must be early so all downstream middleware and handlers have access to req.log.
+app.use(requestIdMiddleware)
 
 // ensure HTTPS only (X-Forwarded-Proto comes from Fly)
 app.use((req, res, next) => {
@@ -101,22 +105,6 @@ app.get(['/img/{*path}', '/favicons/{*path}'], (_req, res) => {
 	// So we'll just send a 404 and won't bother calling other middleware.
 	return res.status(404).send('Not found')
 })
-
-morgan.token('url', (req) => {
-	try {
-		return decodeURIComponent(req.url ?? '')
-	} catch {
-		return req.url ?? ''
-	}
-})
-app.use(
-	morgan('tiny', {
-		skip: (req, res) =>
-			res.statusCode === 200 &&
-			(req.url?.startsWith('/resources/images') ||
-				req.url?.startsWith('/resources/healthcheck')),
-	}),
-)
 
 // When running tests or running in development, we want to effectively disable
 // rate limiting because playwright tests are very fast and we don't want to
@@ -191,7 +179,7 @@ async function getBuild() {
 		return { build: build as unknown as ServerBuild, error: null }
 	} catch (error) {
 		// Catch error and return null to make express happy and avoid an unrecoverable crash
-		console.error('Error creating build:', error)
+		logger.error({ err: error }, 'Error creating build')
 		return { error: error, build: null as unknown as ServerBuild }
 	}
 }
@@ -225,20 +213,17 @@ const portToUse = await getPort({
 })
 const portAvailable = desiredPort === portToUse
 if (!portAvailable && !IS_DEV) {
-	console.log(`⚠️ Port ${desiredPort} is not available.`)
+	logger.warn(`Port ${desiredPort} is not available, exiting.`)
 	process.exit(1)
 }
 
 const server = app.listen(portToUse, () => {
 	if (!portAvailable) {
-		console.warn(
-			styleText(
-				'yellow',
-				`⚠️  Port ${desiredPort} is not available, using ${portToUse} instead.`,
-			),
+		logger.warn(
+			`Port ${desiredPort} is not available, using ${portToUse} instead.`,
 		)
 	}
-	console.log(`🚀  We have liftoff!`)
+	logger.info({ port: portToUse }, 'Server started')
 	const localUrl = `http://localhost:${portToUse}`
 	let lanUrl: string | null = null
 	const localIp = ipAddress() ?? 'Unknown'
@@ -249,12 +234,12 @@ const server = app.listen(portToUse, () => {
 		lanUrl = `http://${localIp}:${portToUse}`
 	}
 
-	console.log(
-		`
-${styleText('bold', 'Local:')}            ${styleText('cyan', localUrl)}
-${lanUrl ? `${styleText('bold', 'On Your Network:')}  ${styleText('cyan', lanUrl)}` : ''}
-${styleText('bold', 'Press Ctrl+C to stop')}
-		`.trim(),
+	logger.info(
+		{
+			local: localUrl,
+			lan: lanUrl ?? undefined,
+		},
+		'Server listening',
 	)
 })
 
@@ -263,8 +248,7 @@ closeWithGrace(async ({ err }) => {
 		server.close((e) => (e ? reject(e) : resolve('ok')))
 	})
 	if (err) {
-		console.error(styleText('red', String(err)))
-		console.error(styleText('red', String(err.stack)))
+		logger.error({ err }, 'Server shutting down due to error')
 		if (SENTRY_ENABLED) {
 			Sentry.captureException(err)
 			await Sentry.flush(500)
