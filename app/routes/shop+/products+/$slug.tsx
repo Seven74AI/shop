@@ -184,9 +184,10 @@ function ProductJsonLd({
 		status: string
 		images: Array<{ objectKey: string; altText: string | null }> | null
 	}
-	currency: { code: string; symbol: string; decimals: number }
+	currency: { code: string; symbol: string; decimals: number } | undefined
 	ratingStats: { averageRating: number | null; reviewCount: number }
 }) {
+	if (!currency) return null
 	const mainImage = product.images?.[0]
 	const priceValue = (product.price / 100).toFixed(currency.decimals)
 	const jsonLd: Record<string, unknown> = {
