@@ -29,6 +29,11 @@ const navData = {
 					icon: 'file-text' as IconName,
 				},
 				{
+					title: 'Metrics',
+					url: '/admin/metrics',
+					icon: 'database' as IconName,
+				},
+				{
 					title: 'Shipping',
 					url: '/admin/shipping/zones',
 					icon: 'shopping-cart' as IconName,

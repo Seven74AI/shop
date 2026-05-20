@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/react-router'
 import { data } from 'react-router'
 import type Stripe from 'stripe'
 import { fulfillOrder } from '#app/utils/fulfillment.server.ts'
+import { recordCheckoutError } from '#app/utils/metrics.server.ts'
 import {
 	createOrderFromStripeSession,
 	StockUnavailableError,
@@ -113,6 +114,9 @@ export async function action({ request }: Route.ActionArgs) {
 			return data({ received: true, orderId: order.id })
 		} catch (error) {
 			// Log critical errors to Sentry
+			recordCheckoutError('webhook-order-creation', error, {
+				sessionId: session.id,
+			})
 			Sentry.captureException(error, {
 				tags: { context: 'webhook-order-creation' },
 				extra: {

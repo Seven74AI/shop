@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
 import { prisma } from './db.server.ts'
 import { sendEmail } from './email.server.ts'
+import { recordOrderCreated } from './metrics.server.ts'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { stripe } from './stripe.server.ts'
@@ -787,6 +788,14 @@ View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
 			extra: { orderNumber: order.orderNumber },
 		})
 	}
+
+	// Record business metrics (non-blocking — silently fails)
+	recordOrderCreated({
+		total: order.total,
+		subtotal: order.subtotal,
+		userId: order.userId,
+		email: order.email,
+	})
 
 	return { id: order.id, orderNumber: order.orderNumber }
 }

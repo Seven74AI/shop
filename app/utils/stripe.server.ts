@@ -1,6 +1,7 @@
 import { invariant, invariantResponse } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
 import Stripe from 'stripe'
+import { recordCheckoutError } from './metrics.server.ts'
 
 /**
  * Initialize Stripe client with API key from environment variables.
@@ -228,6 +229,10 @@ export async function createCheckoutSession({
 	} catch (error) {
 		// Log error to Sentry before re-throwing
 		// Caller will handle the error appropriately
+		recordCheckoutError('stripe-api', error, {
+			message: error instanceof Error ? error.message : 'Unknown error',
+			errorType: error instanceof Error ? error.constructor.name : typeof error,
+		})
 		Sentry.captureException(error, {
 			tags: { context: 'stripe-checkout-session-creation' },
 			extra: {

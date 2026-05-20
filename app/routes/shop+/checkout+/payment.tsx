@@ -8,6 +8,7 @@ import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { getCheckoutData } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { recordCheckoutError, recordCheckoutInitiated } from '#app/utils/metrics.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
 	StockValidationError,
@@ -100,6 +101,9 @@ export async function action({ request }: Route.ActionArgs) {
 		await validateStockAvailability(cart.id)
 	} catch (error) {
 		if (error instanceof StockValidationError) {
+			recordCheckoutError('stock-validation', error, {
+				issues: error.issues.map((i) => ({ name: i.productName, requested: i.requested, available: i.available })),
+			})
 			const stockMessages = error.issues.map(
 				(issue) =>
 					`${issue.productName}: Only ${issue.available} available, ${issue.requested} requested`,
@@ -156,6 +160,7 @@ export async function action({ request }: Route.ActionArgs) {
 	// Create Stripe Checkout Session
 	try {
 		const domainUrl = getDomainUrl(request)
+		recordCheckoutInitiated(cartWithItems.id)
 		const session = await createCheckoutSession({
 			cart: cartWithItems,
 			shippingInfo: {
@@ -182,6 +187,9 @@ export async function action({ request }: Route.ActionArgs) {
 		// Redirect to Stripe Checkout
 		return redirect(session.url)
 	} catch (error) {
+		recordCheckoutError('stripe-session-creation', error, {
+			cartId: cartWithItems.id,
+		})
 		Sentry.captureException(error, {
 			tags: { context: 'checkout-session-creation' },
 		})
