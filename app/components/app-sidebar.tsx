@@ -23,11 +23,16 @@ const navData = {
 					url: '/admin/users',
 					icon: 'user' as IconName,
 				},
-				{
-					title: 'Orders',
-					url: '/admin/orders',
-					icon: 'file-text' as IconName,
-				},
+			{
+				title: 'Orders',
+				url: '/admin/orders',
+				icon: 'file-text' as IconName,
+			},
+			{
+				title: 'Returns',
+				url: '/admin/returns',
+				icon: 'update' as IconName,
+			},
 				{
 					title: 'Shipping',
 					url: '/admin/shipping/zones',
