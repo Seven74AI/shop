@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
+import { JsonLd } from '#app/components/json-ld.tsx'
 import { prisma } from '#app/utils/db.server.ts'
+import { makeItemListJsonLd, makeBreadcrumbListJsonLd } from '#app/utils/json-ld.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/index.ts'
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
 	const products = await prisma.product.findMany({
 		where: {
 			status: 'ACTIVE',
@@ -30,7 +33,7 @@ export async function loader() {
 
 	const currency = await getStoreCurrency()
 
-	return { products, categories, currency }
+	return { products, categories, currency, siteUrl: getDomainUrl(request) }
 }
 
 export const meta: Route.MetaFunction = () => [
@@ -39,7 +42,24 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function ProductsIndex({ loaderData }: Route.ComponentProps) {
-	const { products, categories, currency } = loaderData
+	const { products, categories, currency, siteUrl } = loaderData
+
+	const productListItems = products.map((product) => ({
+		name: product.name,
+		url: `${siteUrl}/shop/products/${product.slug}`,
+		image: product.images[0]?.objectKey
+			? `${siteUrl}/resources/images?objectKey=${encodeURIComponent(product.images[0].objectKey)}`
+			: undefined,
+	}))
+
+	const jsonLd = [
+		makeItemListJsonLd(productListItems),
+		makeBreadcrumbListJsonLd([
+			{ name: 'Home', url: `${siteUrl}/` },
+			{ name: 'Shop', url: `${siteUrl}/shop` },
+			{ name: 'Products', url: `${siteUrl}/shop/products` },
+		]),
+	]
 
 	const [searchTerm, setSearchTerm] = useState('')
 	const [selectedCategory, setSelectedCategory] = useState('all')
@@ -76,6 +96,7 @@ export default function ProductsIndex({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="container py-8">
+			<JsonLd data={jsonLd} />
 			<div className="space-y-8 animate-slide-top">
 			{/* Header */}
 			<div>

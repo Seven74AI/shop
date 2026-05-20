@@ -1,8 +1,11 @@
 import { Link } from 'react-router'
+import { JsonLd } from '#app/components/json-ld.tsx'
 import { prisma } from '#app/utils/db.server.ts'
+import { makeOrganizationJsonLd, makeWebSiteJsonLd } from '#app/utils/json-ld.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
 import { type Route } from './+types/index.ts'
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
 	const categories = await prisma.category.findMany({
 		where: {
 			parentId: null, // Only get root categories
@@ -19,7 +22,7 @@ export async function loader() {
 		},
 	})
 
-	return { categories }
+	return { categories, siteUrl: getDomainUrl(request) }
 }
 
 export const meta: Route.MetaFunction = () => [
@@ -28,10 +31,24 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-	const { categories } = loaderData
+	const { categories, siteUrl } = loaderData
+
+	const jsonLd = [
+		makeOrganizationJsonLd({
+			name: 'Epic Shop',
+			url: siteUrl,
+			description: 'Discover our amazing selection of products.',
+		}),
+		makeWebSiteJsonLd({
+			name: 'Epic Shop',
+			url: siteUrl,
+			description: 'Discover our amazing selection of products.',
+		}),
+	]
 
 	return (
 		<div className="container py-8">
+			<JsonLd data={jsonLd} />
 			<div className="space-y-12 animate-slide-top">
 			{/* Hero Section */}
 			<div className="text-center space-y-4">

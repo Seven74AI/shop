@@ -1,13 +1,16 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { Link, redirect } from 'react-router'
+import { JsonLd } from '#app/components/json-ld.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { addToCart, getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { makeBreadcrumbListJsonLd, makeProductJsonLd } from '#app/utils/json-ld.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$slug.ts'
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
 	const product = await prisma.product.findUnique({
 		where: {
 			slug: params.slug,
@@ -27,7 +30,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	const currency = await getStoreCurrency()
 
-	return { product, currency }
+	return { product, currency, siteUrl: getDomainUrl(request) }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -72,10 +75,39 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
-	const { product, currency } = loaderData
+	const { product, currency, siteUrl } = loaderData
+
+	const productUrl = `${siteUrl}/shop/products/${product.slug}`
+	const productImages = product.images
+		.filter((img) => img.objectKey)
+		.map((img) => `${siteUrl}/resources/images?objectKey=${encodeURIComponent(img.objectKey)}`)
+
+	const jsonLd = [
+		makeProductJsonLd({
+			name: product.name,
+			description: product.description || undefined,
+			sku: product.sku,
+			image: productImages.length > 0 ? productImages : undefined,
+			price: product.price,
+			currency: currency?.symbol || 'USD',
+			url: productUrl,
+			availability: product.status === 'ACTIVE' ? 'InStock' : 'OutOfStock',
+			category: product.category.name,
+		}),
+		makeBreadcrumbListJsonLd([
+			{ name: 'Home', url: `${siteUrl}/` },
+			{ name: 'Shop', url: `${siteUrl}/shop` },
+			{ name: 'Products', url: `${siteUrl}/shop/products` },
+			...(product.category
+				? [{ name: product.category.name, url: `${siteUrl}/shop/categories/${product.category.slug}` }]
+				: []),
+			{ name: product.name, url: productUrl },
+		]),
+	]
 
 	return (
 		<div className="container mx-auto px-4 py-8">
+			<JsonLd data={jsonLd} />
 			<div className="grid gap-8 md:grid-cols-2">
 				{/* Product Images */}
 				<div>

@@ -2,55 +2,120 @@ import * as Sentry from '@sentry/react-router'
 import { type ServerBuild } from 'react-router'
 import { prisma } from './db.server.ts'
 
+type RouteMetadata = {
+	lastmod?: string
+	priority: string
+	changefreq: string
+	images?: { loc: string; title?: string }[]
+}
+
+type RouteEntry = {
+	path: string
+	metadata: RouteMetadata
+}
+
 /**
  * Fetches dynamic routes from database (products and categories)
+ * with updatedAt for lastmod and images for image sitemap
  */
-async function getDynamicRoutes(): Promise<string[]> {
-	const dynamicRoutes: string[] = []
+async function getDynamicRoutes(): Promise<RouteEntry[]> {
+	const entries: RouteEntry[] = []
 
 	try {
-		// Get all active products
+		// Get all active products with images
 		const products = await prisma.product.findMany({
 			where: {
 				status: 'ACTIVE',
 			},
 			select: {
 				slug: true,
+				updatedAt: true,
+				images: {
+					select: { objectKey: true, altText: true },
+					orderBy: { displayOrder: 'asc' },
+				},
 			},
 		})
 
-		// Add product URLs
 		for (const product of products) {
-			dynamicRoutes.push(`/shop/products/${product.slug}`)
+			const path = `/shop/products/${product.slug}`
+			entries.push({
+				path,
+				metadata: {
+					lastmod: product.updatedAt.toISOString(),
+					priority: '0.9',
+					changefreq: 'daily',
+					images: product.images
+						.filter((img) => img.objectKey)
+						.map((img) => ({
+							loc: `/resources/images?objectKey=${encodeURIComponent(img.objectKey)}`,
+							title: img.altText || undefined,
+						})),
+				},
+			})
 		}
 
 		// Get all categories
 		const categories = await prisma.category.findMany({
 			select: {
 				slug: true,
+				updatedAt: true,
 			},
 		})
 
-		// Add category URLs
 		for (const category of categories) {
-			dynamicRoutes.push(`/shop/categories/${category.slug}`)
+			entries.push({
+				path: `/shop/categories/${category.slug}`,
+				metadata: {
+					lastmod: category.updatedAt.toISOString(),
+					priority: '0.7',
+					changefreq: 'weekly',
+				},
+			})
 		}
 	} catch (error) {
 		// If database query fails, log but don't break the sitemap generation
-		// This ensures sitemap still works even if database is unavailable
 		Sentry.captureException(error, {
 			tags: { context: 'sitemap-dynamic-routes' },
 		})
 	}
 
-	return dynamicRoutes
+	return entries
+}
+
+/**
+ * Determines priority and changefreq for a static route based on its path pattern
+ */
+function getStaticRouteMetadata(path: string): RouteMetadata {
+	// Root page gets highest priority
+	if (path === '/') {
+		return { priority: '1.0', changefreq: 'daily' }
+	}
+
+	// Shop main page
+	if (path === '/shop') {
+		return { priority: '0.9', changefreq: 'daily' }
+	}
+
+	// Product listing
+	if (path === '/shop/products') {
+		return { priority: '0.8', changefreq: 'daily' }
+	}
+
+	// Marketing pages (about, tos, privacy, support)
+	if (['/about', '/tos', '/privacy', '/support'].includes(path)) {
+		return { priority: '0.5', changefreq: 'monthly' }
+	}
+
+	// Default for other public pages
+	return { priority: '0.6', changefreq: 'weekly' }
 }
 
 /**
  * Extracts public routes from React Router build that should be included in sitemap
  */
-function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
-	const publicRoutes: string[] = []
+function extractPublicRoutes(routes: ServerBuild['routes']): RouteEntry[] {
+	const publicRoutes: RouteEntry[] = []
 	const routesToIgnore = [
 		// Resource routes
 		'/resources',
@@ -74,34 +139,50 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 		'/webhooks',
 		// Checkout (not indexed)
 		'/shop/checkout',
+		// Account pages (not for indexing)
+		'/account',
+		// User profile pages
+		'/users',
 		// 404 catch-all
 		'$',
 	]
 
 	function shouldIncludeRoute(path: string | undefined): boolean {
 		if (!path) return false
-		
+
 		// Ignore routes that match any ignore pattern
 		for (const ignorePattern of routesToIgnore) {
 			if (path.startsWith(ignorePattern) || path === ignorePattern) {
 				return false
 			}
 		}
-		
+
 		// Include public shop routes
 		if (path.startsWith('/shop')) return true
-		
+
 		// Include marketing routes
 		if (path.startsWith('/')) {
 			const segments = path.split('/').filter(Boolean)
 			// Exclude auth, admin, settings, etc.
 			if (segments.length === 0) return true // root
 			const firstSegment = segments[0]
-			if (firstSegment && !['admin', 'auth', 'settings', 'me', 'resources', 'webhooks'].includes(firstSegment)) {
+			if (
+				firstSegment &&
+				![
+					'admin',
+					'auth',
+					'settings',
+					'me',
+					'resources',
+					'webhooks',
+					'account',
+					'users',
+				].includes(firstSegment)
+			) {
 				return true
 			}
 		}
-		
+
 		return false
 	}
 
@@ -113,7 +194,7 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 			if (!route) continue
 
 			let routePath = route.path || ''
-			
+
 			// Handle index routes
 			if (route.index) {
 				routePath = parentPath || '/'
@@ -134,16 +215,22 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 			// Check if this route should be included
 			if (shouldIncludeRoute(routePath)) {
 				// Normalize: remove trailing slashes except for root
-				const normalizedPath = routePath === '/' ? '/' : routePath.replace(/\/$/, '')
-				if (!publicRoutes.includes(normalizedPath)) {
-					publicRoutes.push(normalizedPath)
+				const normalizedPath =
+					routePath === '/' ? '/' : routePath.replace(/\/$/, '')
+
+				// Check if already added (deduplicate)
+				if (!publicRoutes.find((r) => r.path === normalizedPath)) {
+					publicRoutes.push({
+						path: normalizedPath,
+						metadata: getStaticRouteMetadata(normalizedPath),
+					})
 				}
 			}
 
-			// Recursively process children if they exist
-			// Note: React Router 7 routes may have children in a different structure
-			// We'll handle nested routes by checking if route has any child-related properties
-			const routeWithChildren = route as ServerBuild['routes'][string] & { children?: ServerBuild['routes'] }
+			// Recursively process children
+			const routeWithChildren = route as ServerBuild['routes'][string] & {
+				children?: ServerBuild['routes']
+			}
 			if (routeWithChildren.children) {
 				traverseRoutes(routeWithChildren.children, routePath)
 			}
@@ -151,30 +238,58 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 	}
 
 	traverseRoutes(routes)
-	return publicRoutes.sort()
+	publicRoutes.sort((a, b) => a.path.localeCompare(b.path))
+	return publicRoutes
 }
 
 /**
- * Generates XML sitemap from routes
+ * Generates XML sitemap from routes with metadata
  */
 function generateSitemapXML(
-	routes: string[],
+	entries: RouteEntry[],
 	siteUrl: string,
 ): string {
-	const urls = routes
-		.map((route) => {
-			const url = `${siteUrl}${route === '/' ? '' : route}`
-			return `	<url>
-		<loc>${escapeXml(url)}</loc>
-		<changefreq>weekly</changefreq>
-		<priority>${route === '/' ? '1.0' : '0.8'}</priority>
-	</url>`
+	const urlElements = entries
+		.map((entry) => {
+			const url = `${siteUrl}${entry.path === '/' ? '' : entry.path}`
+			const parts: string[] = [
+				`\t<url>`,
+				`\t\t<loc>${escapeXml(url)}</loc>`,
+			]
+
+			if (entry.metadata.lastmod) {
+				parts.push(`\t\t<lastmod>${entry.metadata.lastmod}</lastmod>`)
+			}
+
+			parts.push(`\t\t<changefreq>${entry.metadata.changefreq}</changefreq>`)
+			parts.push(`\t\t<priority>${entry.metadata.priority}</priority>`)
+
+			// Add image entries for product pages
+			if (entry.metadata.images && entry.metadata.images.length > 0) {
+				for (const image of entry.metadata.images) {
+					const imageUrl = `${siteUrl}${image.loc}`
+					parts.push(
+						`\t\t<image:image>`,
+						`\t\t\t<image:loc>${escapeXml(imageUrl)}</image:loc>`,
+					)
+					if (image.title) {
+						parts.push(
+							`\t\t\t<image:title>${escapeXml(image.title)}</image:title>`,
+						)
+					}
+					parts.push(`\t\t</image:image>`)
+				}
+			}
+
+			parts.push(`\t</url>`)
+			return parts.join('\n')
 		})
 		.join('\n')
 
 	return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${urlElements}
 </urlset>`
 }
 
@@ -200,14 +315,26 @@ export async function generateSitemap(
 ): Promise<string> {
 	// Get static routes from React Router build
 	const staticRoutes = extractPublicRoutes(build.routes)
-	
-	// Get dynamic routes from database (products and categories)
-	const dynamicRoutes = await getDynamicRoutes()
-	
-	// Combine and deduplicate routes
-	const allRoutes = [...staticRoutes, ...dynamicRoutes]
-	const uniqueRoutes = Array.from(new Set(allRoutes)).sort()
-	
-	return generateSitemapXML(uniqueRoutes, siteUrl)
-}
 
+	// Get dynamic routes from database (products and categories) with metadata
+	const dynamicRoutes = await getDynamicRoutes()
+
+	// Merge: dynamic routes override static ones (they have richer metadata)
+	const staticPathSet = new Set(staticRoutes.map((r) => r.path))
+	const merged: RouteEntry[] = [...staticRoutes]
+
+	for (const dynRoute of dynamicRoutes) {
+		if (!staticPathSet.has(dynRoute.path)) {
+			merged.push(dynRoute)
+		} else {
+			// Replace static entry with dynamic one (which has lastmod, images)
+			const idx = merged.findIndex((r) => r.path === dynRoute.path)
+			if (idx !== -1) {
+				merged[idx] = dynRoute
+			}
+		}
+	}
+
+	merged.sort((a, b) => a.path.localeCompare(b.path))
+	return generateSitemapXML(merged, siteUrl)
+}

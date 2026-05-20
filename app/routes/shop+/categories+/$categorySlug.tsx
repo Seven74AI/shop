@@ -1,12 +1,15 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
+import { JsonLd } from '#app/components/json-ld.tsx'
 import { prisma } from '#app/utils/db.server.ts'
+import { makeBreadcrumbListJsonLd, makeCollectionPageJsonLd } from '#app/utils/json-ld.ts'
+import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$categorySlug.ts'
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
 	const category = await prisma.category.findUnique({
 		where: {
 			slug: params.categorySlug,
@@ -41,7 +44,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	const currency = await getStoreCurrency()
 
-	return { category, products, allCategories, currency: currency || { symbol: '$', decimals: 2 } }
+	return { category, products, allCategories, currency: currency || { symbol: '$', decimals: 2 }, siteUrl: getDomainUrl(request) }
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
@@ -56,7 +59,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function CategoryPage({ loaderData }: Route.ComponentProps) {
-	const { category, products, allCategories, currency } = loaderData
+	const { category, products, allCategories, currency, siteUrl } = loaderData
 	const [selectedCategory, setSelectedCategory] = useState(category.id)
 
 	// Filter products by selected category
@@ -67,8 +70,33 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 	// Find the selected category for display
 	const selectedCategoryObj = allCategories.find((cat) => cat.id === selectedCategory)
 
+	const categoryUrl = `${siteUrl}/shop/categories/${category.slug}`
+
+	const productItems = filteredProducts.slice(0, 20).map((p) => ({
+		name: p.name,
+		url: `${siteUrl}/shop/products/${p.slug}`,
+		image: p.images[0]?.objectKey
+			? `${siteUrl}/resources/images?objectKey=${encodeURIComponent(p.images[0].objectKey)}`
+			: undefined,
+	}))
+
+	const jsonLd = [
+		makeCollectionPageJsonLd({
+			name: category.name,
+			url: categoryUrl,
+			description: category.description || undefined,
+			hasPart: productItems.map((p) => ({ name: p.name, url: p.url })),
+		}),
+		makeBreadcrumbListJsonLd([
+			{ name: 'Home', url: `${siteUrl}/` },
+			{ name: 'Shop', url: `${siteUrl}/shop` },
+			{ name: category.name, url: categoryUrl },
+		]),
+	]
+
 	return (
 		<div className="container py-8">
+			<JsonLd data={jsonLd} />
 			<div className="space-y-8 animate-slide-top">
 			{/* Header */}
 			<div>
