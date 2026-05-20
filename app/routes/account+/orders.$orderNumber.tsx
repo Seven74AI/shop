@@ -123,6 +123,22 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 								<span className="text-gray-500">Subtotal</span>
 								<span>{formatPrice(order.subtotal)}</span>
 							</div>
+							{order.shippingCost > 0 && (
+								<div className="flex justify-between">
+									<span className="text-gray-500">Shipping</span>
+									<span>{formatPrice(order.shippingCost)}</span>
+								</div>
+							)}
+							{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
+								<>
+									{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
+										<div key={i} className="flex justify-between text-sm text-gray-500">
+											<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
+											<span>{formatPrice(line.vatCents)}</span>
+										</div>
+									))}
+								</>
+							)}
 							<div className="border-t pt-4 flex justify-between text-lg font-bold">
 								<span>Total</span>
 								<span>{formatPrice(order.total)}</span>

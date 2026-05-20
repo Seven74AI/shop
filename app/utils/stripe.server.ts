@@ -118,6 +118,8 @@ export async function createCheckoutSession({
 	currency,
 	domainUrl,
 	userId,
+	vatTotalCents,
+	vatBreakdown,
 }: {
 	cart: {
 		id: string
@@ -141,6 +143,8 @@ export async function createCheckoutSession({
 	}
 	domainUrl: string
 	userId?: string | null
+	vatTotalCents?: number
+	vatBreakdown?: Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -177,6 +181,21 @@ export async function createCheckoutSession({
 		})
 	}
 
+	// Add VAT as a line item if applicable
+	if (vatTotalCents && vatTotalCents > 0) {
+		lineItems.push({
+			price_data: {
+				currency: currency.code.toLowerCase(),
+				product_data: {
+					name: 'VAT',
+					description: 'Value Added Tax',
+				},
+				unit_amount: vatTotalCents,
+			},
+			quantity: 1,
+		})
+	}
+
 	// Create checkout session
 	const sessionParams: any = {
 		line_items: lineItems,
@@ -197,6 +216,12 @@ export async function createCheckoutSession({
 			shippingCost: shippingCost.toString(),
 			...(customerVatNumber && {
 				customerVatNumber,
+			}),
+			...(vatTotalCents !== undefined && {
+				vatTotalCents: vatTotalCents.toString(),
+			}),
+			...(vatBreakdown && vatBreakdown.length > 0 && {
+				vatBreakdown: JSON.stringify(vatBreakdown),
 			}),
 			...(mondialRelayPickupPointId && {
 				mondialRelayPickupPointId: mondialRelayPickupPointId,

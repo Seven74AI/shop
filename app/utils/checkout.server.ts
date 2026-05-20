@@ -4,6 +4,11 @@ import { getCart } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { getShippingMethodsForCountry } from '#app/utils/shipping.server.ts'
+import {
+	calculateVat,
+	type TaxableItem,
+	type VatCalculation,
+} from '#app/utils/tax.server.ts'
 
 export async function getCheckoutData(request: Request) {
 	// Check for existing cart first without creating one
@@ -36,6 +41,7 @@ export async function getCheckoutData(request: Request) {
 							name: true,
 							description: true,
 							price: true,
+							taxKind: true,
 							weightGrams: true,
 							images: {
 								select: { objectKey: true, altText: true },
@@ -129,5 +135,32 @@ export async function getCheckoutData(request: Request) {
 		defaultShippingAddress,
 		shippingMethods,
 	}
+}
+
+/**
+ * Calculates a VAT preview for a cart without persisting anything.
+ * Used on the review and payment pages to display estimated VAT.
+ * Returns null if the cart has no items.
+ */
+export async function calculateCartVat(
+	cart: {
+		items: Array<{
+			product: { taxKind: string; price: number }
+			variant: { price: number | null } | null
+			quantity: number
+		}>
+	},
+	shippingCountry: string,
+	customerVatNumber?: string | null,
+): Promise<VatCalculation | null> {
+	if (cart.items.length === 0) return null
+
+	const taxableItems: TaxableItem[] = cart.items.map((item) => ({
+		priceCents: item.variant?.price ?? item.product.price,
+		quantity: item.quantity,
+		taxKind: item.product.taxKind as TaxableItem['taxKind'],
+	}))
+
+	return calculateVat(taxableItems, shippingCountry, customerVatNumber)
 }
 

@@ -6,7 +6,7 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
-import { getCheckoutData } from '#app/utils/checkout.server.ts'
+import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
@@ -48,6 +48,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument('/shop/cart')
 	}
 
+	// Calculate VAT for display
+	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
+	let vatCalculation = null
+	try {
+		vatCalculation = await calculateCartVat(
+			checkoutData.cart,
+			country,
+			customerVatNumber,
+		)
+	} catch {
+		// VAT calculation failure shouldn't block checkout
+	}
+
 	return {
 		...checkoutData,
 		shippingInfo: {
@@ -62,6 +75,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		shippingMethodId,
 		shippingCost,
 		mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+		vatCalculation,
 	}
 }
 
@@ -118,7 +132,7 @@ export async function action({ request }: Route.ActionArgs) {
 		throw error
 	}
 
-	// Get cart with full product details
+	// Get cart with full product details including taxKind for VAT calculation
 	const cartWithItems = await prisma.cart.findUnique({
 		where: { id: cart.id },
 		include: {
@@ -130,6 +144,7 @@ export async function action({ request }: Route.ActionArgs) {
 							name: true,
 							description: true,
 							price: true,
+							taxKind: true,
 							weightGrams: true,
 						},
 					},
@@ -153,6 +168,22 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const userId = await getUserId(request)
 
+	// Calculate VAT for the order
+	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
+	let vatCalculation = null
+	try {
+		vatCalculation = await calculateCartVat(
+			cartWithItems as any,
+			country,
+			customerVatNumber,
+		)
+	} catch (vatErr) {
+		Sentry.captureException(vatErr, {
+			tags: { context: 'checkout-vat-calculation' },
+		})
+		// Continue without VAT on calculation failure
+	}
+
 	// Create Stripe Checkout Session
 	try {
 		const domainUrl = getDomainUrl(request)
@@ -170,9 +201,12 @@ export async function action({ request }: Route.ActionArgs) {
 			shippingMethodId,
 			shippingCost,
 			mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+			customerVatNumber,
 			currency,
 			domainUrl,
 			userId: userId || undefined,
+			vatTotalCents: vatCalculation?.totalVatCents ?? 0,
+			vatBreakdown: vatCalculation?.breakdown ?? [],
 		})
 
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
@@ -226,6 +260,7 @@ export default function CheckoutPayment() {
 		subtotal,
 		shippingInfo,
 		shippingCost,
+		vatCalculation,
 	} = loaderData
 
 	if (actionData?.error) {
@@ -313,9 +348,25 @@ export default function CheckoutPayment() {
 							)}
 						</span>
 					</div>
+					{vatCalculation && vatCalculation.totalVatCents > 0 && (
+						<>
+							{vatCalculation.breakdown.map((line) => (
+								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
+									<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
+									<span>{formatPrice(line.vatCents, currency)}</span>
+								</div>
+							))}
+						</>
+					)}
+					{vatCalculation && vatCalculation.totalVatCents === 0 && (
+						<div className="flex justify-between text-sm text-muted-foreground">
+							<span>VAT</span>
+							<span>€0.00</span>
+						</div>
+					)}
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
 						<span>Total</span>
-						<span>{formatPrice(subtotal + shippingCost, currency)}</span>
+						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency)}</span>
 					</div>
 				</div>
 			</div>
