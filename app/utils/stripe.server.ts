@@ -117,6 +117,8 @@ export async function createCheckoutSession({
 	currency,
 	domainUrl,
 	userId,
+	taxCountry,
+	customerVatNumber,
 }: {
 	cart: {
 		id: string
@@ -139,6 +141,8 @@ export async function createCheckoutSession({
 	}
 	domainUrl: string
 	userId?: string | null
+	taxCountry?: string | null
+	customerVatNumber?: string | null
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -193,6 +197,10 @@ export async function createCheckoutSession({
 			shippingCountry: shippingInfo.country,
 			shippingMethodId: shippingMethodId,
 			shippingCost: shippingCost.toString(),
+			taxCountry: taxCountry || shippingInfo.country,
+			...(customerVatNumber && {
+				customerVatNumber: customerVatNumber,
+			}),
 			...(mondialRelayPickupPointId && {
 				mondialRelayPickupPointId: mondialRelayPickupPointId,
 			}),

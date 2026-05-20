@@ -7,6 +7,7 @@ import { sendEmail } from './email.server.ts'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { stripe } from './stripe.server.ts'
+import { calculateOrderVat } from './tax.server.ts'
 
 /**
  * Type for stock availability issues
@@ -548,6 +549,7 @@ export async function createOrderFromStripeSession(
 							description: true,
 							price: true,
 							stockQuantity: true,
+							taxKind: true,
 						},
 					},
 					variant: {
@@ -564,6 +566,25 @@ export async function createOrderFromStripeSession(
 
 	invariant(cart, 'Cart not found')
 	invariant(cart.items.length > 0, 'Cart is empty')
+
+	// Extract tax information from session metadata
+	const shippingCountry = session.metadata?.shippingCountry || 'US'
+	const taxCountry = session.metadata?.taxCountry || shippingCountry
+	const customerVatNumber = session.metadata?.customerVatNumber || null
+
+	// Calculate VAT for the order
+	const vatCalc = await calculateOrderVat(
+		cart.items.map((item) => ({
+			priceCents:
+				item.variantId && item.variant
+					? item.variant.price ?? item.product.price
+					: item.product.price,
+			quantity: item.quantity,
+			taxKind: item.product.taxKind,
+		})),
+		taxCountry,
+		customerVatNumber,
+	)
 
 	// Create order in transaction
 	const order = await prisma.$transaction(
@@ -718,6 +739,11 @@ export async function createOrderFromStripeSession(
 					stripePaymentIntentId: paymentIntentId,
 					stripeChargeId: chargeId,
 					status: 'CONFIRMED',
+					// VAT fields
+					vatBreakdown: vatCalc.breakdown as any,
+					vatTotalCents: vatCalc.totalVatCents,
+					taxCountry: vatCalc.taxCountry,
+					customerVatNumber: customerVatNumber || null,
 				},
 			})
 
