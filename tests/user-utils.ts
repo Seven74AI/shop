@@ -1,12 +1,15 @@
 import { faker } from '@faker-js/faker'
 import { getPasswordHash } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { generateTOTP } from '#app/utils/totp.server.ts'
+import { twoFAVerificationType } from '#app/routes/account+/security+/two-factor.tsx'
 import { createUser } from '#tests/db-utils.ts'
 
 export type UserData = ReturnType<typeof createUser>
 
 /**
- * Creates an admin user in the database
+ * Creates an admin user in the database with 2FA pre-enrolled.
+ * Admin users MUST have 2FA set up to access any admin routes.
  */
 export async function createAdminUser() {
 	const userData = createUser()
@@ -26,6 +29,16 @@ export async function createAdminUser() {
 			},
 		},
 		select: { id: true, email: true, username: true, name: true },
+	})
+
+	// Admin users must have 2FA enrolled to access admin routes
+	const { otp: _otp, ...totpConfig } = await generateTOTP()
+	await prisma.verification.create({
+		data: {
+			type: twoFAVerificationType,
+			target: user.id,
+			...totpConfig,
+		},
 	})
 
 	return { user, password }
