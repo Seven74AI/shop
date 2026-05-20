@@ -78,7 +78,7 @@ async function createProduct(categoryId: string) {
 		const usedCombinations = new Set<string>()
 		
 		for (let i = 0; i < variantCount; i++) {
-			let sizeValue, colorValue, combination
+			let sizeValue: (typeof sizeValues)[number], colorValue: (typeof colorValues)[number], combination: string
 			// Ensure unique size-color combinations
 			do {
 				sizeValue = faker.helpers.arrayElement(sizeValues)

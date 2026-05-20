@@ -32,7 +32,7 @@ async function createTestOrder() {
 	})
 
 	const orderNumber = await generateOrderNumber()
-	const subtotal = cart.items.reduce((sum, item) => {
+	const subtotal = cart.items.reduce((sum: number, item: (typeof cart.items)[number]) => {
 		return sum + (item.product.price ?? 0) * item.quantity
 	}, 0)
 
@@ -51,7 +51,7 @@ async function createTestOrder() {
 			stripeCheckoutSessionId: 'cs_test_' + Date.now(),
 			status: 'CONFIRMED',
 			items: {
-				create: cart.items.map((item) => ({
+				create: cart.items.map((item: (typeof cart.items)[number]) => ({
 					productId: item.productId,
 					variantId: item.variantId,
 					price: item.product.price ?? 0,
