@@ -5,6 +5,7 @@ import { handlers as pwnedPasswordApiHandlers } from './pwned-passwords.ts'
 import { handlers as resendHandlers } from './resend.ts'
 import { handlers as stripeHandlers } from './stripe.ts'
 import { handlers as tigrisHandlers } from './tigris.ts'
+import { handlers as viesHandlers } from './vies.ts'
 
 const handlersToUse = [
 	// IMPORTANT: Stripe handlers MUST be first to ensure they're matched before other handlers
@@ -15,6 +16,7 @@ const handlersToUse = [
 	...githubHandlers,
 	...tigrisHandlers,
 	...pwnedPasswordApiHandlers,
+	...viesHandlers,
 ]
 
 export const server = setupServer(...handlersToUse)
