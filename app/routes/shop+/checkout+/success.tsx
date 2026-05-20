@@ -7,6 +7,7 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { fulfillOrder } from '#app/utils/fulfillment.server.ts'
+import { ensurePrimary } from '#app/utils/litefs.server.ts'
 import { getOrderByCheckoutSessionId } from '#app/utils/order-queries.server.ts'
 import { createOrderFromStripeSession } from '#app/utils/order.server.ts'
 import { type StoreAddress } from '#app/utils/shipment.server.ts'
@@ -76,6 +77,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
+	// Guard: only the primary can handle write operations in multi-region deployments
+	await ensurePrimary()
+
 	const formData = await request.formData()
 	const intent = formData.get('intent')
 	const sessionId = formData.get('session_id')

@@ -2,7 +2,7 @@
 
 > **Target:** Shop (`shop-3ecf`) — Epic Stack e-commerce app on Fly.io
 > **Status:** Single-region (CDG/Paris) with LiteFS single-node, ready for multi-region read replicas
-> **Last updated:** 2026-05-20
+> **Last updated:** 2026-05-20 (review fixes: ensurePrimary guards, PRIMARY_REGION clarification, backup section)
 
 ---
 
@@ -15,10 +15,11 @@
 5. [Write Routing (ensurePrimary)](#5-write-routing-ensureprimary)
 6. [Transactional Consistency for Reads](#6-transactional-consistency-for-reads)
 7. [Monitoring & Health Checks](#7-monitoring--health-checks)
-8. [Failover Procedures](#8-failover-procedures)
-9. [Troubleshooting](#9-troubleshooting)
-10. [When to Move Off LiteFS](#10-when-to-move-off-litefs)
-11. [Appendix: Reference Configurations](#11-appendix-reference-configurations)
+8. [Backup Automation](#7a-backup-automation)
+9. [Failover Procedures](#8-failover-procedures)
+10. [Troubleshooting](#9-troubleshooting)
+11. [When to Move Off LiteFS](#10-when-to-move-off-litefs)
+12. [Appendix: Reference Configurations](#11-appendix-reference-configurations)
 
 ---
 
@@ -66,7 +67,7 @@
 - **Config file:** `other/litefs.yml` (copied to `/etc/litefs.yml` in container)
 - **Mount:** `/data` persistent volume, LiteFS FUSE dir at `${LITEFS_DIR}` (`/litefs/data`)
 - **Databases:** `sqlite.db` (main) + `cache.db` (cachified cache)
-- **App-level write routing:** `ensurePrimary()` on auth callback; `currentIsPrimary` checks for cache mutations
+- **App-level write routing:** `ensurePrimary()` on auth callback, checkout success, and admin category delete; `currentIsPrimary` checks for cache mutations
 - **Replication lag handling:** `litefs-js` package checks txid cookies for transactional consistency on reads after writes
 
 ---
@@ -118,6 +119,7 @@ fly volumes create data \
 Volume size recommendations:
 - Start with 3 GB (current DB + headroom for LTX logs and cache)
 - Monitor `fly volumes list -a shop-3ecf` and resize if approaching limit
+- To resize: `fly volumes extend <volume-id> --size 5 -a shop-3ecf` (in 1 GB increments)
 - LiteFS data dir (`/data/litefs`) stores internal state — budget ~500 MB for it
 
 ### Step 2: Scale machines to new regions
@@ -136,7 +138,7 @@ Expected output: 2 machines (1 cdg, 1 ams). The LiteFS cluster auto-forms via Co
 
 ### Step 3: Update `fly.toml` if needed
 
-The current `fly.toml` is region-agnostic — no changes needed for basic scale-out. The `PRIMARY_REGION` env var is not set as a Fly secret; it's derived from the `lease.candidate` expression in `litefs.yml`:
+The current `fly.toml` is region-agnostic — no changes needed for basic scale-out. `PRIMARY_REGION` is read by the `lease.candidate` expression in `litefs.yml`, but it is NOT automatically set — **you must set it as a Fly secret**:
 
 ```yaml
 # other/litefs.yml (existing)
@@ -146,13 +148,13 @@ lease:
   promote: true
 ```
 
-**⚠️ IMPORTANT:** If `PRIMARY_REGION` env var is not set, set it now:
+**⚠️ IMPORTANT:** If `PRIMARY_REGION` is not set as a Fly secret, the expression `FLY_REGION == PRIMARY_REGION` evaluates to `false` for **ALL** nodes (because `PRIMARY_REGION` resolves to an empty string, and `FLY_REGION` is always a non-empty region code like `cdg`). Result: **no node is a lease candidate → no primary is elected → all writes fail.**
+
+Set it now:
 
 ```bash
 fly secrets set PRIMARY_REGION=cdg -a shop-3ecf
 ```
-
-Without this, ALL nodes are candidates and the first to acquire the Consul lease becomes primary — which works, but is non-deterministic on restart.
 
 ### Step 4: Verify cluster formation
 
@@ -221,8 +223,9 @@ The Shop app is built read-friendly by default:
 | Operation | Requires primary? | Mechanism |
 |---|---|---|
 | OAuth login callback | ✅ Yes | `ensurePrimary()` in `auth.$provider.callback.ts` |
-| Checkout / Stripe webhook | ✅ Yes | Webhook handler must write order state |
-| Admin CRUD mutations | ✅ Yes | Form actions write to DB |
+| Checkout success sync | ✅ Yes | `ensurePrimary()` in `checkout/success.tsx` |
+| Admin category delete | ✅ Yes | `ensurePrimary()` in `categories/$categorySlug.delete.ts` |
+| Other admin CRUD mutations | ✅ Yes | Form actions write to DB (audit and add `ensurePrimary()` as needed) |
 | Cache writes (SQLite) | ✅ Yes | `cache.set()` checks `currentIsPrimary` |
 | Passkey registration | ✅ Yes | Writes credential to DB |
 
@@ -396,10 +399,42 @@ The existing `/admin/cache` page shows all instances and their regions. This is 
 ```bash
 # Fly.io metrics can be exported to external monitoring
 # Consider adding a cron health-check job:
-fly machines run . -a shop-3ecf \
-  --shell \
-  --command "curl -sf http://localhost:8080/litefs/health || exit 1"
+fly ssh console -a shop-3ecf -C "curl -sf http://localhost:8080/litefs/health || exit 1"
 ```
+
+---
+
+## 7a. Backup Automation
+
+LiteFS supports snapshot-style backups via `litefs export`. While this is not a streaming backup solution, it provides a point-in-time SQLite snapshot that can be stored off-instance.
+
+### Manual backup
+
+```bash
+# SSH into the primary instance
+fly ssh console -a shop-3ecf -r cdg
+
+# Export the database to a timestamped file
+litefs export -name sqlite.db /backups/sqlite-$(date -Iseconds).db
+
+# For the cache database
+litefs export -name cache.db /backups/cache-$(date -Iseconds).db
+```
+
+### Automated daily backup (recommended)
+
+```bash
+# Add to Dockerfile or CMD:
+# 0 3 * * * litefs export -name sqlite.db /backups/sqlite-$(date -I).db
+
+# Alternatively, use the existing backup automation in feat/137-litefs-backup-automation
+# which schedules exports and uploads to S3-compatible storage.
+```
+
+**Notes:**
+- `litefs export` creates a consistent snapshot at a point in time — no write locks or downtime
+- Exports can run from any node (primary or replica), but the primary has the most recent data
+- For disaster recovery, see `docs/disaster-recovery.md` (task `t_f96c2671`)
 
 ---
 
@@ -508,6 +543,7 @@ rg "export async function action" app/routes/ -l \
 **Recovery:**
 ```bash
 # 1. Stop all instances
+# ⚠️ This takes the entire app down — all regions, all traffic. Use only for split-brain recovery.
 fly machine stop --all -a shop-3ecf
 
 # 2. Identify the instance with the most recent data
@@ -546,6 +582,10 @@ fly ssh console -a shop-3ecf
 mount | grep litefs
 # If stuck:
 fusermount -uz /litefs/data
+# ⚠️ WARNING: `-uz` is a lazy unmount that can cause data loss.
+# The `-z` flag detaches the mount immediately without syncing,
+# which may leave unflushed writes behind. Prefer `fusermount -u`
+# (graceful unmount) or stop the litefs process first if possible.
 # Then restart the machine
 ```
 
@@ -646,10 +686,11 @@ source = "data"
 destination = "/data"
 ```
 
-### Current Dockerfile LiteFS section
+### Current `other/Dockerfile` LiteFS section
 
 ```dockerfile
-# Line 91-97
+# Dockerfile is at other/Dockerfile (not the repo root)
+# Lines 91-97
 COPY --from=flyio/litefs:0.5.14 /usr/local/bin/litefs /usr/local/bin/litefs
 ADD other/litefs.yml /etc/litefs.yml
 RUN mkdir -p /data ${LITEFS_DIR}
@@ -663,6 +704,7 @@ CMD ["litefs", "mount"]
 | `FLY` | `true` | Dockerfile |
 | `LITEFS_DIR` | `/litefs/data` | Dockerfile |
 | `DATABASE_FILENAME` | `sqlite.db` | Dockerfile |
+| `CACHE_DATABASE_FILENAME` | `cache.db` | Dockerfile |
 | `DATABASE_PATH` | `$LITEFS_DIR/$DATABASE_FILENAME` | Dockerfile |
 | `DATABASE_URL` | `file:$DATABASE_PATH` | Dockerfile |
 | `CACHE_DATABASE_PATH` | `$LITEFS_DIR/cache.db` | Dockerfile |

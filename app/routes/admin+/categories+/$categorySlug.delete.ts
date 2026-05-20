@@ -3,6 +3,7 @@ import { invariantResponse } from '@epic-web/invariant'
 import { data } from 'react-router'
 import { z } from 'zod'
 import { prisma } from '#app/utils/db.server.ts'
+import { ensurePrimary } from '#app/utils/litefs.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { type Route } from './+types/$categorySlug.delete.ts'
@@ -12,6 +13,9 @@ const DeleteCategorySchema = z.object({
 })
 
 export async function action({ params, request }: Route.ActionArgs) {
+	// Guard: only the primary can handle write operations in multi-region deployments
+	await ensurePrimary()
+
 	await requireUserWithRole(request, 'admin')
 
 	const formData = await request.formData()
