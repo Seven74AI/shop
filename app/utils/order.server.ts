@@ -4,12 +4,26 @@ import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
 import { prisma } from './db.server.ts'
 import { sendEmail } from './email.server.ts'
+import { type Locale, getLocale, getTranslations } from './i18n.server.ts'
+import { createT } from './i18n.tsx'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { getOrderByCheckoutSessionId } from './order-queries.server.ts'
 import { getOrderStatusLabel } from './order-status.ts'
 import { StockUnavailableError } from './order-stock.server.ts'
 import { stripe } from './stripe.server.ts'
+
+/**
+ * Returns the best locale for an order's email notification.
+ * Priority: request locale (from cookie/Accept-Language) > taxCountry heuristic > 'en'
+ */
+function getOrderLocale(request?: Request, taxCountry?: string): Locale {
+	if (request) {
+		return getLocale(request)
+	}
+	if (taxCountry?.toUpperCase() === 'FR') return 'fr'
+	return 'en'
+}
 
 /**
  * Updates an order status (admin only) and sends email notification.
@@ -24,7 +38,6 @@ export async function updateOrderStatus(
 		where: { id: orderId },
 		data: {
 			status,
-			// Always update trackingNumber when status is SHIPPED (even if empty)
 			...(status === 'SHIPPED'
 				? { trackingNumber: trackingNumber ?? '' }
 				: {}),
@@ -35,45 +48,50 @@ export async function updateOrderStatus(
 			email: true,
 			status: true,
 			trackingNumber: true,
+			shippingCountry: true,
 		},
 	})
 
-	// Send status update email (non-blocking - don't fail update if email fails)
 	try {
+		const locale = getOrderLocale(request, order.shippingCountry)
+		const translations = await getTranslations(locale)
+		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
 		const statusLabel = getOrderStatusLabel(status)
 
+		const subject = t('email.statusUpdate.subject', { orderNumber: order.orderNumber })
+
 		let emailBody = `
-			<h1>Order Status Update</h1>
-			<p>Your order status has been updated.</p>
-			<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-			<p><strong>New Status:</strong> ${statusLabel}</p>
+			<h1>${t('email.statusUpdate.heading')}</h1>
+			<p>${t('email.statusUpdate.body')}</p>
+			<p><strong>${t('email.statusUpdate.orderNumber')}:</strong> ${order.orderNumber}</p>
+			<p><strong>${t('email.statusUpdate.newStatus')}:</strong> ${statusLabel}</p>
 		`
 
 		if (status === 'SHIPPED' && order.trackingNumber) {
-			emailBody += `<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>`
+			emailBody += `<p><strong>${t('email.statusUpdate.trackingNumber')}:</strong> ${order.trackingNumber}</p>`
 		}
 
-		emailBody += `<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>`
+		emailBody += `<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>`
 
 		let textBody = `
-Order Status Update
+${t('email.statusUpdate.heading')}
 
-Your order status has been updated.
+${t('email.statusUpdate.body')}
 
-Order Number: ${order.orderNumber}
-New Status: ${statusLabel}
+${t('email.statusUpdate.orderNumber')}: ${order.orderNumber}
+${t('email.statusUpdate.newStatus')}: ${statusLabel}
 `
 
 		if (status === 'SHIPPED' && order.trackingNumber) {
-			textBody += `Tracking Number: ${order.trackingNumber}\n`
+			textBody += `${t('email.statusUpdate.trackingNumber')}: ${order.trackingNumber}\n`
 		}
 
-		textBody += `View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}`
+		textBody += `${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}`
 
 		await sendEmail({
 			to: order.email,
-			subject: `Order Status Update - ${order.orderNumber}`,
+			subject,
 			html: emailBody,
 			text: textBody,
 		})
@@ -99,6 +117,7 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 			stripePaymentIntentId: true,
 			stripeChargeId: true,
 			total: true,
+			shippingCountry: true,
 		},
 	})
 
@@ -126,7 +145,6 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 			const refund = await stripe.refunds.create(refundParams)
 			refundId = refund.id
 		} catch (refundError) {
-			// Log refund error but don't fail cancellation; admin can refund manually.
 			Sentry.captureException(refundError, {
 				tags: { context: 'order-cancellation-refund' },
 				extra: { orderNumber: order.orderNumber },
@@ -139,30 +157,35 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 		data: { status: 'CANCELLED' },
 	})
 
-	// Send cancellation email (non-blocking)
 	try {
+		const locale = getOrderLocale(request, order.shippingCountry)
+		const translations = await getTranslations(locale)
+		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
+
+		const subject = t('email.cancellation.subject', { orderNumber: order.orderNumber })
+
 		await sendEmail({
 			to: order.email,
-			subject: `Order Cancelled - ${order.orderNumber}`,
+			subject,
 			html: `
-				<h1>Order Cancelled</h1>
-				<p>Your order has been cancelled.</p>
-				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				${refundId ? `<p><strong>Refund ID:</strong> ${refundId}</p>` : ''}
-				<p>${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
+				<h1>${t('email.cancellation.heading')}</h1>
+				<p>${t('email.cancellation.body')}</p>
+				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
+				${refundId ? `<p><strong>${t('email.cancellation.refundId')}:</strong> ${refundId}</p>` : ''}
+				<p>${refundId ? t('email.cancellation.refundProcessed') : t('email.cancellation.contactSupport')}</p>
+				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
 			`,
 			text: `
-Order Cancelled
+${t('email.cancellation.heading')}
 
-Your order has been cancelled.
+${t('email.cancellation.body')}
 
-Order Number: ${order.orderNumber}
-${refundId ? `Refund ID: ${refundId}` : ''}
-${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}
+${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
+${refundId ? `${t('email.cancellation.refundId')}: ${refundId}` : ''}
+${refundId ? t('email.cancellation.refundProcessed') : t('email.cancellation.contactSupport')}
 
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
+${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,
 		})
 	} catch (emailError) {
@@ -184,7 +207,6 @@ export async function createOrderFromStripeSession(
 	request?: Request,
 ): Promise<{ id: string; orderNumber: string }> {
 	// Idempotency: if order already exists, just ensure cart is cleaned up.
-	// Webhook retries can land here after the original call succeeded.
 	const existingOrder = await getOrderByCheckoutSessionId(sessionId)
 	if (existingOrder) {
 		const session = fullSession || await stripe.checkout.sessions.retrieve(sessionId)
@@ -216,7 +238,6 @@ export async function createOrderFromStripeSession(
 	const userId = session.metadata?.userId || null
 	invariant(cartId, 'Missing cartId in session metadata')
 
-	// Load cart data BEFORE transaction (more efficient)
 	const cart = await prisma.cart.findUnique({
 		where: { id: cartId },
 		include: {
@@ -248,7 +269,6 @@ export async function createOrderFromStripeSession(
 
 	const order = await prisma.$transaction(
 		async (tx) => {
-			// 1. Re-check stock (final validation, handles race conditions)
 			for (const item of cart.items) {
 				if (item.variantId && item.variant) {
 					const variant = await tx.productVariant.findUnique({
@@ -285,7 +305,6 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
-			// 2. Reduce stock atomically
 			for (const item of cart.items) {
 				if (item.variantId) {
 					await tx.productVariant.update({
@@ -306,10 +325,8 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
-			// 3. Generate order number (within transaction)
 			const orderNumber = await generateOrderNumber(tx)
 
-			// 4. Resolve charge id from payment intent
 			const paymentIntentId =
 				typeof session.payment_intent === 'string'
 					? session.payment_intent
@@ -390,7 +407,6 @@ export async function createOrderFromStripeSession(
 				},
 			})
 
-			// 5. Create order items
 			await Promise.all(
 				cart.items.map((item) =>
 					tx.orderItem.create({
@@ -408,7 +424,6 @@ export async function createOrderFromStripeSession(
 				),
 			)
 
-			// 6. Delete cart items + cart (atomic)
 			await tx.cartItem.deleteMany({ where: { cartId } })
 			await tx.cart.delete({ where: { id: cartId } })
 
@@ -417,28 +432,31 @@ export async function createOrderFromStripeSession(
 		{ timeout: 30000 },
 	)
 
-	// Send confirmation email (non-blocking)
 	try {
+		const locale = getOrderLocale(request, order.shippingCountry)
+		const translations = await getTranslations(locale)
+		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
+
 		await sendEmail({
 			to: order.email,
-			subject: `Order Confirmation - ${order.orderNumber}`,
+			subject: t('email.orderConfirmation.subject', { orderNumber: order.orderNumber }),
 			html: `
-				<h1>Order Confirmation</h1>
-				<p>Thank you for your order!</p>
-				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				<p><strong>Total:</strong> ${(order.total / 100).toFixed(2)}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
+				<h1>${t('email.orderConfirmation.heading')}</h1>
+				<p>${t('email.orderConfirmation.thankYou')}</p>
+				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
+				<p><strong>${t('email.orderConfirmation.total')}:</strong> ${(order.total / 100).toFixed(2)}</p>
+				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
 			`,
 			text: `
-Order Confirmation
+${t('email.orderConfirmation.heading')}
 
-Thank you for your order!
+${t('email.orderConfirmation.thankYou')}
 
-Order Number: ${order.orderNumber}
-Total: ${(order.total / 100).toFixed(2)}
+${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
+${t('email.orderConfirmation.total')}: ${(order.total / 100).toFixed(2)}
 
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
+${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,
 		})
 	} catch (emailError) {

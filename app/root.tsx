@@ -132,6 +132,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
+	const locale = getLocale(request)
+	const translations = await getTranslations(locale)
+
 	return data(
 		{
 			user,
@@ -147,6 +150,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 			ENV: getEnv(),
 			toast,
 			honeyProps,
+			locale,
+			translations,
 		},
 		{
 			headers: combineHeaders(
@@ -300,7 +305,9 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<App />
+			<TranslationProvider locale={data.locale} translations={data.translations}>
+				<App />
+			</TranslationProvider>
 		</HoneypotProvider>
 	)
 }

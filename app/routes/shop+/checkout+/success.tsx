@@ -7,6 +7,7 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { fulfillOrder } from '#app/utils/fulfillment.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { getOrderByCheckoutSessionId } from '#app/utils/order-queries.server.ts'
 import { createOrderFromStripeSession } from '#app/utils/order.server.ts'
 import { type StoreAddress } from '#app/utils/shipment.server.ts'
@@ -19,19 +20,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 		const sessionId = url.searchParams.get('session_id')
 
 		if (!sessionId) {
-			// No session_id - redirect to shop
 			return redirect('/shop')
 		}
 
-		// Wait 1.5 seconds for webhook to process (webhooks are usually very fast)
 		await new Promise((resolve) => setTimeout(resolve, 1500))
 
-		// Check database for order by session_id (webhook creates it)
 		let order
 		try {
 			order = await getOrderByCheckoutSessionId(sessionId)
 		} catch (error) {
-			// Log error but don't fail - show processing state instead
 			Sentry.captureException(error, {
 				tags: { context: 'checkout-success-loader' },
 				extra: { sessionId },
@@ -40,31 +37,24 @@ export async function loader({ request }: Route.LoaderArgs) {
 		}
 
 		if (order) {
-			// Order exists - redirect to order detail using redirectDocument to replace history
 			const userId = await getUserId(request)
-			// For authenticated users, redirect directly
 			if (userId) {
 				const redirectUrl = `/shop/orders/${order.orderNumber}`
 				return redirectDocument(redirectUrl)
 			}
-			// For guests, redirect with email parameter
 			const redirectUrl = `/shop/orders/${order.orderNumber}?email=${encodeURIComponent(order.email)}`
 			return redirectDocument(redirectUrl)
 		}
 
-		// Order doesn't exist yet - return processing state
-		// DO NOT redirect - let the component handle the processing state
 		return {
 			processing: true,
 			sessionId,
 			message: 'Your order is being processed. Please wait a moment.',
 		}
 	} catch (error) {
-		// Log error but still return processing state for user
 		Sentry.captureException(error, {
 			tags: { context: 'checkout-success-loader' },
 		})
-		// Return error state but still render something
 		const url = new URL(request.url)
 		const sessionId = url.searchParams.get('session_id')
 		return {
@@ -85,9 +75,8 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	try {
-		// Verify payment status from Stripe before creating order
 		const session = await stripe.checkout.sessions.retrieve(sessionId)
-		
+
 		if (session.payment_status !== 'paid') {
 			return {
 				error: 'Payment not completed',
@@ -95,11 +84,8 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 		}
 
-		// Create order using shared function (includes cart deletion)
 		const order = await createOrderFromStripeSession(sessionId, session, request)
 
-		// Fulfill order (create shipments, etc.) - non-blocking
-		// Don't fail sync if fulfillment fails - it can be retried manually
 		try {
 			const storeAddress: StoreAddress = {
 				name: process.env.STORE_NAME || 'Store',
@@ -114,8 +100,6 @@ export async function action({ request }: Route.ActionArgs) {
 
 			await fulfillOrder(order.id, storeAddress)
 		} catch (fulfillmentError) {
-			// Log fulfillment errors but don't fail sync
-			// Order was created successfully, fulfillment can be retried
 			Sentry.captureException(fulfillmentError, {
 				tags: { context: 'checkout-success-sync-fulfillment' },
 				extra: {
@@ -126,14 +110,12 @@ export async function action({ request }: Route.ActionArgs) {
 			})
 		}
 
-		// Return success with order number and email for redirect
 		return {
 			success: true,
 			orderNumber: order.orderNumber,
 			email: session.customer_email || session.metadata?.email || null,
 		}
 	} catch (error) {
-		// Log error to Sentry for critical failures
 		Sentry.captureException(error, {
 			tags: { context: 'checkout-success-sync' },
 			extra: { sessionId },
@@ -153,10 +135,12 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
-	// Ensure we have the required data with defaults
 	const processing = loaderData?.processing ?? false
 	const sessionId = loaderData?.sessionId ?? null
-	const message = loaderData?.message ?? 'Your order is being processed. Please wait a moment.'
+	const defaultMessage = loaderData?.message ?? 'Your order is being processed. Please wait a moment.'
+
+	const { t } = useTranslation()
+	const message = defaultMessage
 
 	const revalidator = useRevalidator()
 	const syncFetcher = useFetcher<typeof action>()
@@ -168,25 +152,22 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 		if (!sessionId) {
 			return
 		}
-		
+
 		if (syncFetcher.state !== 'idle') {
 			return
 		}
-		
+
 		const formData = new FormData()
 		formData.append('intent', 'sync-order')
 		formData.append('session_id', sessionId)
 		void syncFetcher.submit(formData, { method: 'POST' })
 	}, [sessionId, syncFetcher])
 
-	// Auto-refresh if order is processing
 	useEffect(() => {
 		if (!processing || !sessionId) return
-		
-		// If fallback already triggered, don't start polling again
+
 		if (hasTriggeredFallback) return
 
-		// Check if we should trigger fallback immediately (if page has been open for > 15 seconds)
 		const elapsedSincePageLoad = Date.now() - pageLoadTime
 		if (elapsedSincePageLoad >= 15000) {
 			setShowSyncButton(true)
@@ -195,72 +176,62 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 			return
 		}
 
-		// Set max polling duration (15 seconds before fallback)
-		const maxPollingDuration = 15000 // 15 seconds
+		const maxPollingDuration = 15000
 		const startTime = Date.now()
-		
+
 		const interval = setInterval(() => {
 			const elapsed = Date.now() - startTime
 			if (elapsed >= maxPollingDuration) {
 				clearInterval(interval)
 				setShowSyncButton(true)
 				setHasTriggeredFallback(true)
-				// Automatically trigger fallback sync
 				handleSyncOrder()
 				return
 			}
 			void revalidator.revalidate()
-		}, 3000) // Check every 3 seconds
+		}, 3000)
 
 		return () => clearInterval(interval)
 	}, [processing, sessionId, revalidator, hasTriggeredFallback, handleSyncOrder, pageLoadTime])
 
-	// Handle sync fetcher response
 	useEffect(() => {
 		if (syncFetcher.data?.success && syncFetcher.data.orderNumber) {
-			// Redirect to order detail page
-			// For guests, include email in URL if available
 			let redirectUrl = `/shop/orders/${syncFetcher.data.orderNumber}`
 			if (syncFetcher.data.email) {
 				redirectUrl += `?email=${encodeURIComponent(syncFetcher.data.email)}`
 			}
 			window.location.href = redirectUrl
 		} else if (syncFetcher.data?.error) {
-			// Error is already displayed in UI, no need to log
+			// Error is already displayed in UI
 		}
 	}, [syncFetcher.data])
 
 	const isSyncing = syncFetcher.state !== 'idle'
 	const syncError = syncFetcher.data?.error
-	
-	// Show sync button if we've been processing for more than 15 seconds
+
 	const shouldShowSyncButton = showSyncButton || (processing && (Date.now() - pageLoadTime) >= 15000)
-	
+
 	return (
 		<div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[calc(100vh-200px)]">
 			<Card className="w-full max-w-[672px] rounded-[10px] border border-[#D1D5DC] shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)] bg-white">
 				<CardContent className="pt-16 pb-16 px-12 text-center">
-					{/* Loading Icon */}
 					<div className="flex justify-center mb-6">
 						<Icon
 							name="update"
 							className={`h-[68px] w-[68px] ${isSyncing ? 'animate-spin' : ''} text-[#101828]`}
 						/>
 					</div>
-					
-					{/* Heading */}
+
 					<h1 className="text-base font-normal text-[#101828] mb-4 leading-[1.5em]">
-						{isSyncing ? 'Creating Your Order...' : 'Processing Your Order'}
+						{isSyncing ? t('checkout.success.creating') : t('checkout.success.processing')}
 					</h1>
-					
-					{/* Message */}
+
 					<p className="text-base font-normal text-[#4A5565] mb-6 leading-[1.5em]">
 						{isSyncing
-							? 'Your payment was successful! We are creating your order now. This may take a few moments.'
+							? t('checkout.success.paymentSuccessful')
 							: message}
 					</p>
-					
-					{/* Error Message */}
+
 					{syncError && (
 						<div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
 							<p className="text-destructive font-medium mb-2">Error: {syncError}</p>
@@ -269,8 +240,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 							</p>
 						</div>
 					)}
-					
-					{/* Sync Button (shown after timeout) */}
+
 					{shouldShowSyncButton && !isSyncing && (
 						<div className="mb-6">
 							<Button
@@ -279,12 +249,11 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 								className="h-9 px-4 rounded-lg font-medium border border-[#D1D5DC] bg-white text-[#101828] hover:bg-gray-50"
 							>
 								<Icon name="update" className="mr-2 h-4 w-4" />
-								Sync Order Now
+								{t('checkout.success.syncNow')}
 							</Button>
 						</div>
 					)}
-					
-					{/* Refresh Button */}
+
 					{!shouldShowSyncButton && !isSyncing && (
 						<div className="mb-6">
 							<Button
@@ -294,17 +263,15 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 								}}
 								className="h-9 px-4 rounded-lg font-medium border border-[#D1D5DC] bg-white text-[#101828] hover:bg-gray-50"
 							>
-								Refresh Now
+								{t('checkout.success.refreshNow')}
 							</Button>
 						</div>
 					)}
-					
-					{/* Cart Info */}
+
 					<p className="text-sm font-normal text-[#4A5565] mb-4 leading-[1.4285714285714286em]">
-						Your cart will be cleared once your order is created. If this takes longer than expected, please check your email for order confirmation or contact support.
+						{t('checkout.success.cartInfo')}
 					</p>
-					
-					{/* Session ID */}
+
 					{sessionId && (
 						<p className="text-sm font-normal text-[#6A7282] leading-[1.4285714285714286em]">
 							Session ID: {sessionId.substring(0, 20)}...

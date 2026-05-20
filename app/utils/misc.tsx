@@ -319,3 +319,9 @@ export async function downloadFile(url: string, retries: number = 0) {
 		return downloadFile(url, retries + 1)
 	}
 }
+
+/**
+ * Safe version of useTranslation() that falls back to identity function.
+ * Use in components that may render outside a TranslationProvider.
+ */
+export { useTranslation as useOptionalTranslation } from './i18n.tsx'

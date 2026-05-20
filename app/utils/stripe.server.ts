@@ -97,6 +97,7 @@ export async function createCheckoutSession({
 	currency,
 	domainUrl,
 	userId,
+	locale,
 }: {
 	cart: {
 		id: string
@@ -119,6 +120,7 @@ export async function createCheckoutSession({
 	}
 	domainUrl: string
 	userId?: string | null
+	locale?: string | null
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -162,6 +164,7 @@ export async function createCheckoutSession({
 		success_url: `${domainUrl}/shop/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
 		cancel_url: `${domainUrl}/shop/checkout?canceled=true`,
 		customer_email: shippingInfo.email,
+		...(locale ? { locale } : {}),
 		metadata: {
 			cartId: cart.id,
 			userId: userId || '',

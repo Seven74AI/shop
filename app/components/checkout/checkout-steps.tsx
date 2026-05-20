@@ -1,6 +1,13 @@
-import { cn } from '#app/utils/misc.tsx'
+import { cn, useOptionalTranslation } from '#app/utils/misc.tsx'
 
 export type CheckoutStep = 'review' | 'shipping' | 'delivery' | 'payment'
+
+const STEP_KEYS: Record<CheckoutStep, string> = {
+	review: 'checkout.steps.review',
+	shipping: 'checkout.steps.shipping',
+	delivery: 'checkout.steps.delivery',
+	payment: 'checkout.steps.payment',
+}
 
 const steps: Array<{ id: CheckoutStep; name: string; path: string }> = [
 	{ id: 'review', name: 'Review', path: '/shop/checkout/review' },
@@ -11,6 +18,7 @@ const steps: Array<{ id: CheckoutStep; name: string; path: string }> = [
 
 export function CheckoutSteps({ currentStep }: { currentStep: CheckoutStep }) {
 	const currentStepIndex = steps.findIndex((s) => s.id === currentStep)
+	const { t } = useOptionalTranslation()
 
 	return (
 		<nav aria-label="Checkout steps" className="mb-8">
@@ -61,7 +69,7 @@ export function CheckoutSteps({ currentStep }: { currentStep: CheckoutStep }) {
 										isUpcoming && 'text-muted-foreground',
 									)}
 								>
-									{step.name}
+									{t(STEP_KEYS[step.id])}
 								</span>
 							</div>
 							{/* Connector Line */}
@@ -80,4 +88,3 @@ export function CheckoutSteps({ currentStep }: { currentStep: CheckoutStep }) {
 		</nav>
 	)
 }
-
