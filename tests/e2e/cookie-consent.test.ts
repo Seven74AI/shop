@@ -42,7 +42,7 @@ test.describe('Cookie Consent Banner', () => {
 		expect(consentCookie).toBeDefined()
 		const value = JSON.parse(
 			decodeURIComponent(consentCookie!.value),
-		)
+		) as { granted: string[]; timestamp: string }
 		expect(value.granted).toContain('analytics')
 		expect(value.granted).toContain('marketing')
 		expect(value.timestamp).toBeDefined()
@@ -68,7 +68,7 @@ test.describe('Cookie Consent Banner', () => {
 		expect(consentCookie).toBeDefined()
 		const value = JSON.parse(
 			decodeURIComponent(consentCookie!.value),
-		)
+		) as { granted: string[]; timestamp: string }
 		expect(value.granted).toEqual([])
 		expect(value.timestamp).toBeDefined()
 	})
@@ -153,7 +153,7 @@ test.describe('Cookie Consent Banner', () => {
 		expect(consentCookie).toBeDefined()
 		const value = JSON.parse(
 			decodeURIComponent(consentCookie!.value),
-		)
+		) as { granted: string[]; timestamp: string }
 		expect(value.granted).toContain('analytics')
 		expect(value.granted).not.toContain('marketing')
 	})

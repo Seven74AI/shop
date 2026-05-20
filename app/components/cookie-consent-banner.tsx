@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { useFetcher } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
 import { Checkbox } from '#app/components/ui/checkbox.tsx'
 import { Label } from '#app/components/ui/label.tsx'
-import { CONSENT_CATEGORIES, type ConsentCategory } from '#app/utils/consent.ts'
+import { useConsentFetcher } from '#app/routes/resources+/consent.tsx'
+import {
+	CONSENT_CATEGORIES,
+	type ConsentCategory,
+	type ConsentState,
+} from '#app/utils/consent.ts'
+import { hasConsentDecision } from '#app/utils/consent.server.ts'
 
 const CATEGORY_LABELS: Record<ConsentCategory, { label: string; description: string }> = {
 	analytics: {
@@ -22,12 +27,18 @@ const CATEGORY_LABELS: Record<ConsentCategory, { label: string; description: str
  * Shows at the bottom of the page until the user makes a choice.
  * Stores consent via a resource route that sets the en_consent cookie.
  */
-export function CookieConsentBanner() {
+export function CookieConsentBanner({
+	consent,
+}: {
+	consent: ConsentState | null
+}) {
+	if (hasConsentDecision(consent)) return null
+
 	const [showCustomize, setShowCustomize] = useState(false)
 	const [selected, setSelected] = useState<Set<ConsentCategory>>(
 		new Set(CONSENT_CATEGORIES),
 	)
-	const fetcher = useFetcher()
+	const { fetcher, grant, acceptAll, refuseAll } = useConsentFetcher()
 
 	const isSubmitting = fetcher.state !== 'idle'
 	const hasSubmitted =
@@ -48,26 +59,15 @@ export function CookieConsentBanner() {
 	}
 
 	function handleAcceptAll() {
-		const granted = CONSENT_CATEGORIES as unknown as ConsentCategory[]
-		void fetcher.submit(
-			{ granted: granted.join(',') },
-			{ method: 'POST', action: '/resources/consent' },
-		)
+		acceptAll()
 	}
 
 	function handleRefuseAll() {
-		void fetcher.submit(
-			{ granted: '' },
-			{ method: 'POST', action: '/resources/consent' },
-		)
+		refuseAll()
 	}
 
 	function handleSavePreferences() {
-		const granted = [...selected]
-		void fetcher.submit(
-			{ granted: granted.join(',') },
-			{ method: 'POST', action: '/resources/consent' },
-		)
+		grant([...selected])
 	}
 
 	return (

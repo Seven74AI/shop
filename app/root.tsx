@@ -229,7 +229,7 @@ function App() {
 				<div className="min-h-screen bg-background">
 					<Outlet />
 				</div>
-				<CookieConsentBanner />
+				<CookieConsentBanner consent={data.requestInfo.userPrefs.consent} />
 				<EpicToaster closeButton position="bottom-center" theme={theme} />
 				<EpicProgress />
 			</OpenImgContextProvider>
@@ -275,7 +275,7 @@ function App() {
 				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 			</footer>
 			</div>
-			<CookieConsentBanner />
+			<CookieConsentBanner consent={data.requestInfo.userPrefs.consent} />
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
 			<EpicProgress />
 		</OpenImgContextProvider>
