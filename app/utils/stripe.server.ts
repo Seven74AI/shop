@@ -205,10 +205,16 @@ export async function createCheckoutSession({
 	}
 
 	try {
+		// Generate idempotency key based on cart ID to prevent duplicate sessions
+		// Stripe idempotency ensures the same session is returned for duplicate requests
+		// within 24 hours, preventing accidental double-charges on network retries
+		const idempotencyKey = `checkout_session_${cart.id}`
+
 		// Use Stripe SDK with explicit timeout options
 		const sessionPromise = stripe.checkout.sessions.create(sessionParams, {
 			timeout: 8000, // 8 seconds timeout per request (shorter than global)
 			maxNetworkRetries: 0, // Disable retries to fail fast
+			idempotencyKey,
 		})
 		
 		// Add additional timeout wrapper as a safety net

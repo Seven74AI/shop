@@ -130,6 +130,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 				if (paymentIntentId && fullSession.amount_total) {
 					try {
+						// Use idempotency key based on session ID to prevent duplicate refunds
+						// on webhook retries for the same checkout session
+						const refundIdempotencyKey = `refund_stock_unavailable_${fullSession.id}`
 						await stripe.refunds.create({
 							payment_intent: paymentIntentId,
 							amount: fullSession.amount_total,
@@ -139,6 +142,8 @@ export async function action({ request }: Route.ActionArgs) {
 								checkout_session_id: fullSession.id,
 								product_name: error.data.productName,
 							},
+						}, {
+							idempotencyKey: refundIdempotencyKey,
 						})
 						// Log successful refund for monitoring
 						Sentry.captureMessage(

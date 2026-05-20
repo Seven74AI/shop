@@ -2,6 +2,13 @@ import { http, HttpResponse, passthrough } from 'msw'
 import Stripe from 'stripe'
 
 /**
+ * In-memory store for tracking idempotency keys.
+ * Simulates Stripe's idempotency behavior — returns the same response
+ * for duplicate keys within the test session.
+ */
+const idempotencyStore = new Map<string, { status: number; body: any }>()
+
+/**
  * Mock Stripe Checkout Session response
  */
 function createMockCheckoutSession(
@@ -112,6 +119,16 @@ export const handlers = [
 		? [
 				// POST /v1/checkout/sessions - Create checkout session
 				http.post('https://api.stripe.com/v1/checkout/sessions', async ({ request }) => {
+					// Check for idempotency key header
+					const idempotencyKey = request.headers.get('Idempotency-Key')
+					if (idempotencyKey) {
+						const stored = idempotencyStore.get(idempotencyKey)
+						if (stored) {
+							// Return the same response for duplicate idempotency keys
+							return HttpResponse.json(stored.body, { status: stored.status })
+						}
+					}
+
 					const body = await request.text()
 					const params = new URLSearchParams(body)
 					
@@ -134,6 +151,14 @@ export const handlers = [
 						currency: 'usd',
 						metadata,
 					})
+
+					// Store response for idempotency key
+					if (idempotencyKey) {
+						idempotencyStore.set(idempotencyKey, {
+							status: 200,
+							body: session,
+						})
+					}
 
 					return HttpResponse.json(session, { status: 200 })
 				}),
@@ -172,6 +197,53 @@ export const handlers = [
 				// Webhook signature verification endpoint (for testing webhooks)
 				// Note: Actual webhook verification uses stripe.webhooks.constructEvent()
 				// which we'll test using Stripe's generateTestHeaderString()
+
+				// POST /v1/refunds - Create a refund
+				http.post('https://api.stripe.com/v1/refunds', async ({ request }) => {
+					// Check for idempotency key header
+					const idempotencyKey = request.headers.get('Idempotency-Key')
+					if (idempotencyKey) {
+						const stored = idempotencyStore.get(idempotencyKey)
+						if (stored) {
+							return HttpResponse.json(stored.body, { status: stored.status })
+						}
+					}
+
+					const refundId = `re_test_${Date.now()}`
+					const refund = {
+						id: refundId,
+						object: 'refund',
+						amount: 10000,
+						currency: 'usd',
+						status: 'succeeded',
+					}
+
+					if (idempotencyKey) {
+						idempotencyStore.set(idempotencyKey, {
+							status: 200,
+							body: refund,
+						})
+					}
+
+					return HttpResponse.json(refund, { status: 200 })
+				}),
+
+				// GET /v1/payment_intents/:id - Retrieve payment intent
+				http.get(
+					'https://api.stripe.com/v1/payment_intents/:paymentIntentId',
+					async ({ params }) => {
+						const { paymentIntentId } = params
+
+						return HttpResponse.json({
+							id: paymentIntentId,
+							object: 'payment_intent',
+							amount: 10000,
+							currency: 'usd',
+							status: 'succeeded',
+							latest_charge: `ch_test_${Date.now()}`,
+						}, { status: 200 })
+					},
+				),
 			]
 		: [
 				// In development mode, passthrough all Stripe API requests

@@ -399,7 +399,12 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 				refundParams.charge = order.stripeChargeId
 			}
 
-			const refund = await stripe.refunds.create(refundParams)
+			// Use idempotency key based on order ID to prevent duplicate refunds
+			// Ensures retries don't create multiple refunds for the same order
+			const idempotencyKey = `refund_order_${order.id}`
+			const refund = await stripe.refunds.create(refundParams, {
+				idempotencyKey,
+			})
 			refundId = refund.id
 		} catch (refundError) {
 			// Log refund error but don't fail order cancellation
