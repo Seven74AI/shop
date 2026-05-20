@@ -230,6 +230,13 @@ enum AddressType {
   BOTH
 }
 
+enum TaxKind {
+  STANDARD
+  REDUCED
+  SUPER_REDUCED
+  ZERO
+}
+
 // E-commerce Product Models
 
 model Settings {
@@ -269,6 +276,7 @@ model Product {
   status        ProductStatus @default(DRAFT)
   stockQuantity Int? // stock quantity for products without variants (nullable)
   weightGrams   Int? // weight in grams (for shipping calculations)
+  taxKind       TaxKind        @default(STANDARD)
   categoryId    String
 
   createdAt DateTime @default(now())
@@ -463,6 +471,13 @@ model Order {
   shippingPostal  String
   shippingCountry String
 
+  // VAT information
+  vatBreakdown       Json    @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
+  vatTotalCents      Int     @default(0) // Total VAT in cents
+  taxCountry         String? // ISO 2-letter country code for tax calculation
+  customerVatNumber  String? // Customer VAT number (for B2B reverse-charge)
+  vatValidationStatus String? // VALID | INVALID | UNCHECKED | OUTAGE
+
   // Payment information (Stripe)
   stripeCheckoutSessionId String  @unique // Stripe Checkout Session ID
   stripePaymentIntentId   String? // Stripe PaymentIntent ID (from webhook)
@@ -519,6 +534,23 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+model TaxRate {
+  id            String   @id @default(cuid())
+  country       String // ISO 2-letter country code
+  kind          TaxKind
+  rate          Int // Rate in basis points (2000 = 20.00%)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isActive      Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([country, kind, effectiveFrom])
+  @@index([country])
+  @@index([kind])
+  @@index([isActive])
 }
 
 enum OrderStatus {
