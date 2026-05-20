@@ -9,6 +9,7 @@ test('Admin without 2FA is redirected to enrollment on login', async ({
 }) => {
 	const password = faker.internet.password({ length: 12 })
 	const user = await login({ password, asAdmin: true })
+	await navigate('/')
 
 	// Logout to clear the cookie-based session
 	await page.getByRole('link', { name: 'User menu' }).click()
@@ -104,6 +105,7 @@ test('Non-admin login is unaffected by admin 2FA enforcement', async ({
 }) => {
 	const password = faker.internet.password({ length: 12 })
 	const user = await login({ password })
+	await navigate('/')
 
 	// Non-admin should have normal session with direct login
 	await page.getByRole('link', { name: 'User menu' }).click()
