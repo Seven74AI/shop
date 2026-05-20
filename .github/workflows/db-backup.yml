@@ -1,0 +1,55 @@
+name: 🗄️ Database Backup
+on:
+  schedule:
+    - cron: '0 3 * * *' # Daily at 3am UTC
+  workflow_dispatch: {} # Manual trigger
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false # Never cancel a running backup
+
+jobs:
+  backup:
+    name: 📦 Backup & Prune
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 👀 Read app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: app_name
+        with:
+          file: 'fly.toml'
+          field: 'app'
+
+      - name: 🎈 Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: 📦 Run backup on production
+        run: |
+          flyctl ssh console \
+            --app ${{ steps.app_name.outputs.value }} \
+            --command 'node /myapp/scripts/backup-db.js'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: 📊 Report success
+        if: success()
+        run: echo "✅ Daily backup completed successfully"
+
+  notify-failure:
+    name: 🚨 Notify Failure
+    needs: [backup]
+    if: ${{ failure() && vars.SLACK_WEBHOOK_URL != '' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 🔔 Send Slack alert
+        run: |
+          curl -X POST "${{ vars.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": ":warning: *Daily DB backup failed!*\n\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nCheck the logs for details."
+            }'
