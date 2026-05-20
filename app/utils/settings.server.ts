@@ -52,3 +52,56 @@ export async function getStoreCurrency({ timings }: { timings?: Timings } = {}) 
 	return result
 }
 
+export type CompanySettings = {
+	companyLegalName: string | null
+	companyLegalForm: string | null
+	companyCapital: string | null
+	siret: string | null
+	rcs: string | null
+	vatNumber: string | null
+	headOfficeAddress: string | null
+	directorName: string | null
+	directorContactEmail: string | null
+}
+
+/**
+ * Get company legal settings for Mentions Légales (FR LCEN art. 6)
+ * Cached for 1 hour since these rarely change
+ */
+export async function getCompanySettings({ timings }: { timings?: Timings } = {}): Promise<CompanySettings> {
+	return cachified({
+		key: 'settings:company',
+		cache,
+		timings,
+		getFreshValue: async () => {
+			const settings = await prisma.settings.findUnique({
+				where: { id: 'settings' },
+				select: {
+					companyLegalName: true,
+					companyLegalForm: true,
+					companyCapital: true,
+					siret: true,
+					rcs: true,
+					vatNumber: true,
+					headOfficeAddress: true,
+					directorName: true,
+					directorContactEmail: true,
+				},
+			})
+			return settings ?? {
+				companyLegalName: null,
+				companyLegalForm: null,
+				companyCapital: null,
+				siret: null,
+				rcs: null,
+				vatNumber: null,
+				headOfficeAddress: null,
+				directorName: null,
+				directorContactEmail: null,
+			}
+		},
+		ttl: 1000 * 60 * 60, // 1 hour
+		staleWhileRevalidate: 1000 * 60 * 60 * 24, // 24 hours
+	})
+}
+

@@ -266,8 +266,23 @@ function App() {
 				<Outlet />
 			</main>
 
-			<footer className="container flex justify-between pb-5">
-				<Logo />
+			<footer className="container flex flex-col gap-4 pb-5 sm:flex-row sm:justify-between">
+				<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+					<Logo />
+					<span aria-hidden="true">&middot;</span>
+					<Link to="/privacy" className="hover:text-foreground transition-colors">
+						Privacy
+					</Link>
+					<Link to="/legal" className="hover:text-foreground transition-colors">
+						Legal
+					</Link>
+					<Link to="/cgv" className="hover:text-foreground transition-colors">
+						CGV
+					</Link>
+					<Link to="/tos" className="hover:text-foreground transition-colors">
+						Terms
+					</Link>
+				</div>
 				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 			</footer>
 			</div>
