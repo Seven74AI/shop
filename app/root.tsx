@@ -24,6 +24,7 @@ import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
 import { EpicToaster } from './components/ui/sonner.tsx'
 import { UserDropdown } from './components/user-dropdown.tsx'
+import { LocaleSwitch } from './routes/resources+/locale-switch.tsx'
 import {
 	ThemeSwitch,
 	useOptionalTheme,
@@ -37,17 +38,17 @@ import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { pipeHeaders } from './utils/headers.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
+import {
+	getLocale,
+	getTranslations,
+} from './utils/i18n.server.ts'
+import { TranslationProvider } from './utils/i18n.tsx'
 import { combineHeaders, getDomainUrl, getImgSrc } from './utils/misc.tsx'
 import { useNonce } from './utils/nonce-provider.ts'
 import { type Theme, getTheme } from './utils/theme.server.ts'
 import { makeTimings, time } from './utils/timing.server.ts'
 import { getToast } from './utils/toast.server.ts'
 import { useOptionalUser } from './utils/user.ts'
-import {
-	getLocale,
-	getTranslations,
-} from './utils/i18n.server.ts'
-import { TranslationProvider } from './utils/i18n.tsx'
 
 export const links: Route.LinksFunction = () => {
 	return [
@@ -170,12 +171,16 @@ function Document({
 	nonce,
 	theme = 'light',
 	locale = 'en',
+	origin,
+	pathname,
 	env = {},
 }: {
 	children: React.ReactNode
 	nonce: string
 	theme?: Theme
 	locale?: string
+	origin?: string
+	pathname?: string
 	env?: Record<string, string | undefined>
 }) {
 	const allowIndexing = ENV.ALLOW_INDEXING !== 'false'
@@ -189,6 +194,25 @@ function Document({
 				{allowIndexing ? null : (
 					<meta name="robots" content="noindex, nofollow" />
 				)}
+				{origin && pathname ? (
+					<>
+						<link
+							rel="alternate"
+							hrefLang="en"
+							href={`${origin}${pathname}`}
+						/>
+						<link
+							rel="alternate"
+							hrefLang="fr"
+							href={`${origin}${pathname}`}
+						/>
+						<link
+							rel="alternate"
+							hrefLang="x-default"
+							href={`${origin}${pathname}`}
+						/>
+					</>
+				) : null}
 				<Links />
 			</head>
 			<body className="bg-background text-foreground">
@@ -212,8 +236,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	const nonce = useNonce()
 	const theme = useOptionalTheme()
 	const locale = (data?.locale as string) ?? 'en'
+	const origin = (data?.requestInfo?.origin as string) ?? undefined
+	const pathname = (data?.requestInfo?.path as string) ?? undefined
 	return (
-		<Document nonce={nonce} theme={theme} locale={locale} env={data?.ENV}>
+		<Document
+			nonce={nonce}
+			theme={theme}
+			locale={locale}
+			origin={origin}
+			pathname={pathname}
+			env={data?.ENV}
+		>
 			{children}
 		</Document>
 	)
@@ -282,7 +315,10 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
-				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
+				<div className="flex items-center gap-6">
+					<LocaleSwitch />
+					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
+				</div>
 			</footer>
 			</div>
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
