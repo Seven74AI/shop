@@ -678,3 +678,31 @@ enum ShippingRateType {
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
 }
+
+// Newsletter Subscription System
+// Double-opt-in: users receive a confirmation email with a unique token.
+// Only after clicking the link does the subscription become active.
+
+model NewsletterSubscription {
+  id        String                 @id @default(cuid())
+  email     String                 @unique
+  status    NewsletterStatus       @default(PENDING)
+  token     String?                @unique // HMAC-signed confirmation token (null after confirmation)
+  tokenExpiresAt DateTime?         // Token expires after 7 days (null after confirmation)
+
+  confirmedAt   DateTime?
+  unsubscribedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([token])
+}
+
+enum NewsletterStatus {
+  PENDING      // Awaiting double-opt-in confirmation
+  CONFIRMED    // Subscribed and active
+  UNSUBSCRIBED // Opted out
+}
