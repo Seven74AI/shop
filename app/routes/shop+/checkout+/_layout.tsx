@@ -3,6 +3,8 @@ import { CheckoutSteps, type CheckoutStep } from '#app/components/checkout/check
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getCartSessionIdFromRequest } from '#app/utils/cart-session.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { getLocale, getTranslations } from '#app/utils/i18n.server.ts'
+import { TranslationProvider } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/_layout.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -44,7 +46,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 		currentStep = 'payment'
 	}
 
-	return { currentStep }
+	const locale = getLocale(request)
+	const translations = await getTranslations(locale)
+
+	return { currentStep, locale, translations }
 }
 
 export const meta: Route.MetaFunction = () => [
@@ -56,13 +61,15 @@ export default function CheckoutLayout() {
 	const currentStep = loaderData?.currentStep || 'review'
 
 	return (
-		<div className="container mx-auto max-w-4xl px-4 py-8">
-			<h1 className="mb-8 text-center text-3xl font-bold">Checkout</h1>
-			<CheckoutSteps currentStep={currentStep} />
-			<div className="min-h-[400px]">
-				<Outlet />
+		<TranslationProvider locale={loaderData.locale} translations={loaderData.translations}>
+			<div className="container mx-auto max-w-4xl px-4 py-8">
+				<h1 className="mb-8 text-center text-3xl font-bold">Checkout</h1>
+				<CheckoutSteps currentStep={currentStep} />
+				<div className="min-h-[400px]">
+					<Outlet />
+				</div>
 			</div>
-		</div>
+		</TranslationProvider>
 	)
 }
 

@@ -24,7 +24,6 @@ import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
 import { EpicToaster } from './components/ui/sonner.tsx'
 import { UserDropdown } from './components/user-dropdown.tsx'
-import { LocaleSwitch } from './routes/resources+/locale-switch.tsx'
 import {
 	ThemeSwitch,
 	useOptionalTheme,
@@ -133,7 +132,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
-	// i18n: detect locale and load translations
 	const locale = getLocale(request)
 	const translations = await getTranslations(locale)
 
@@ -141,8 +139,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 		{
 			user,
 			cartCount,
-			locale,
-			translations,
 			requestInfo: {
 				hints: getHints(request),
 				origin: getDomainUrl(request),
@@ -154,6 +150,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 			ENV: getEnv(),
 			toast,
 			honeyProps,
+			locale,
+			translations,
 		},
 		{
 			headers: combineHeaders(
@@ -170,22 +168,16 @@ function Document({
 	children,
 	nonce,
 	theme = 'light',
-	locale = 'en',
-	origin,
-	pathname,
 	env = {},
 }: {
 	children: React.ReactNode
 	nonce: string
 	theme?: Theme
-	locale?: string
-	origin?: string
-	pathname?: string
 	env?: Record<string, string | undefined>
 }) {
 	const allowIndexing = ENV.ALLOW_INDEXING !== 'false'
 	return (
-		<html lang={locale} className={`${theme} h-full overflow-x-hidden`}>
+		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
 			<head>
 				<ClientHintCheck nonce={nonce} />
 				<Meta />
@@ -194,25 +186,6 @@ function Document({
 				{allowIndexing ? null : (
 					<meta name="robots" content="noindex, nofollow" />
 				)}
-				{origin && pathname ? (
-					<>
-						<link
-							rel="alternate"
-							hrefLang="en"
-							href={`${origin}${pathname}`}
-						/>
-						<link
-							rel="alternate"
-							hrefLang="fr"
-							href={`${origin}${pathname}`}
-						/>
-						<link
-							rel="alternate"
-							hrefLang="x-default"
-							href={`${origin}${pathname}`}
-						/>
-					</>
-				) : null}
 				<Links />
 			</head>
 			<body className="bg-background text-foreground">
@@ -235,18 +208,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	const data = useLoaderData<typeof loader | null>()
 	const nonce = useNonce()
 	const theme = useOptionalTheme()
-	const locale = (data?.locale as string) ?? 'en'
-	const origin = (data?.requestInfo?.origin as string) ?? undefined
-	const pathname = (data?.requestInfo?.path as string) ?? undefined
 	return (
-		<Document
-			nonce={nonce}
-			theme={theme}
-			locale={locale}
-			origin={origin}
-			pathname={pathname}
-			env={data?.ENV}
-		>
+		<Document nonce={nonce} theme={theme} env={data?.ENV}>
 			{children}
 		</Document>
 	)
@@ -316,10 +279,7 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
-				<div className="flex items-center gap-6">
-					<LocaleSwitch />
-					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
-				</div>
+				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 			</footer>
 			</div>
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
@@ -345,7 +305,7 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<TranslationProvider>
+			<TranslationProvider locale={data.locale} translations={data.translations}>
 				<App />
 			</TranslationProvider>
 		</HoneypotProvider>
