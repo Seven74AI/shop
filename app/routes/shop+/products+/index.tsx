@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { SearchFilters } from '#app/components/search-filters.tsx'
 import { SortSelect } from '#app/components/sort-select.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { searchProducts } from '#app/utils/product-search.server.ts'
 import { parseSearchParams } from '#app/utils/search-params.ts'
@@ -40,6 +41,7 @@ export const meta: Route.MetaFunction = () => [
 export default function ProductsIndex({
 	loaderData,
 }: Route.ComponentProps) {
+	const { locale } = useTranslation()
 	const {
 		products,
 		totalCount,
@@ -173,7 +175,7 @@ export default function ProductsIndex({
 												{product.categoryId}
 											</p>
 											<p className="text-lg font-bold">
-												{formatPrice(product.price, currency)}
+												{formatPrice(product.price, currency, locale)}
 											</p>
 										</div>
 									</Link>
