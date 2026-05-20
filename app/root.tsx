@@ -24,6 +24,7 @@ import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
 import { EpicToaster } from './components/ui/sonner.tsx'
 import { UserDropdown } from './components/user-dropdown.tsx'
+import { LocaleSwitcher } from './components/locale-switcher.tsx'
 import {
 	ThemeSwitch,
 	useOptionalTheme,
@@ -43,6 +44,12 @@ import { type Theme, getTheme } from './utils/theme.server.ts'
 import { makeTimings, time } from './utils/timing.server.ts'
 import { getToast } from './utils/toast.server.ts'
 import { useOptionalUser } from './utils/user.ts'
+import {
+	type Locale,
+	getLocale,
+	getTranslations,
+} from './utils/i18n.server.ts'
+import { TranslationProvider } from './utils/i18n.tsx'
 
 export const links: Route.LinksFunction = () => {
 	return [
@@ -65,9 +72,32 @@ export const links: Route.LinksFunction = () => {
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const locale = (loaderData?.locale as Locale) ?? 'en'
+	const origin = loaderData?.requestInfo?.origin ?? 'https://epicnotes.fly.dev'
+	const path = loaderData?.requestInfo?.path ?? '/'
+	const canonicalUrl = `${origin}${path}`
 	return [
 		{ title: loaderData ? 'Epic Notes' : 'Error | Epic Notes' },
 		{ name: 'description', content: `Your own captain's log` },
+		{ tagName: 'link', rel: 'canonical', href: canonicalUrl },
+		{
+			tagName: 'link',
+			rel: 'alternate',
+			href: canonicalUrl,
+			hreflang: 'en',
+		},
+		{
+			tagName: 'link',
+			rel: 'alternate',
+			href: canonicalUrl,
+			hreflang: 'fr',
+		},
+		{
+			tagName: 'link',
+			rel: 'alternate',
+			href: canonicalUrl,
+			hreflang: 'x-default',
+		},
 	]
 }
 
@@ -127,10 +157,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
+	// i18n: detect locale and load translations
+	const locale = getLocale(request)
+	const translations = await getTranslations(locale)
+
 	return data(
 		{
 			user,
 			cartCount,
+			locale,
+			translations,
 			requestInfo: {
 				hints: getHints(request),
 				origin: getDomainUrl(request),
@@ -158,16 +194,18 @@ function Document({
 	children,
 	nonce,
 	theme = 'light',
+	locale = 'en',
 	env = {},
 }: {
 	children: React.ReactNode
 	nonce: string
 	theme?: Theme
+	locale?: string
 	env?: Record<string, string | undefined>
 }) {
 	const allowIndexing = ENV.ALLOW_INDEXING !== 'false'
 	return (
-		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
+		<html lang={locale} className={`${theme} h-full overflow-x-hidden`}>
 			<head>
 				<ClientHintCheck nonce={nonce} />
 				<Meta />
@@ -198,8 +236,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	const data = useLoaderData<typeof loader | null>()
 	const nonce = useNonce()
 	const theme = useOptionalTheme()
+	const locale = (data?.locale as string) ?? 'en'
 	return (
-		<Document nonce={nonce} theme={theme} env={data?.ENV}>
+		<Document nonce={nonce} theme={theme} locale={locale} env={data?.ENV}>
 			{children}
 		</Document>
 	)
@@ -268,7 +307,10 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
-				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
+				<div className="flex items-center gap-4">
+					<LocaleSwitcher />
+					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
+				</div>
 			</footer>
 			</div>
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
@@ -294,7 +336,9 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<App />
+			<TranslationProvider>
+				<App />
+			</TranslationProvider>
 		</HoneypotProvider>
 	)
 }
