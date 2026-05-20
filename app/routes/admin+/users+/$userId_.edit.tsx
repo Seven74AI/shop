@@ -11,6 +11,7 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { Input } from '#app/components/ui/input.tsx'
 import { Label } from '#app/components/ui/label.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
+import { withAudit } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
@@ -86,7 +87,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params: _params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const actorUserId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request)
 	
@@ -135,21 +136,60 @@ export async function action({ params: _params, request }: Route.ActionArgs) {
 	const { id, name, email, username, roleIds } = submission.value
 
 	try {
-		await prisma.$transaction(async (tx) => {
-			// Update user fields and roles
-			await tx.user.update({
-				where: { id },
-				data: {
-					name: name || null,
-					email,
-					username,
-					roles: {
-						set: [], // Clear existing roles
-						connect: roleIds.map((roleId) => ({ id: roleId })), // Connect new roles
-					},
-				},
-			})
+		// Load before snapshot for audit
+		const beforeUser = await prisma.user.findUnique({
+			where: { id },
+			select: {
+				id: true,
+				email: true,
+				username: true,
+				name: true,
+				roles: { select: { id: true, name: true } },
+			},
 		})
+
+		await withAudit(
+			{
+				action: 'user.rolesChanged',
+				entityType: 'User',
+				entityId: id,
+				actorUserId,
+				getBefore: async () => ({
+					email: beforeUser?.email,
+					username: beforeUser?.username,
+					name: beforeUser?.name,
+					roleIds: beforeUser?.roles.map(r => r.id),
+					roleNames: beforeUser?.roles.map(r => r.name),
+				}),
+				getAfter: () =>
+					prisma.user.findUnique({
+						where: { id },
+						select: {
+							id: true,
+							email: true,
+							username: true,
+							name: true,
+							roles: { select: { id: true, name: true } },
+						},
+					}),
+			},
+			async () =>
+				prisma.$transaction(async (tx) => {
+					// Update user fields and roles
+					await tx.user.update({
+						where: { id },
+						data: {
+							name: name || null,
+							email,
+							username,
+							roles: {
+								set: [], // Clear existing roles
+								connect: roleIds.map((roleId) => ({ id: roleId })), // Connect new roles
+							},
+						},
+					})
+				}),
+		)
 
 		return redirectWithToast(`/admin/users/${id}`, {
 			type: 'success',

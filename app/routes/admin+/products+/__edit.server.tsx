@@ -4,6 +4,7 @@ import { parseFormData } from '@mjackson/form-data-parser'
 import { data } from 'react-router'
 import { MAX_UPLOAD_SIZE } from '#app/schemas/constants'
 import { productSchema } from '#app/schemas/product.ts'
+import { withAudit } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { handlePrismaError } from '#app/utils/prisma-error.server.ts'
@@ -21,7 +22,7 @@ import { imageHasFile } from './__new.server.tsx'
  * @throws {invariantResponse} If product is not found (404)
  */
 export async function action({ request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request, {
 		maxFileSize: MAX_UPLOAD_SIZE,
@@ -111,97 +112,117 @@ export async function action({ request }: Route.ActionArgs) {
 	invariantResponse(existingProduct, 'Product not found', { status: 404 })
 
 	try {
-		await prisma.$transaction(async (tx) => {
-			// Update product basic info
-			const { variants = [], tags, ...productDataWithoutVariants } = productData
-			
-			const newTagNames = tags || []
+		await withAudit(
+			{
+				action: 'product.updated',
+				entityType: 'Product',
+				entityId: productData.id,
+				actorUserId: userId,
+				getBefore: async () => ({
+					name: existingProduct.name,
+					slug: existingProduct.slug,
+					status: existingProduct.status,
+					price: existingProduct.price,
+				}),
+				getAfter: () =>
+					prisma.product.findUnique({
+						where: { id: productData.id },
+						select: { id: true, name: true, slug: true, status: true, price: true },
+					}),
+			},
+			async () =>
+				prisma.$transaction(async (tx) => {
+					// Update product basic info
+					const { variants = [], tags, ...productDataWithoutVariants } = productData
+					
+					const newTagNames = tags || []
 
-			// Update the product
-			await tx.product.update({
-				where: { id: productData.id },
-				data: {
-					...productDataWithoutVariants,
-					images: {
-						// Delete removed images
-						delete: existingProduct.images
-							.filter(existingImg => !existingImages.find(img => img.id === existingImg.id))
-							.map(img => ({ id: img.id })),
-						// Add new images
-						create: newImages,
-					},
-				},
-			})
+					// Update the product
+					await tx.product.update({
+						where: { id: productData.id },
+						data: {
+							...productDataWithoutVariants,
+							images: {
+								// Delete removed images
+								delete: existingProduct.images
+									.filter(existingImg => !existingImages.find(img => img.id === existingImg.id))
+									.map(img => ({ id: img.id })),
+								// Add new images
+								create: newImages,
+							},
+						},
+					})
 
-			// Handle tags separately - delete all and recreate
-			// First, delete existing product-to-tag connections
-			await tx.productToTag.deleteMany({
-				where: { productId: productData.id },
-			})
+					// Handle tags separately - delete all and recreate
+					// First, delete existing product-to-tag connections
+					await tx.productToTag.deleteMany({
+						where: { productId: productData.id },
+					})
 
-			// Upsert tags (create if they don't exist) and connect to product
-			for (const tagName of newTagNames) {
-				// Get or create tag
-				const tag = await tx.productTag.upsert({
-					where: { name: tagName },
-					create: { name: tagName },
-					update: {},
-				})
-				
-				// Connect product to tag
-				await tx.productToTag.create({
-					data: {
-						productId: productData.id,
-						tagId: tag.id,
-					},
-				})
-			}
-
-			// Handle variants - delete all and recreate
-			if (variants && variants.length > 0) {
-				// Delete existing variants
-				await tx.productVariant.deleteMany({
-					where: { productId: productData.id },
-				})
-
-				// Create new variants
-				await tx.productVariant.createMany({
-					data: variants.map((variant) => ({
-						productId: productData.id,
-						sku: variant.sku,
-						price: variant.price,
-						stockQuantity: variant.stockQuantity,
-					})),
-				})
-
-				// Get created variants
-				const createdVariants = await tx.productVariant.findMany({
-					where: { productId: productData.id },
-				})
-
-				// Create attribute value connections
-				for (const [index, variant] of variants.entries()) {
-					if (variant.attributeValueIds && variant.attributeValueIds.length > 0) {
-						const attributeValueIds = variant.attributeValueIds
-							.filter((id) => id && id.trim() !== '' && id !== 'none')
-
-						if (attributeValueIds.length > 0 && createdVariants[index]) {
-							await tx.variantAttributeValue.createMany({
-								data: attributeValueIds.map((attributeValueId) => ({
-									variantId: createdVariants[index]!.id,
-									attributeValueId,
-								})),
-							})
-						}
+					// Upsert tags (create if they don't exist) and connect to product
+					for (const tagName of newTagNames) {
+						// Get or create tag
+						const tag = await tx.productTag.upsert({
+							where: { name: tagName },
+							create: { name: tagName },
+							update: {},
+						})
+						
+						// Connect product to tag
+						await tx.productToTag.create({
+							data: {
+								productId: productData.id,
+								tagId: tag.id,
+							},
+						})
 					}
-				}
-			} else {
-				// If no variants, delete existing ones
-				await tx.productVariant.deleteMany({
-					where: { productId: productData.id },
-				})
-			}
-		})
+
+					// Handle variants - delete all and recreate
+					if (variants && variants.length > 0) {
+						// Delete existing variants
+						await tx.productVariant.deleteMany({
+							where: { productId: productData.id },
+						})
+
+						// Create new variants
+						await tx.productVariant.createMany({
+							data: variants.map((variant) => ({
+								productId: productData.id,
+								sku: variant.sku,
+								price: variant.price,
+								stockQuantity: variant.stockQuantity,
+							})),
+						})
+
+						// Get created variants
+						const createdVariants = await tx.productVariant.findMany({
+							where: { productId: productData.id },
+						})
+
+						// Create attribute value connections
+						for (const [index, variant] of variants.entries()) {
+							if (variant.attributeValueIds && variant.attributeValueIds.length > 0) {
+								const attributeValueIds = variant.attributeValueIds
+									.filter((id) => id && id.trim() !== '' && id !== 'none')
+
+								if (attributeValueIds.length > 0 && createdVariants[index]) {
+									await tx.variantAttributeValue.createMany({
+										data: attributeValueIds.map((attributeValueId) => ({
+											variantId: createdVariants[index]!.id,
+											attributeValueId,
+										})),
+									})
+								}
+							}
+						}
+					} else {
+						// If no variants, delete existing ones
+						await tx.productVariant.deleteMany({
+							where: { productId: productData.id },
+						})
+					}
+				}),
+		)
 
 		return redirectWithToast(`/admin/products/${productData.slug}`, {
 			description: 'Product updated successfully',

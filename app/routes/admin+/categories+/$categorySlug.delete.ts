@@ -2,6 +2,7 @@ import { parseWithZod } from '@conform-to/zod/v4'
 import { invariantResponse } from '@epic-web/invariant'
 import { data } from 'react-router'
 import { z } from 'zod'
+import { withAudit } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
@@ -12,7 +13,7 @@ const DeleteCategorySchema = z.object({
 })
 
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await request.formData()
 	const submission = parseWithZod(formData, { schema: DeleteCategorySchema })
@@ -65,8 +66,23 @@ export async function action({ params, request }: Route.ActionArgs) {
 		})
 	}
 
-	// Delete the category
-	await prisma.category.delete({ where: { id: category.id } })
+	// Delete the category — with audit
+	await withAudit(
+		{
+			action: 'category.deleted',
+			entityType: 'Category',
+			entityId: category.id,
+			actorUserId: userId,
+			getBefore: async () => ({
+				name: category.name,
+				slug: category.slug,
+				productCount: category._count.products,
+				childCount: category._count.children,
+			}),
+			getAfter: async () => null, // category no longer exists
+		},
+		async () => prisma.category.delete({ where: { id: category.id } }),
+	)
 
 	const productMsg = category._count.products > 0
 		? ` ${category._count.products} products moved to Uncategorized.`

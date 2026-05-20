@@ -1,5 +1,6 @@
 import { invariantResponse } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
+import { withAudit } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { deleteProductImages } from '#app/utils/storage.server.ts'
@@ -15,7 +16,7 @@ import { type Route } from './+types/$productSlug.delete.ts'
  * @throws {invariantResponse} If product is not found (404)
  */
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	// Get product with images for cleanup
 	const product = await prisma.product.findUnique({
@@ -32,10 +33,25 @@ export async function action({ params, request }: Route.ActionArgs) {
 	// Extract objectKeys for cleanup
 	const imageKeys = product.images.map(img => img.objectKey)
 
-	// Delete from database (cascade will handle images and variants)
-	await prisma.product.delete({
-		where: { id: product.id },
-	})
+	// Delete from database (cascade will handle images and variants) — with audit
+	await withAudit(
+		{
+			action: 'product.deleted',
+			entityType: 'Product',
+			entityId: product.id,
+			actorUserId: userId,
+			getBefore: async () => ({
+				name: product.name,
+				slug: product.slug,
+				imageCount: imageKeys.length,
+			}),
+			getAfter: async () => null, // product no longer exists
+		},
+		async () =>
+			prisma.product.delete({
+				where: { id: product.id },
+			}),
+	)
 
 	// Clean up images from Tigris storage
 	if (imageKeys.length > 0) {
