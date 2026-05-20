@@ -133,11 +133,12 @@ export async function getBusinessMetrics(): Promise<BusinessMetrics> {
 				_sum: { total: true },
 				_count: { id: true },
 			}),
-			// Last 30 days
-			prisma.order.aggregate({
-				where: { createdAt: { gte: thirtyDaysAgo } },
-				_sum: { total: true },
-			}),
+		// Last 30 days
+		prisma.order.aggregate({
+			where: { createdAt: { gte: thirtyDaysAgo } },
+			_sum: { total: true },
+			_count: { id: true },
+		}),
 			// Group by status
 			prisma.order.groupBy({
 				by: ['status'],
@@ -153,9 +154,7 @@ export async function getBusinessMetrics(): Promise<BusinessMetrics> {
 
 	const totalOrders = totalAgg._count.id
 	const totalGMV = totalAgg._sum.total ?? 0
-	const recentOrders = (await prisma.order.count({
-		where: { createdAt: { gte: thirtyDaysAgo } },
-	})) as number
+	const recentOrders = recentAgg._count.id ?? 0
 	const recentGMV = recentAgg._sum.total ?? 0
 
 	const ordersByStatus = {} as Record<OrderStatus, number>

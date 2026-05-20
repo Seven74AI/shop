@@ -1,4 +1,4 @@
-import { Link, useLoaderData } from 'react-router'
+import { Link, useLoaderData, type LoaderFunctionArgs, type MetaFunction } from 'react-router'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
@@ -6,9 +6,8 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { getBusinessMetrics } from '#app/utils/metrics.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
-import { type Route } from './+types/metrics.ts'
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	await requireUserWithRole(request, 'admin')
 
 	const metrics = await getBusinessMetrics()
@@ -24,18 +23,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return { metrics, statusLabels }
 }
 
-export const meta: Route.MetaFunction = () => [
+export const meta: MetaFunction = () => [
 	{ title: 'Business Metrics | Epic Shop' },
 	{ name: 'description', content: 'Business metrics dashboard — orders, GMV, errors, conversion' },
 ]
 
 export default function MetricsDashboard() {
-	const { metrics, statusLabels } = useLoaderData() as Awaited<ReturnType<typeof loader>> extends infer T
-		? T extends { metrics: infer M; statusLabels: infer S } ? { metrics: M; statusLabels: S } : never
-		: never
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const m = metrics as any
+	const { metrics: m, statusLabels } = useLoaderData<typeof loader>()
 
 	return (
 		<div className="space-y-8 animate-slide-top">
