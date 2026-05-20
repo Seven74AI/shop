@@ -13,7 +13,7 @@ describe('guest-order-token', () => {
 		it('returns a string with two parts separated by a dot', () => {
 			const token = createGuestOrderToken('ORD-000001', 'test@example.com')
 			expect(typeof token).toBe('string')
-			const parts = token.split('.')
+			const parts = token.split('.') as [string, string]
 			expect(parts).toHaveLength(2)
 			expect(parts[0].length).toBeGreaterThan(0)
 			expect(parts[1].length).toBeGreaterThan(0)
@@ -69,7 +69,7 @@ describe('guest-order-token', () => {
 
 		it('returns null for a tampered token (modified payload)', () => {
 			const token = createGuestOrderToken('ORD-000001', 'test@example.com')
-			const parts = token.split('.')
+			const parts = token.split('.') as [string, string]
 			// Modify the payload by flipping a character
 			const flippedPayload =
 				parts[0].slice(0, -1) +

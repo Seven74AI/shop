@@ -72,7 +72,8 @@ export function verifyGuestOrderToken(
 		const parts = token.split('.')
 		if (parts.length !== 2) return null
 
-		const [payloadEncoded, signatureEncoded] = parts
+		const payloadEncoded = parts[0]!
+		const signatureEncoded = parts[1]!
 
 		// Verify signature using constant-time comparison
 		const expectedSignature = sign(payloadEncoded)
