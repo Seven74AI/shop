@@ -110,8 +110,8 @@ export function parseInvoiceNumber(
 ): { fiscalYear: number; sequence: number } | null {
 	const match = invoiceNumber.match(/^F(\d{4})-(\d{5})$/)
 	if (!match) return null
-	const fiscalYear = parseInt(match[1], 10)
-	const sequence = parseInt(match[2], 10)
+	const fiscalYear = parseInt(match[1]!, 10)
+	const sequence = parseInt(match[2]!, 10)
 	if (isNaN(fiscalYear) || isNaN(sequence)) return null
 	return { fiscalYear, sequence }
 }

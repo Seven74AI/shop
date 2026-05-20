@@ -259,7 +259,7 @@ describe('calculateVat', () => {
 			expect(result.taxCountry).toBe('DE')
 			expect(result.totalBaseCents).toBe(1000)
 			expect(result.totalVatCents).toBe(190) // 19% of 1000
-			expect(result.breakdown[0].rate).toBe(1900)
+			expect(result.breakdown[0]!.rate).toBe(1900)
 		})
 
 		test('DE destination → German REDUCED rate (7%)', async () => {
@@ -269,7 +269,7 @@ describe('calculateVat', () => {
 			)
 			expect(result.taxCountry).toBe('DE')
 			expect(result.totalVatCents).toBe(35) // 7% of 500
-			expect(result.breakdown[0].rate).toBe(700)
+			expect(result.breakdown[0]!.rate).toBe(700)
 		})
 
 		test('DE missing SUPER_REDUCED → 0%', async () => {
@@ -285,7 +285,7 @@ describe('calculateVat', () => {
 			)
 			expect(result.taxCountry).toBe('DE')
 			expect(result.totalVatCents).toBe(0)
-			expect(result.breakdown[0].rate).toBe(0)
+			expect(result.breakdown[0]!.rate).toBe(0)
 		})
 	})
 

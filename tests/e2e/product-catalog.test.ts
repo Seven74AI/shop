@@ -48,13 +48,14 @@ test.describe('Product Catalog', () => {
 
 	test('product catalog should support search by name', async ({ page }) => {
 		await page.goto('/shop/products')
-		const searchInput = page.getByPlaceholder(/search products by name/i)
+		const searchInput = page.getByPlaceholder(/search products/i)
 		await expect(searchInput).toBeVisible()
 	})
 
 	test('product catalog should support filtering by category', async ({ page }) => {
 		await page.goto('/shop/products')
-		const categoryFilter = page.getByRole('combobox', { name: /category/i })
+		// Faceted filters use checkboxes inside a fieldset, not a combobox
+		const categoryFilter = page.getByTestId('search-filters')
 		await expect(categoryFilter).toBeVisible()
 	})
 

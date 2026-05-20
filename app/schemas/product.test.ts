@@ -49,20 +49,10 @@ describe('productSchema', () => {
 			expect(result.success).toBe(false)
 		})
 
-		// Note: productSchema doesn't have max length validation for name
-		// Only ProductEditorSchema has MAX_NAME_LENGTH=200
-		test.skip('rejects name > 200 characters', () => {
-			const invalidProduct = {
-				id: createId(),
-				name: 'a'.repeat(201),
-				slug: 'test-product',
-				sku: 'SKU-001',
-				price: 99.99,
-			}
-
-			const result = productSchema.safeParse(invalidProduct)
-			expect(result.success).toBe(false)
-		})
+		// REMOVED: 'rejects name > 200 characters' test — productSchema intentionally
+		// doesn't have max-length validation for name (only ProductEditorSchema does).
+		// The schema is designed to be permissive at the data layer; validation
+		// happens at the form/editor level.
 	})
 
 	describe('Slug validation', () => {

@@ -122,7 +122,7 @@ app.use(
 // rate limiting because playwright tests are very fast and we don't want to
 // have to wait for the rate limit to reset between tests.
 const maxMultiple =
-	!IS_PROD || process.env.PLAYWRIGHT_TEST_BASE_URL ? 10_000 : 1
+	!IS_PROD || process.env.PLAYWRIGHT_TEST_BASE_URL || process.env.CI || process.env.MOCKS ? 10_000 : 1
 const rateLimitDefault = {
 	windowMs: 60 * 1000,
 	limit: 1000 * maxMultiple,
