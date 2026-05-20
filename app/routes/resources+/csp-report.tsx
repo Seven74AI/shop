@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react-router'
-import { data, type Route } from 'react-router'
+import { type Route } from 'react-router'
 
 export async function action({ request }: Route.ActionArgs) {
 	try {
@@ -14,5 +14,5 @@ export async function action({ request }: Route.ActionArgs) {
 		// Malformed JSON - ignore
 	}
 	// Always return 200 to avoid report loops
-	return data({ received: true }, { status: 200 })
+	return Response.json({ received: true }, { status: 200 })
 }

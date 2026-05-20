@@ -1,7 +1,8 @@
 /**
  * @vitest-environment node
  */
-import { describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+import * as Sentry from '@sentry/react-router'
 import { action } from './csp-report.tsx'
 
 // Mock Sentry before importing the module that uses it
@@ -14,6 +15,9 @@ vi.mock('@sentry/react-router', async () => {
 })
 
 describe('CSP Report route', () => {
+	beforeEach(() => {
+		vi.mocked(Sentry.captureMessage).mockClear()
+	})
 	test('accepts valid CSP report JSON and returns 200', async () => {
 		const report = {
 			'csp-report': {
@@ -47,6 +51,17 @@ describe('CSP Report route', () => {
 			const body = await result.json()
 			expect(body).toEqual({ received: true })
 		}
+
+		// Verify Sentry.captureMessage was called with the CSP report
+		expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
+		expect(Sentry.captureMessage).toHaveBeenCalledWith(
+			'CSP violation',
+			expect.objectContaining({
+				level: 'warning',
+				tags: { context: 'csp-report' },
+				extra: report,
+			}),
+		)
 	})
 
 	test('handles malformed JSON gracefully and returns 200', async () => {
@@ -68,6 +83,9 @@ describe('CSP Report route', () => {
 			const body = await result.json()
 			expect(body).toEqual({ received: true })
 		}
+
+		// Verify Sentry.captureMessage was NOT called for malformed JSON
+		expect(Sentry.captureMessage).not.toHaveBeenCalled()
 	})
 
 	test('handles empty body gracefully and returns 200', async () => {
@@ -88,5 +106,8 @@ describe('CSP Report route', () => {
 			const body = await result.json()
 			expect(body).toEqual({ received: true })
 		}
+
+		// Verify Sentry.captureMessage was NOT called for empty body
+		expect(Sentry.captureMessage).not.toHaveBeenCalled()
 	})
 })
