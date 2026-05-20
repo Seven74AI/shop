@@ -511,6 +511,7 @@ model Order {
   // See: docs/data-retention.md
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
+  invoices       Invoice[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -541,6 +542,58 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+model Invoice {
+  id         String      @id @default(cuid())
+  orderId    String
+
+  // Sequential fiscal-year numbering
+  // Invoice number format: "F{year}-{sequence:05d}" (e.g., "F2025-00001").
+  // Generated atomically via withInvoiceLock() in app/utils/invoice.server.ts —
+  // a Promise-chain lock (not DB lock) sufficient for single-process LiteFS primary.
+  fiscalYear Int
+  sequence   Int
+
+  // Invoice type: INVOICE or CREDIT_NOTE
+  kind InvoiceKind @default(INVOICE)
+
+  // Financial snapshot at invoice time (in cents)
+  subtotalCents Int
+  totalCents    Int
+
+  // VAT snapshot from order at invoice time
+  vatBreakdown  Json @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
+  vatTotalCents Int  @default(0)
+
+  // Self-referencing for credit notes — when kind=CREDIT_NOTE, this references the INVOICE being corrected
+  parentInvoiceId String?
+  parentInvoice   Invoice?  @relation("InvoiceCreditNotes", fields: [parentInvoiceId], references: [id], onDelete: SetNull)
+  creditNotes     Invoice[] @relation("InvoiceCreditNotes")
+
+  // PDF generation placeholder — populated by P1.2.2 PDF rendering
+  pdfObjectKey String?
+
+  // Status lifecycle: DRAFT → FINAL (when issued), or CANCELLED
+  status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED"
+
+  issuedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([fiscalYear, sequence])
+  @@index([orderId])
+  @@index([fiscalYear])
+  @@index([fiscalYear, sequence])
+  @@index([parentInvoiceId])
+  @@index([status])
+}
+
+enum InvoiceKind {
+  INVOICE
+  CREDIT_NOTE
 }
 
 model TaxRate {
