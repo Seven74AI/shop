@@ -89,7 +89,7 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 			sku: product.sku,
 			image: productImages.length > 0 ? productImages : undefined,
 			price: product.price,
-			currency: currency?.symbol || 'USD',
+			currency: currency?.code || 'USD',
 			url: productUrl,
 			availability: product.status === 'ACTIVE' ? 'InStock' : 'OutOfStock',
 			category: product.category.name,

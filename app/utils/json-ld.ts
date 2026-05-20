@@ -52,7 +52,7 @@ export function renderJsonLd(node: JsonLdNode | JsonLdNode[]): string {
 		nodes.length === 1
 			? { '@context': 'https://schema.org', ...nodes[0] }
 			: { '@context': 'https://schema.org', '@graph': nodes },
-	)
+	).replace(/<\//g, '<\\/')
 }
 
 /**
