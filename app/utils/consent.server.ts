@@ -53,17 +53,6 @@ export function setConsent(state: ConsentState): string {
 }
 
 /**
- * Check if consent has been granted for a specific category.
- */
-export function hasConsent(
-	consent: ConsentState | null,
-	category: ConsentCategory,
-): boolean {
-	if (!consent) return false
-	return consent.granted.includes(category)
-}
-
-/**
  * Create a consent state with the current timestamp and given categories.
  * Pass empty array for refused-all.
  */
