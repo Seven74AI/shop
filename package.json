@@ -186,6 +186,7 @@
       "esbuild",
       "msw",
       "prisma",
+      "better-sqlite3",
       "sharp",
       "unrs-resolver"
     ]
