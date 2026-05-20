@@ -65,6 +65,14 @@ export async function action({ request }: Route.ActionArgs) {
 			`Item ${item.orderItemId} does not belong to this order`,
 			{ status: 400 },
 		)
+
+		// Validate return quantity does not exceed purchased quantity
+		const orderItem = order.items.find(oi => oi.id === item.orderItemId)
+		invariantResponse(
+			orderItem && item.quantity <= orderItem.quantity,
+			`Return quantity ${item.quantity} exceeds purchased quantity ${orderItem?.quantity} for item ${item.orderItemId}`,
+			{ status: 400 },
+		)
 	}
 
 	const returnRequest = await createReturnRequest({
