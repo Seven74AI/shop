@@ -237,11 +237,12 @@ test.describe('Product Detail', () => {
 
 			// Verify aggregateRating is present
 			expect(parsed.aggregateRating).toBeDefined()
-			expect(parsed.aggregateRating['@type']).toBe('AggregateRating')
-			expect(parsed.aggregateRating.reviewCount).toBe(2)
-			expect(parsed.aggregateRating.ratingValue).toBe(4.5)
-			expect(parsed.aggregateRating.bestRating).toBe(5)
-			expect(parsed.aggregateRating.worstRating).toBe(1)
+			const agg = parsed.aggregateRating!
+			expect(agg['@type']).toBe('AggregateRating')
+			expect(agg.reviewCount).toBe(2)
+			expect(agg.ratingValue).toBe(4.5)
+			expect(agg.bestRating).toBe(5)
+			expect(agg.worstRating).toBe(1)
 		})
 	})
 
