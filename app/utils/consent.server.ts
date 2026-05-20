@@ -64,14 +64,6 @@ export function hasConsent(
 }
 
 /**
- * Check if any consent decision has been made (user has either accepted or refused).
- * Used to determine whether to show the banner.
- */
-export function hasConsentDecision(consent: ConsentState | null): boolean {
-	return consent !== null
-}
-
-/**
  * Create a consent state with the current timestamp and given categories.
  * Pass empty array for refused-all.
  */

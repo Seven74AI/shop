@@ -8,7 +8,7 @@ import {
 	type ConsentCategory,
 	type ConsentState,
 } from '#app/utils/consent.ts'
-import { hasConsentDecision } from '#app/utils/consent.server.ts'
+import { hasConsentDecision } from '#app/utils/consent.ts'
 
 const CATEGORY_LABELS: Record<ConsentCategory, { label: string; description: string }> = {
 	analytics: {
