@@ -114,6 +114,31 @@ export default function AdminDashboard() {
 						</div>
 					</CardContent>
 				</Card>
+
+				{/* Tax Rates Card */}
+				<Card className="rounded-[14px]">
+					<CardContent className="p-6">
+						<div className="flex items-center space-x-4">
+							<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+								<Icon name="layers" className="h-6 w-6 text-primary" />
+							</div>
+							<div className="flex-1">
+								<h2 className="text-base font-normal text-foreground">Tax Rates</h2>
+								<p className="text-sm text-muted-foreground">
+									Manage VAT and tax rates
+								</p>
+							</div>
+						</div>
+						<div className="mt-4 space-y-2">
+							<Button asChild className="w-full h-9 rounded-lg font-medium">
+								<a href="/admin/tax-rates">View Tax Rates</a>
+							</Button>
+							<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
+								<a href="/admin/tax-rates/new">Add New Tax Rate</a>
+							</Button>
+						</div>
+					</CardContent>
+				</Card>
 			</div>
 
 			{/* Quick Actions */}

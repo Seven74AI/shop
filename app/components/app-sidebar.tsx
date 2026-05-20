@@ -58,16 +58,26 @@ const navData = {
 						{ title: 'Add Category', url: '/admin/categories/new' },
 					],
 				},
-				{
-					title: 'Attributes',
-					url: '/admin/attributes',
-					icon: 'sliders' as IconName,
-					hasSubmenu: true,
-					items: [
-						{ title: 'All Attributes', url: '/admin/attributes' },
-						{ title: 'Add Attribute', url: '/admin/attributes/new' },
-					],
-				},
+		{
+			title: 'Attributes',
+			url: '/admin/attributes',
+			icon: 'sliders' as IconName,
+			hasSubmenu: true,
+			items: [
+				{ title: 'All Attributes', url: '/admin/attributes' },
+				{ title: 'Add Attribute', url: '/admin/attributes/new' },
+			],
+		},
+		{
+			title: 'Tax Rates',
+			url: '/admin/tax-rates',
+			icon: 'layers' as IconName,
+			hasSubmenu: true,
+			items: [
+				{ title: 'All Tax Rates', url: '/admin/tax-rates' },
+				{ title: 'Add Tax Rate', url: '/admin/tax-rates/new' },
+			],
+		},
 			],
 		},
 		{
