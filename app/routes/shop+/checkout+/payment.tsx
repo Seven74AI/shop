@@ -7,7 +7,7 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { getCheckoutData } from '#app/utils/checkout.server.ts'
-import { validateCoupon } from '#app/utils/coupon.server.ts'
+import { hasUserReachedPromotionLimit, validateCoupon } from '#app/utils/coupon.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
@@ -175,18 +175,29 @@ export async function action({ request }: Route.ActionArgs) {
 	let discountCents = 0
 	let promotionId: string | undefined = undefined
 
-	if (couponCode) {
-		const result = await validateCoupon(couponCode, subtotal)
-		if (result.valid) {
-			couponValid = true
-			discountCents = result.discountCents
-			promotionId = result.promotion.id
-		}
-		// If coupon is invalid, we silently ignore it (user may have applied it earlier
-		// but it expired between review and payment - don't block the purchase)
-	}
+\tif (couponCode) {
+\t\tconst result = await validateCoupon(couponCode, subtotal)
+\t\tif (result.valid) {
+\t\t\tcouponValid = true
+\t\t\tdiscountCents = result.discountCents
+\t\t\tpromotionId = result.promotion.id
+\t\t}
+\t\t// If coupon is invalid, we silently ignore it (user may have applied it earlier
+\t\t// but it expired between review and payment - don't block the purchase)
+\t}
 
-	// Create Stripe Checkout Session
+\t// Check per-user promotion limit (prevents users from reusing single-use coupons)
+\tif (couponValid && promotionId && userId) {
+\t\tconst reachedLimit = await hasUserReachedPromotionLimit(promotionId, userId)
+\t\tif (reachedLimit) {
+\t\t\treturn data(
+\t\t\t\t{ error: 'You have already used this coupon the maximum number of times' },
+\t\t\t\t{ status: 400 },
+\t\t\t)
+\t\t}
+\t}
+
+\t// Create Stripe Checkout Session
 	try {
 		const domainUrl = getDomainUrl(request)
 		const session = await createCheckoutSession({

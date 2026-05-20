@@ -44,7 +44,14 @@ describe('validateCoupon', () => {
 	// We create promotions directly in the DB for testing
 	let validPromo: Promotion
 
-	beforeAll(async () => {
+	beforeEach(async () => {
+		// Clean up any leftover test data first (idempotent)
+		await prisma.promotion.deleteMany({
+			where: {
+				code: { in: ['TEST10', 'INACTIVE', 'EXPIRED', 'FUTURE', 'MIN50', 'MAXEDOUT'] },
+			},
+		})
+
 		// Create a valid active promotion
 		validPromo = await prisma.promotion.create({
 			data: {
@@ -117,7 +124,7 @@ describe('validateCoupon', () => {
 		})
 	})
 
-	afterAll(async () => {
+	afterEach(async () => {
 		// Clean up test promotions
 		await prisma.promotion.deleteMany({
 			where: {
@@ -226,9 +233,17 @@ describe('validateCoupon', () => {
 
 describe('hasUserReachedPromotionLimit', () => {
 	let limitPromo: Promotion
+	let noLimitPromo: Promotion
 	let testUserId: string
 
-	beforeAll(async () => {
+	beforeEach(async () => {
+		// Clean up any leftover test data first
+		await prisma.order.deleteMany({ where: { userId: testUserId } }).catch(() => {})
+		await prisma.user.deleteMany({ where: { id: testUserId } }).catch(() => {})
+		await prisma.promotion.deleteMany({
+			where: { id: { in: [limitPromo?.id, noLimitPromo?.id].filter(Boolean) as string[] } },
+		}).catch(() => {})
+
 		// Create user
 		const user = await prisma.user.create({
 			data: {
@@ -249,18 +264,32 @@ describe('hasUserReachedPromotionLimit', () => {
 				maxUsesPerUser: 1,
 			},
 		})
+
+		// Create a promotion with no per-user limit (for the "no limit" test)
+		noLimitPromo = await prisma.promotion.create({
+			data: {
+				code: `NOLIMIT-${Date.now()}`,
+				description: 'No per-user limit',
+				type: 'FIXED_AMOUNT',
+				value: 500,
+				isActive: true,
+				// maxUsesPerUser intentionally null
+			},
+		})
 	})
 
-	afterAll(async () => {
+	afterEach(async () => {
 		// Clean up
 		await prisma.order.deleteMany({ where: { userId: testUserId } })
 		await prisma.user.delete({ where: { id: testUserId } }).catch(() => {})
-		await prisma.promotion.delete({ where: { id: limitPromo.id } }).catch(() => {})
+		await prisma.promotion.deleteMany({
+			where: { id: { in: [limitPromo?.id, noLimitPromo?.id].filter(Boolean) as string[] } },
+		}).catch(() => {})
 	})
 
 	test('returns false when per-user limit is null (no limit)', async () => {
-		const result = await hasUserReachedPromotionLimit(validPromo?.id ?? '', testUserId)
-		// TEST10 has no per-user limit
+		const result = await hasUserReachedPromotionLimit(noLimitPromo?.id ?? '', testUserId)
+		// noLimitPromo has no per-user limit
 		expect(result).toBe(false)
 	})
 
