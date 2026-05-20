@@ -2,6 +2,8 @@ import { render } from '@react-email/components'
 import path from 'node:path'
 import { type ReactElement } from 'react'
 import { z } from 'zod'
+import { prisma } from './db.server.ts'
+import { createUnsubscribeToken } from './unsubscribe-token.server.ts'
 
 const resendErrorSchema = z.union([
 	z.object({
@@ -24,20 +26,43 @@ const resendSuccessSchema = z.object({
 
 export async function sendEmail({
 	react,
+	marketing,
 	...options
 }: {
 	to: string
 	subject: string
+	/** If true, adds List-Unsubscribe headers (RFC 8058). Required for marketing emails. */
+	marketing?: boolean
 } & (
 	| { html: string; text: string; react?: never }
 	| { react: ReactElement; html?: never; text?: never }
 )) {
 	const from = 'hello@epicstack.dev'
 
-	const email = {
+	const email: Record<string, unknown> = {
 		from,
 		...options,
 		...(react ? await renderReactEmail(react) : null),
+	}
+
+	// Add List-Unsubscribe headers for marketing emails (RFC 8058)
+	if (marketing) {
+		const user = await prisma.user.findUnique({
+			where: { email: options.to },
+			select: { id: true },
+		})
+		if (user) {
+			const token = createUnsubscribeToken(user.id)
+			const domainUrl =
+				process.env.HOST_URL ?? 'https://shop.example'
+			const unsubscribeUrl = `${domainUrl}/unsubscribe?token=${token}`
+			const mailtoUnsubscribe = `mailto:unsubscribe@${new URL(domainUrl).hostname}`
+
+			email.headers = {
+				'List-Unsubscribe': `<${mailtoUnsubscribe}>, <${unsubscribeUrl}>`,
+				'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+			}
+		}
 	}
 
 	// Skip real API call when no valid API key or in mocks mode
