@@ -13,6 +13,8 @@
  * Used by Mondial Relay API clients to handle transient failures gracefully.
  */
 
+import { breakerRegistry } from './circuit-breaker-registry.server.ts'
+
 export enum CircuitState {
   CLOSED = 'CLOSED',
   OPEN = 'OPEN',
@@ -47,6 +49,20 @@ const DEFAULT_RESET_TIMEOUT_MS = 30_000 // 30 seconds
 const DEFAULT_HALF_OPEN_MAX_REQUESTS = 1
 
 /**
+ * Creates a default state change logger that captures the breaker name.
+ * Logs circuit breaker state transitions at WARN level for observability.
+ */
+function createDefaultStateChangeLogger(
+  name: string,
+): (from: CircuitState, to: CircuitState) => void {
+  return (from: CircuitState, to: CircuitState) => {
+    console.warn(
+      `Circuit breaker "${name}" state change: ${from} → ${to}`,
+    )
+  }
+}
+
+/**
  * A circuit breaker for async function calls.
  *
  * Wraps an async function and prevents calls when the circuit is OPEN
@@ -78,7 +94,12 @@ export class CircuitBreaker<_Args extends unknown[], Result> {
     this.resetTimeoutMs = config.resetTimeoutMs ?? DEFAULT_RESET_TIMEOUT_MS
     this.halfOpenMaxRequests =
       config.halfOpenMaxRequests ?? DEFAULT_HALF_OPEN_MAX_REQUESTS
-    this.onStateChange = config.onStateChange
+    this.onStateChange =
+      config.onStateChange ?? createDefaultStateChangeLogger(name)
+    // Auto-register with central registry for monitoring
+    breakerRegistry.register(
+      this as unknown as CircuitBreaker<unknown[], unknown>,
+    )
   }
 
   /**
