@@ -74,7 +74,49 @@ app.disable('x-powered-by')
 
 app.use((_, res, next) => {
 	// The referrerPolicy breaks our redirectTo logic
-	helmet(res, { general: { referrerPolicy: false } })
+	helmet(res, {
+		general: { referrerPolicy: false },
+		content: {
+			contentSecurityPolicy: {
+				reportOnly: true,
+				useDefaults: false,
+				directives: {
+					fetch: {
+						'default-src': ["'self'"],
+						'script-src': [
+							"'self'",
+							"'unsafe-inline'",
+							'https://js.stripe.com',
+							'https://*.sentry.io',
+						],
+						'style-src': ["'self'", "'unsafe-inline'"],
+						'img-src': [
+							"'self'",
+							'data:',
+							'https://*.tigris.dev',
+							'https://api.mondialrelay.com',
+						],
+						'connect-src': [
+							"'self'",
+							'https://api.stripe.com',
+							'https://api.mondialrelay.com',
+							'https://*.sentry.io',
+							'https://ec.europa.eu',
+						],
+						'frame-src': [
+							"'self'",
+							'https://js.stripe.com',
+							'https://hooks.stripe.com',
+						],
+						'font-src': ["'self'", 'data:'],
+					},
+					deprecated: {
+						'report-uri': '/resources/csp-report',
+					},
+				},
+			},
+		},
+	})
 	next()
 })
 

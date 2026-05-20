@@ -8,6 +8,7 @@ export function init() {
 		environment: process.env.NODE_ENV,
 		denyUrls: [
 			/\/resources\/healthcheck/,
+			/\/resources\/csp-report/,
 			// TODO: be smarter about the public assets...
 			/\/build\//,
 			/\/favicons\//,
@@ -26,6 +27,10 @@ export function init() {
 		tracesSampler(samplingContext) {
 			// ignore healthcheck transactions by other services (consul, etc.)
 			if (samplingContext.request?.url?.includes('/resources/healthcheck')) {
+				return 0
+			}
+			// ignore CSP report transactions
+			if (samplingContext.request?.url?.includes('/resources/csp-report')) {
 				return 0
 			}
 			return process.env.NODE_ENV === 'production' ? 1 : 0
