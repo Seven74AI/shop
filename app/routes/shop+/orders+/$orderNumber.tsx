@@ -1,0 +1,335 @@
+import { invariantResponse } from '@epic-web/invariant'
+import { useState } from 'react'
+import { useFetcher } from 'react-router'
+import { OrderStatusBadge } from '#app/components/order-status-badge.tsx'
+import { Button } from '#app/components/ui/button.tsx'
+import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
+import { Icon } from '#app/components/ui/icon.tsx'
+import { getUserId } from '#app/utils/auth.server.ts'
+import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
+import { formatPrice } from '#app/utils/price.ts'
+import { type Route } from './+types/$orderNumber.ts'
+
+export async function loader({ params, request }: Route.LoaderArgs) {
+	const { orderNumber } = params
+	const userId = await getUserId(request)
+	const url = new URL(request.url)
+	const email = url.searchParams.get('email')
+
+	// Try to get order by order number
+	let order = await getOrderByOrderNumber(orderNumber)
+
+	// If not found, return 404
+	invariantResponse(order, 'Order not found', { status: 404 })
+
+	// Authorization check
+	if (order.userId) {
+		// Order belongs to a user - require authentication
+		invariantResponse(userId === order.userId, 'Unauthorized', { status: 403 })
+	} else {
+		// Guest order - require email verification
+		invariantResponse(email, 'Email required to view guest order', { status: 400 })
+		invariantResponse(
+			email.toLowerCase() === order.email.toLowerCase(),
+			'Email does not match order',
+			{ status: 403 },
+		)
+	}
+
+	return { order }
+}
+
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	if (!loaderData?.order) {
+		return [{ title: 'Order Not Found | Shop | Epic Shop' }]
+	}
+	return [{ title: `Order ${loaderData.order.orderNumber} | Shop | Epic Shop` }]
+}
+
+export default function OrderDetail({ loaderData }: Route.ComponentProps) {
+	const { order } = loaderData
+	const [showTracking, setShowTracking] = useState(false)
+
+	const trackingFetcher = useFetcher<{
+		trackingInfo?: {
+			status: string
+			statusCode: string
+			events: Array<{
+				date: Date
+				description: string
+				location?: string
+			}>
+		}
+		error?: string
+		message?: string
+	}>()
+
+	// Fetch tracking info when button is clicked
+	const handleLoadTracking = () => {
+		if (!showTracking && order.mondialRelayShipmentNumber) {
+			const url = new URL(window.location.href)
+			const email = url.searchParams.get('email')
+		const trackingUrl = `/shop/orders/${order.orderNumber}/tracking${email ? `?email=${encodeURIComponent(email)}` : ''}`
+		void trackingFetcher.load(trackingUrl)
+		setShowTracking(true)
+		}
+	}
+
+	return (
+		<div className="container mx-auto px-4 py-8 space-y-8">
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="text-3xl font-bold tracking-tight">Order Details</h1>
+					<p className="text-muted-foreground">
+						Order Number: <span className="font-semibold">{order.orderNumber}</span>
+					</p>
+				</div>
+				<OrderStatusBadge status={order.status} className="text-sm" />
+			</div>
+
+			<div className="grid gap-6 md:grid-cols-2">
+				{/* Order Items */}
+				<Card>
+					<CardHeader>
+						<h2>Items</h2>
+					</CardHeader>
+					<CardContent>
+						<div className="space-y-4">
+							{order.items.map((item) => (
+								<div key={item.id} className="flex items-start gap-4 pb-4 border-b last:border-0">
+									{item.product.images[0] && (
+										<img
+											src={`/resources/images?objectKey=${encodeURIComponent(item.product.images[0].objectKey)}`}
+											alt={item.product.images[0].altText || item.product.name}
+											className="w-16 h-16 object-cover rounded"
+										/>
+									)}
+									<div className="flex-1">
+										<h2 className="font-semibold">{item.product.name}</h2>
+										{item.variant && (
+											<p className="text-sm text-muted-foreground">
+												{item.variant.attributeValues
+													.map((av) => `${av.attributeValue.attribute.name}: ${av.attributeValue.value}`)
+													.join(', ')}
+											</p>
+										)}
+										<p className="text-sm text-muted-foreground">
+											Quantity: {item.quantity}
+										</p>
+									</div>
+									<div className="text-right">
+										<p className="font-semibold">{formatPrice(item.price)}</p>
+									</div>
+								</div>
+							))}
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Order Summary */}
+				<div className="space-y-6">
+					<Card>
+						<CardHeader>
+							<h2>Order Summary</h2>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Subtotal</span>
+								<span>{formatPrice(order.subtotal)}</span>
+							</div>
+							{order.shippingCost !== null && order.shippingCost !== undefined && (
+								<div className="flex justify-between">
+									<span className="text-muted-foreground">Shipping</span>
+									<span>
+										{order.shippingCost === 0 ? (
+											<span className="text-green-600 font-semibold">Free</span>
+										) : (
+											formatPrice(order.shippingCost)
+										)}
+									</span>
+								</div>
+							)}
+							{order.shippingMethodName && (
+								<div className="text-sm text-muted-foreground pt-2 border-t">
+									{order.shippingCarrierName && (
+										<p>
+											<strong>Carrier:</strong> {order.shippingCarrierName}
+										</p>
+									)}
+									<p>
+										<strong>Method:</strong> {order.shippingMethodName}
+									</p>
+									{order.mondialRelayPickupPointName && (
+										<p className="mt-1">
+											<strong>Pickup Point:</strong>{' '}
+											{order.mondialRelayPickupPointName}
+										</p>
+									)}
+									{order.mondialRelayShipmentNumber && (
+										<div className="mt-2">
+											<p className="mb-2">
+												<strong>Shipment Number:</strong> {order.mondialRelayShipmentNumber}
+											</p>
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={handleLoadTracking}
+												disabled={trackingFetcher.state === 'loading'}
+											>
+												{trackingFetcher.state === 'loading' ? (
+													<>
+														<Icon name="update" className="h-4 w-4 animate-spin mr-2" />
+														Loading...
+													</>
+												) : (
+													<>
+														<Icon name="magnifying-glass" className="h-4 w-4 mr-2" />
+														{showTracking ? 'Refresh Tracking' : 'View Tracking'}
+													</>
+												)}
+											</Button>
+										</div>
+									)}
+								</div>
+							)}
+							<div className="border-t pt-4 flex justify-between text-lg font-bold">
+								<span>Total</span>
+								<span>{formatPrice(order.total)}</span>
+							</div>
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<h2>Shipping Address</h2>
+						</CardHeader>
+						<CardContent>
+							<p className="font-semibold">{order.shippingName}</p>
+							<p className="text-muted-foreground">{order.shippingStreet}</p>
+							<p className="text-muted-foreground">
+								{order.shippingCity}
+								{order.shippingState && `, ${order.shippingState}`} {order.shippingPostal}
+							</p>
+							<p className="text-muted-foreground">{order.shippingCountry}</p>
+						</CardContent>
+					</Card>
+
+					<Card>
+						<CardHeader>
+							<h2>Order Information</h2>
+						</CardHeader>
+						<CardContent className="space-y-2">
+							<div>
+								<p className="text-sm text-muted-foreground">Order Date</p>
+								<p>
+									{new Date(order.createdAt).toLocaleDateString('en-US', {
+										year: 'numeric',
+										month: 'long',
+										day: 'numeric',
+										hour: '2-digit',
+										minute: '2-digit',
+									})}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm text-muted-foreground">Email</p>
+								<p>{order.email}</p>
+							</div>
+							{order.trackingNumber && (
+								<div>
+									<p className="text-sm text-muted-foreground">Tracking Number</p>
+									<p className="font-mono font-semibold">{order.trackingNumber}</p>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					{/* Tracking Information */}
+					{showTracking && order.mondialRelayShipmentNumber && (
+						<Card>
+							<CardHeader>
+								<h2>Tracking Information</h2>
+							</CardHeader>
+							<CardContent>
+								{trackingFetcher.state === 'loading' && (
+									<div className="text-center py-4">
+										<Icon name="update" className="h-6 w-6 animate-spin mx-auto mb-2" />
+										<p className="text-sm text-muted-foreground">Loading tracking information...</p>
+									</div>
+								)}
+
+								{trackingFetcher.data?.error && (
+									<div className="p-4 border border-destructive/50 rounded-lg bg-destructive/10">
+										<p className="text-sm text-destructive">
+											{trackingFetcher.data.error}
+											{trackingFetcher.data.message && `: ${trackingFetcher.data.message}`}
+										</p>
+									</div>
+								)}
+
+								{trackingFetcher.data?.trackingInfo && (
+									<div className="space-y-4">
+										<div>
+											<p className="text-sm text-muted-foreground">Status</p>
+											<p className="font-semibold">{trackingFetcher.data.trackingInfo.status}</p>
+										</div>
+
+										{trackingFetcher.data.trackingInfo.events.length > 0 && (
+											<div>
+												<p className="text-sm text-muted-foreground mb-2">Tracking Events</p>
+												<div className="space-y-3">
+													{trackingFetcher.data.trackingInfo.events.map((event, index) => (
+														<div
+															key={index}
+															className="flex items-start gap-3 pb-3 border-b last:border-0"
+														>
+															<div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
+															<div className="flex-1">
+																<p className="font-medium">{event.description}</p>
+																{event.location && (
+																	<p className="text-sm text-muted-foreground">
+																		{event.location}
+																	</p>
+																)}
+																<p className="text-xs text-muted-foreground">
+																	{new Date(event.date).toLocaleString('en-US', {
+																		year: 'numeric',
+																		month: 'short',
+																		day: 'numeric',
+																		hour: '2-digit',
+																		minute: '2-digit',
+																	})}
+																</p>
+															</div>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
+
+										{trackingFetcher.data.trackingInfo.events.length === 0 && (
+											<p className="text-sm text-muted-foreground">
+												No tracking events available yet.
+											</p>
+										)}
+									</div>
+								)}
+							</CardContent>
+						</Card>
+					)}
+				</div>
+			</div>
+
+			<div className="flex gap-4">
+				<Button variant="outline" asChild>
+					<a href="/shop/orders">Back to Orders</a>
+				</Button>
+				<Button asChild>
+					<a href="/shop">Continue Shopping</a>
+				</Button>
+			</div>
+		</div>
+	)
+}
+

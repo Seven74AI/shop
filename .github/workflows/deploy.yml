@@ -1,0 +1,365 @@
+name: 🚀 Deploy
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request: {}
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  lint:
+    name: ⬣ ESLint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🔍 Detect package manager
+        id: pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📦 Setup pnpm
+        if: steps.pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: ${{ steps.pm.outputs.manager }}
+
+      - name: 📥 Install dependencies (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: 📥 Install dependencies (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        uses: bahmutov/npm-install@v1
+
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env
+
+      - name: 🛠 Setup Database (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
+
+      - name: 🛠 Setup Database (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npx prisma migrate deploy && npx prisma generate --sql
+
+      - name: 🔬 Lint (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm lint
+
+      - name: 🔬 Lint (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npm run lint
+
+  typecheck:
+    name: ʦ TypeScript
+    runs-on: ubuntu-24.04
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🔍 Detect package manager
+        id: pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📦 Setup pnpm
+        if: steps.pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: ${{ steps.pm.outputs.manager }}
+
+      - name: 📥 Install dependencies (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: 📥 Install dependencies (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        uses: bahmutov/npm-install@v1
+
+      - name: 🏗 Build (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm build
+
+      - name: 🏗 Build (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npm run build
+
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env
+
+      - name: 🛠 Setup Database (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
+
+      - name: 🛠 Setup Database (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npx prisma migrate deploy && npx prisma generate --sql
+
+      - name: 🔎 Type check (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm typecheck
+
+      - name: 🔎 Type check (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npm run typecheck --if-present
+
+  vitest:
+    name: ⚡ Vitest
+    runs-on: ubuntu-24.04
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🔍 Detect package manager
+        id: pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📦 Setup pnpm
+        if: steps.pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: ${{ steps.pm.outputs.manager }}
+
+      - name: 📥 Install dependencies (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: 📥 Install dependencies (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        uses: bahmutov/npm-install@v1
+
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env
+
+      - name: 🛠 Setup Database (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
+
+      - name: 🛠 Setup Database (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npx prisma migrate deploy && npx prisma generate --sql
+
+      - name: ⚡ Run vitest (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm test -- --coverage
+
+      - name: ⚡ Run vitest (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npm run test -- --coverage
+
+  playwright:
+    name: 🎭 Playwright
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env && echo 'MOCKS=true' >> .env && echo 'RESEND_API_KEY=""' >> .env && echo 'PLAYWRIGHT_TEST_BASE_URL=http://localhost:3000' >> .env
+
+      - name: 🔍 Detect package manager
+        id: pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📦 Setup pnpm
+        if: steps.pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: ${{ steps.pm.outputs.manager }}
+
+      - name: 📥 Install dependencies (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: 📥 Install dependencies (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        uses: bahmutov/npm-install@v1
+
+      - name: 📥 Install Playwright Browsers (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm test:e2e:install
+
+      - name: 📥 Install Playwright Browsers (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npm run test:e2e:install
+
+      - name: 🛠 Setup Database (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
+
+      - name: 🛠 Setup Database (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npx prisma migrate deploy && npx prisma generate --sql
+
+      - name: 🏦 Cache Database
+        id: db-cache
+        uses: actions/cache@v5
+        with:
+          path: prisma/data.db
+          key:
+            db-cache-v2-schema_${{ hashFiles('./prisma/schema.prisma')
+            }}-migrations_${{ hashFiles('./prisma/migrations/*/migration.sql')
+            }}-prisma7-v2
+
+      - name: 🌱 Seed Database (pnpm)
+        if: steps.db-cache.outputs.cache-hit != 'true' && steps.pm.outputs.manager == 'pnpm'
+        run: pnpm exec prisma migrate reset --force
+
+      - name: 🌱 Seed Database (npm)
+        if: steps.db-cache.outputs.cache-hit != 'true' && steps.pm.outputs.manager == 'npm'
+        run: npx prisma migrate reset --force
+
+      - name: 🏗 Build (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm build
+
+      - name: 🏗 Build (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npm run build
+
+      - name: 🎭 Playwright tests (pnpm)
+        if: steps.pm.outputs.manager == 'pnpm'
+        run: pnpm exec playwright test --workers=1
+
+      - name: 🎭 Playwright tests (npm)
+        if: steps.pm.outputs.manager == 'npm'
+        run: npx playwright test --workers=1
+
+      - name: 📊 Upload report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  container:
+    name: 📦 Prepare Container
+    runs-on: ubuntu-24.04
+    # only prepare container on pushes
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 50
+
+      - name: 👀 Read app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: app_name
+        with:
+          file: 'fly.toml'
+          field: 'app'
+
+      - name: 🎈 Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: 📦 Build Staging Container
+        if: ${{ github.ref == 'refs/heads/dev' }}
+        run: |
+          flyctl deploy \
+            --build-only \
+            --push \
+            --image-label ${{ github.sha }} \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            --app ${{ steps.app_name.outputs.value }}-staging
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: 📦 Build Production Container
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          flyctl deploy \
+            --build-only \
+            --push \
+            --image-label ${{ github.sha }} \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            --build-secret SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} \
+            --app ${{ steps.app_name.outputs.value }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-24.04
+    needs: [lint, typecheck, vitest, playwright, container]
+    # only deploy on pushes
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: '50'
+
+      - name: 👀 Read app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: app_name
+        with:
+          file: 'fly.toml'
+          field: 'app'
+
+      - name: 🎈 Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: 🚀 Deploy Staging
+        if: ${{ github.ref == 'refs/heads/dev' }}
+        run: |
+          flyctl deploy \
+            --image "registry.fly.io/${{ steps.app_name.outputs.value }}-staging:${{ github.sha }}" \
+            --app ${{ steps.app_name.outputs.value }}-staging
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: 🚀 Deploy Production
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          flyctl deploy \
+            --image "registry.fly.io/${{ steps.app_name.outputs.value }}:${{ github.sha }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

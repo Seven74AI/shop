@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', '**.txt']
+  pull_request:
+    branches: [main]
+    paths-ignore: ['**.md', '**.txt']
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: npx playwright install --with-deps
+
+      - run: pnpm vitest run
+
+      - run: pnpm tsc --noEmit
+
+      - run: pnpm lint
+
+      - run: npx playwright test --workers=1
