@@ -34,6 +34,7 @@ model User {
   cart        Cart?
   orders      Order[]
   addresses   Address[]
+  abandonedCartEmails AbandonedCartEmail[]
 }
 
 model Note {
@@ -429,6 +430,7 @@ model Cart {
 
   user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CartItem[]
+  abandonedCartEmails AbandonedCartEmail[]
 
   @@index([userId])
   @@index([sessionId])
@@ -451,6 +453,28 @@ model CartItem {
   @@unique([cartId, productId, variantId])
   @@index([cartId])
   @@index([productId])
+}
+
+model AbandonedCartEmail {
+  id     String @id @default(cuid())
+  cartId String
+  userId String
+  email  String
+  token  String @unique
+
+  // Whether the user came back and completed checkout after this email
+  recovered   Boolean  @default(false)
+  recoveredAt DateTime?
+
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([userId])
+  @@index([sentAt])
 }
 
 model Order {
