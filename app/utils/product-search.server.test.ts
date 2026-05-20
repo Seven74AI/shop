@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	searchProducts,
@@ -198,11 +198,9 @@ async function createTestData() {
 
 // ─── Setup / Teardown ────────────────────────────────────────────────────
 
-beforeAll(async () => {
-	await ensureFts5Migration()
-})
-
 beforeEach(async () => {
+	// FTS5 migration must run AFTER db-setup copies base.db → per-file db
+	await ensureFts5Migration()
 	await createTestData()
 })
 
@@ -281,8 +279,8 @@ describe('product-search.server.ts — FTS5 Search', () => {
 				minPriceCents: 2000,
 				maxPriceCents: 5000,
 			})
-			expect(result.totalCount).toBe(3) // T-Shirt ($24.99), JS Book ($29.99), TS Book ($39.99 DRAFT→filtered)
-			// But DRAFT is filtered by default, so 2
+			// T-Shirt ($24.99) + JS Book ($29.99) = 2 ACTIVE products in range.
+			// TS Book ($39.99) is DRAFT and filtered out by default.
 			expect(result.totalCount).toBe(2)
 		})
 
@@ -294,8 +292,7 @@ describe('product-search.server.ts — FTS5 Search', () => {
 				query: 'cable',
 				categoryId: electronics!.id,
 			})
-			expect(result.totalCount).toBe(2) // USB-C Cable + bag contains "cable"? No - just USB-C
-			// Actually "cable" should only match "USB-C Charging Cable 2m"
+			expect(result.totalCount).toBe(1) // Only "USB-C Charging Cable 2m" matches "cable"
 			expect(result.products[0].name).toBe('USB-C Charging Cable 2m')
 		})
 

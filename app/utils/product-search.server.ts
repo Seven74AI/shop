@@ -83,37 +83,32 @@ function buildSearchQuery(filters: SearchFilters): {
 	sql: string
 	params: (string | number)[]
 } {
-	const conditions: string[] = []
 	const params: (string | number)[] = []
 
 	// FTS5 match
+	let ftsQueryParam: string | null = null
 	if (filters.query && filters.query.trim()) {
-		// Escape FTS5 special characters and build prefix query for partial matching
 		const sanitized = filters.query
 			.trim()
 			.replace(/['"]/g, '')
 			.replace(/\s+/g, ' ')
 		if (sanitized) {
-			// Split into tokens and append * for prefix matching
 			const tokens = sanitized.split(/\s+/).filter(Boolean)
-			const ftsQuery = tokens.map((t) => `"${t}"*`).join(' ')
-			conditions.push(`pf.product_fts MATCH ?`)
-			params.push(ftsQuery)
+			ftsQueryParam = tokens.map((t) => `"${t}"*`).join(' ')
 		}
 	}
 
-	// Build the base query - always join to get rank if FTS match, otherwise direct Product query
-	const hasQuery = conditions.length > 0
-
+	// Build the base query
 	let sql: string
 
-	if (hasQuery) {
+	if (ftsQueryParam) {
+		params.push(ftsQueryParam)
 		// FTS5 search with rank
 		sql = `
 			WITH fts_match AS (
 				SELECT rowid, rank
 				FROM product_fts
-				WHERE ${conditions.join(' AND ')}
+				WHERE product_fts MATCH ?
 				ORDER BY rank
 			)
 			SELECT
@@ -239,10 +234,14 @@ async function getFacets(
 		GROUP BY p.categoryId
 		ORDER BY count DESC
 	`
-	const categoryFacets = await prisma.$queryRawUnsafe<CategoryFacet[]>(
+	const rawCategoryFacets = await prisma.$queryRawUnsafe<CategoryFacet[]>(
 		categorySql,
 		...params,
 	)
+	const categoryFacets = rawCategoryFacets.map((f) => ({
+		...f,
+		count: Number(f.count),
+	}))
 
 	// Price range facet counts
 	const priceRangeFacets: PriceRangeFacet[] = []
