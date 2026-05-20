@@ -2,7 +2,20 @@ import { prisma } from './db.server.ts'
 import { type ReturnStatus } from './return-status.ts'
 
 /**
+ * Allowed status transitions for return requests.
+ * REFUNDED and REJECTED are terminal states with no further transitions.
+ */
+const ALLOWED_TRANSITIONS: Record<ReturnStatus, ReturnStatus[]> = {
+	REQUESTED: ['APPROVED', 'REJECTED'],
+	APPROVED: ['RECEIVED', 'REJECTED'],
+	RECEIVED: ['REFUNDED', 'REJECTED'],
+	REFUNDED: [],
+	REJECTED: [],
+}
+
+/**
  * Update a return request's status and optionally set admin notes.
+ * Enforces valid status transitions — a 400 is thrown for invalid ones.
  * Automatically sets timestamps:
  * - APPROVED → no timestamp change
  * - RECEIVED → sets receivedAt
@@ -15,6 +28,25 @@ export async function updateReturnStatus(
 	refundAmountCents?: number | null,
 	restockingFeeCents?: number | null,
 ) {
+	// Validate the status transition before applying
+	const current = await prisma.returnRequest.findUnique({
+		where: { id: returnId },
+		select: { status: true },
+	})
+
+	if (!current) {
+		throw new Response('Return request not found', { status: 404 })
+	}
+
+	const currentStatus = current.status as ReturnStatus
+	const allowed = ALLOWED_TRANSITIONS[currentStatus]
+	if (!allowed || !allowed.includes(status)) {
+		throw new Response(
+			`Invalid status transition: ${current.status} → ${status}`,
+			{ status: 400 },
+		)
+	}
+
 	const data: Record<string, unknown> = { status }
 
 	if (adminNotes !== undefined) {
