@@ -4,6 +4,7 @@ import { type Prisma } from '@prisma/client'
 import { data } from 'react-router'
 import { MAX_UPLOAD_SIZE } from '#app/schemas/constants'
 import { productSchema } from '#app/schemas/product.ts'
+import { withAudit } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { handlePrismaError } from '#app/utils/prisma-error.server.ts'
@@ -33,7 +34,7 @@ export function imageHasFile(
  * @returns Redirect to product page on success, or error data on failure
  */
 export async function action({ request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request, {
 		maxFileSize: MAX_UPLOAD_SIZE,
@@ -71,78 +72,95 @@ export async function action({ request }: Route.ActionArgs) {
 	const { newImages, ...productData } = submission.value
 
 	try {
-		const result = await prisma.$transaction(async (tx) => {
-			// Prepare product data
-			const { variants = [], tags = [], categoryId, ...productDataWithoutVariantsAndCategory } = productData
-			const productCreateData: Prisma.ProductCreateInput = { 
-				...productDataWithoutVariantsAndCategory,
-				category: {
-					connect: { id: categoryId }
-				}
-			}
+		const productId = productData.id
 
-			// Add images if they exist
-			if (newImages && newImages.length > 0) {
-				productCreateData.images = {
-					create: newImages
-				}
-			}
-
-			// Add tags if they exist
-			if (tags && tags.length > 0) {
-				productCreateData.tags = {
-					create: tags.map(tagName => ({
-						tag: {
-							connectOrCreate: {
-								where: { name: tagName },
-								create: { name: tagName }
-							}
+		const result = await withAudit(
+			{
+				action: 'product.created',
+				entityType: 'Product',
+				entityId: productId,
+				actorUserId: userId,
+				getBefore: async () => null, // new product
+				getAfter: () =>
+					prisma.product.findUnique({
+						where: { id: productId },
+						select: { id: true, name: true, slug: true, status: true, price: true },
+					}),
+			},
+			async () =>
+				prisma.$transaction(async (tx) => {
+					// Prepare product data
+					const { variants = [], tags = [], categoryId, ...productDataWithoutVariantsAndCategory } = productData
+					const productCreateData: Prisma.ProductCreateInput = { 
+						...productDataWithoutVariantsAndCategory,
+						category: {
+							connect: { id: categoryId }
 						}
-					}))
-				}
-			}
+					}
 
-			// Add variants if they exist
-			if (variants && variants.length > 0) {
-				productCreateData.variants = {
-					create: variants.map((variant) => ({
-						sku: variant.sku,
-						price: variant.price,
-						stockQuantity: variant.stockQuantity,
-						attributeValues: {
-							create: (variant.attributeValueIds || [])
-								.filter((id) => id && id.trim() !== '' && id !== 'none')
-								.map((attributeValueId) => ({
-									attributeValueId,
-								})),
-						},
-					})),
-				}
-			}
+					// Add images if they exist
+					if (newImages && newImages.length > 0) {
+						productCreateData.images = {
+							create: newImages
+						}
+					}
 
-			const createdProduct = await tx.product.create({
-				data: productCreateData,
-				include: {
-					images: true,
-					variants: {
-						include: {
-							attributeValues: {
-								include: {
-									attributeValue: true
+					// Add tags if they exist
+					if (tags && tags.length > 0) {
+						productCreateData.tags = {
+							create: tags.map(tagName => ({
+								tag: {
+									connectOrCreate: {
+										where: { name: tagName },
+										create: { name: tagName }
+									}
 								}
-							}
+							}))
 						}
-					},
-					tags: {
+					}
+
+					// Add variants if they exist
+					if (variants && variants.length > 0) {
+						productCreateData.variants = {
+							create: variants.map((variant) => ({
+								sku: variant.sku,
+								price: variant.price,
+								stockQuantity: variant.stockQuantity,
+								attributeValues: {
+									create: (variant.attributeValueIds || [])
+										.filter((id) => id && id.trim() !== '' && id !== 'none')
+										.map((attributeValueId) => ({
+											attributeValueId,
+										})),
+								},
+							})),
+						}
+					}
+
+					const createdProduct = await tx.product.create({
+						data: productCreateData,
 						include: {
-							tag: true
-						}
-					},
-				},
-			})
-			
-			return createdProduct
-		})
+							images: true,
+							variants: {
+								include: {
+									attributeValues: {
+										include: {
+											attributeValue: true
+										}
+									}
+								}
+							},
+							tags: {
+								include: {
+									tag: true
+								}
+							},
+						},
+					})
+					
+					return createdProduct
+				}),
+		)
 
 		return redirectWithToast(`/admin/products/${result.slug}`, {
 			description: 'Product created successfully',

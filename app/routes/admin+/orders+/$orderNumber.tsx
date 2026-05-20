@@ -68,7 +68,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await request.formData()
 	const intent = formData.get('intent')
@@ -91,7 +91,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 
 		invariantResponse(order, 'Order not found', { status: 404 })
 
-		await cancelOrder(order.id, request)
+		await cancelOrder(order.id, request, userId)
 
 		return redirectWithToast(`/admin/orders/${orderNumber}`, {
 			type: 'success',
@@ -119,7 +119,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 
 	const { status, trackingNumber } = submission.value
 
-	await updateOrderStatus(order.id, status, request, trackingNumber || null)
+	await updateOrderStatus(order.id, status, request, trackingNumber || null, userId)
 
 	const statusLabel = getOrderStatusLabel(status)
 	const description = trackingNumber

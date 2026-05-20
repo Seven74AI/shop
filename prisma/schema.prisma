@@ -714,3 +714,21 @@ enum ShippingRateType {
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
 }
+
+// Audit Log System
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actorEmail   String?
+  action       String // e.g. "order.statusUpdated", "product.created"
+  entityType   String // e.g. "Order", "Product", "User"
+  entityId     String
+  before       Json?
+  after        Json?
+  requestId    String?
+  createdAt    DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt])
+}

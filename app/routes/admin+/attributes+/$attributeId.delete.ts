@@ -1,12 +1,13 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { parseFormData } from '@mjackson/form-data-parser'
+import { withAudit } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { type Route } from './+types/$attributeId.delete.ts'
 
 export async function action({ params: _params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request)
 	const attributeId = formData.get('attributeId')
@@ -39,10 +40,24 @@ export async function action({ params: _params, request }: Route.ActionArgs) {
 		})
 	}
 
-	// Delete the attribute (values will be deleted due to cascade)
-	await prisma.attribute.delete({
-		where: { id: attributeId as string },
-	})
+	// Delete the attribute (values will be deleted due to cascade) — with audit
+	await withAudit(
+		{
+			action: 'attribute.deleted',
+			entityType: 'Attribute',
+			entityId: attributeId as string,
+			actorUserId: userId,
+			getBefore: async () => ({
+				name: attribute.name,
+				valueCount: attribute.values.length,
+			}),
+			getAfter: async () => null, // attribute no longer exists
+		},
+		async () =>
+			prisma.attribute.delete({
+				where: { id: attributeId as string },
+			}),
+	)
 
 	return redirectWithToast('/admin/attributes', {
 		type: 'success',

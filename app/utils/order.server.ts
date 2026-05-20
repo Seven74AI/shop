@@ -2,6 +2,7 @@ import { invariant } from '@epic-web/invariant'
 import { type OrderStatus } from '@prisma/client'
 import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
+import { withAudit } from './audit.server.ts'
 import { prisma } from './db.server.ts'
 import { sendEmail } from './email.server.ts'
 import { getDomainUrl } from './misc.tsx'
@@ -268,25 +269,47 @@ export async function updateOrderStatus(
 	status: OrderStatus,
 	request?: Request,
 	trackingNumber?: string | null,
+	actorUserId?: string | null,
 ): Promise<void> {
-	// Update order status and tracking number
-	const order = await prisma.order.update({
+	// Load before snapshot for audit
+	const beforeSnapshot = await prisma.order.findUnique({
 		where: { id: orderId },
-		data: {
-			status,
-			// Always update trackingNumber when status is SHIPPED (even if it's empty string/null)
-			...(status === 'SHIPPED'
-				? { trackingNumber: trackingNumber ?? '' }
-				: {}),
-		},
-		select: {
-			id: true,
-			orderNumber: true,
-			email: true,
-			status: true,
-			trackingNumber: true,
-		},
+		select: { id: true, status: true, trackingNumber: true },
 	})
+
+	// Update order status and tracking number (with audit)
+	const order = await withAudit(
+		{
+			action: `order.${status.toLowerCase()}`,
+			entityType: 'Order',
+			entityId: orderId,
+			actorUserId,
+			getBefore: async () => beforeSnapshot,
+			getAfter: () =>
+				prisma.order.findUnique({
+					where: { id: orderId },
+					select: { id: true, status: true, trackingNumber: true },
+				}),
+		},
+		async () =>
+			prisma.order.update({
+				where: { id: orderId },
+				data: {
+					status,
+					// Always update trackingNumber when status is SHIPPED (even if it's empty string/null)
+					...(status === 'SHIPPED'
+						? { trackingNumber: trackingNumber ?? '' }
+						: {}),
+				},
+				select: {
+					id: true,
+					orderNumber: true,
+					email: true,
+					status: true,
+					trackingNumber: true,
+				},
+			}),
+	)
 
 	// Send status update email (non-blocking - don't fail status update if email fails)
 	try {
@@ -362,7 +385,11 @@ function getStatusLabel(status: OrderStatus): string {
  * @param orderId - The ID of the order to cancel
  * @param request - Optional request object for getting domain URL (for email links)
  */
-export async function cancelOrder(orderId: string, request?: Request): Promise<void> {
+export async function cancelOrder(
+	orderId: string,
+	request?: Request,
+	actorUserId?: string | null,
+): Promise<void> {
 	const order = await prisma.order.findUnique({
 		where: { id: orderId },
 		select: {
@@ -378,6 +405,9 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 
 	invariant(order, 'Order not found')
 	invariant(order.status !== 'CANCELLED', 'Order is already cancelled')
+
+	// Snapshot before for audit (capture pre-cancellation state)
+	const beforeSnapshot = { status: order.status, stripePaymentIntentId: order.stripePaymentIntentId, stripeChargeId: order.stripeChargeId }
 
 	// Create refund via Stripe if payment was processed
 	let refundId: string | null = null
@@ -412,11 +442,26 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 		}
 	}
 
-	// Update order status to CANCELLED
-	await prisma.order.update({
-		where: { id: orderId },
-		data: { status: 'CANCELLED' },
-	})
+	// Update order status to CANCELLED (with audit)
+	await withAudit(
+		{
+			action: 'order.cancelled',
+			entityType: 'Order',
+			entityId: orderId,
+			actorUserId,
+			getBefore: async () => beforeSnapshot,
+			getAfter: () =>
+				prisma.order.findUnique({
+					where: { id: orderId },
+					select: { id: true, status: true },
+				}),
+		},
+		async () =>
+			prisma.order.update({
+				where: { id: orderId },
+				data: { status: 'CANCELLED' },
+			}),
+	)
 
 	// Send cancellation email (non-blocking)
 	try {
