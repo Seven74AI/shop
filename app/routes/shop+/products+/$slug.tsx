@@ -1,15 +1,15 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { Link, redirect, data, useActionData } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
-import { Textarea } from '#app/components/ui/textarea.tsx'
 import { Input } from '#app/components/ui/input.tsx'
 import { Label } from '#app/components/ui/label.tsx'
+import { Textarea } from '#app/components/ui/textarea.tsx'
+import { requireUserId } from '#app/utils/auth.server.ts'
 import { addToCart, getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
-import { getStoreCurrency } from '#app/utils/settings.server.ts'
-import { requireUserId } from '#app/utils/auth.server.ts'
 import { createReview, getProductReviews, getProductRatingStats } from '#app/utils/reviews.server.ts'
+import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$slug.ts'
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -227,7 +227,7 @@ function ProductJsonLd({
 	return (
 		<script
 			type="application/ld+json"
-			dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, '<\\/') }}
 		/>
 	)
 }
