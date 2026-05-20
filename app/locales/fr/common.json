@@ -1,0 +1,35 @@
+{
+	"site": {
+		"title": "Epic Notes",
+		"description": "Votre journal de bord"
+	},
+	"nav": {
+		"home": "Accueil",
+		"shop": "Boutique",
+		"login": "Connexion",
+		"logout": "Déconnexion",
+		"account": "Mon compte",
+		"admin": "Admin",
+		"cart": "Panier"
+	},
+	"footer": {
+		"copyright": "© {year} Epic Notes. Tous droits réservés.",
+		"locale": {
+			"label": "Langue",
+			"en": "English",
+			"fr": "Français"
+		}
+	},
+	"search": {
+		"placeholder": "Rechercher..."
+	},
+	"error": {
+		"general": "Une erreur est survenue",
+		"notFound": "Page introuvable",
+		"unauthorized": "Vous devez être connecté pour accéder à cette page",
+		"forbidden": "Vous n'avez pas la permission d'accéder à cette page"
+	},
+	"locale": {
+		"switched": "Langue changée en {locale}"
+	}
+}

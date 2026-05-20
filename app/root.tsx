@@ -43,6 +43,11 @@ import { type Theme, getTheme } from './utils/theme.server.ts'
 import { makeTimings, time } from './utils/timing.server.ts'
 import { getToast } from './utils/toast.server.ts'
 import { useOptionalUser } from './utils/user.ts'
+import {
+	getLocale,
+	getTranslations,
+} from './utils/i18n.server.ts'
+import { TranslationProvider } from './utils/i18n.tsx'
 
 export const links: Route.LinksFunction = () => {
 	return [
@@ -127,10 +132,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
+	// i18n: detect locale and load translations
+	const locale = getLocale(request)
+	const translations = await getTranslations(locale)
+
 	return data(
 		{
 			user,
 			cartCount,
+			locale,
+			translations,
 			requestInfo: {
 				hints: getHints(request),
 				origin: getDomainUrl(request),
@@ -158,16 +169,18 @@ function Document({
 	children,
 	nonce,
 	theme = 'light',
+	locale = 'en',
 	env = {},
 }: {
 	children: React.ReactNode
 	nonce: string
 	theme?: Theme
+	locale?: string
 	env?: Record<string, string | undefined>
 }) {
 	const allowIndexing = ENV.ALLOW_INDEXING !== 'false'
 	return (
-		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
+		<html lang={locale} className={`${theme} h-full overflow-x-hidden`}>
 			<head>
 				<ClientHintCheck nonce={nonce} />
 				<Meta />
@@ -198,8 +211,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	const data = useLoaderData<typeof loader | null>()
 	const nonce = useNonce()
 	const theme = useOptionalTheme()
+	const locale = (data?.locale as string) ?? 'en'
 	return (
-		<Document nonce={nonce} theme={theme} env={data?.ENV}>
+		<Document nonce={nonce} theme={theme} locale={locale} env={data?.ENV}>
 			{children}
 		</Document>
 	)
@@ -294,7 +308,9 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<App />
+			<TranslationProvider>
+				<App />
+			</TranslationProvider>
 		</HoneypotProvider>
 	)
 }
