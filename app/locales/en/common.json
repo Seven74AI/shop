@@ -1,0 +1,21 @@
+{
+	"site.title": "Epic Notes",
+	"site.description": "Your own captain's log",
+	"nav.home": "Home",
+	"nav.shop": "Shop",
+	"nav.login": "Log In",
+	"nav.logout": "Log Out",
+	"nav.account": "Account",
+	"nav.admin": "Admin",
+	"nav.cart": "Cart",
+	"footer.copyright": "© {year} Epic Notes. All rights reserved.",
+	"footer.locale.label": "Language",
+	"footer.locale.en": "English",
+	"footer.locale.fr": "Français",
+	"search.placeholder": "Search...",
+	"error.general": "Something went wrong",
+	"error.notFound": "Page not found",
+	"error.unauthorized": "You must be logged in to access this page",
+	"error.forbidden": "You don't have permission to access this page",
+	"locale.switched": "Language changed to {locale}"
+}
