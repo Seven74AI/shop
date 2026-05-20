@@ -37,6 +37,11 @@ import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { pipeHeaders } from './utils/headers.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
+import {
+	getLocale,
+	getTranslations,
+} from './utils/i18n.server.ts'
+import { TranslationProvider, useTranslation } from './utils/i18n.tsx'
 import { combineHeaders, getDomainUrl, getImgSrc } from './utils/misc.tsx'
 import { useNonce } from './utils/nonce-provider.ts'
 import { type Theme, getTheme } from './utils/theme.server.ts'
@@ -209,6 +214,7 @@ function App() {
 	const data = useLoaderData<typeof loader>()
 	const user = useOptionalUser()
 	const theme = useTheme()
+	const { t } = useTranslation()
 	const matches = useMatches()
 	const isOnSearchPage = matches.find((m) => m.id === 'routes/users+/index')
 	const isOnAdminPage = matches.some((m) => m.id?.includes('routes/admin+'))
@@ -247,7 +253,7 @@ function App() {
 						</div>
 						<div className="flex items-center gap-6">
 							<Button variant="ghost" asChild>
-								<Link to="/shop">Shop</Link>
+								<Link to="/shop">{t('nav.shop')}</Link>
 							</Button>
 							<CartBadge count={data.cartCount} />
 							{user ? (
