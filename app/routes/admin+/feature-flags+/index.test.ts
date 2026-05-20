@@ -82,8 +82,8 @@ describe('admin feature flags index route', () => {
 		expect(result).toHaveProperty('flags')
 		expect(result.flags).toHaveLength(3)
 		// Should be sorted by key alphabetically
-		expect(result.flags[0].key).toBe('dark_mode')
-		expect(result.flags[1].key).toBe('experimental_feature')
-		expect(result.flags[2].key).toBe('new_checkout_flow')
+		expect(result.flags![0]!.key).toBe('dark_mode')
+		expect(result.flags![1]!.key).toBe('experimental_feature')
+		expect(result.flags![2]!.key).toBe('new_checkout_flow')
 	})
 })

@@ -85,8 +85,8 @@ function EditFlagForm({
 			return parseWithZod(formData, { schema: FlagSchema.omit({ key: true }) })
 		},
 		defaultValue: {
-			enabled: flag.enabled,
-			rolloutPercentage: flag.rolloutPercentage ?? 0,
+			enabled: flag.enabled ? 'on' : '',
+			rolloutPercentage: String(flag.rolloutPercentage ?? 0),
 			audience: flag.audience ?? '',
 			description: flag.description ?? '',
 		},

@@ -84,8 +84,8 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 		},
 		defaultValue: {
 			key: '',
-			enabled: false,
-			rolloutPercentage: 0,
+			enabled: '',
+			rolloutPercentage: '0',
 			audience: '',
 			description: '',
 		},

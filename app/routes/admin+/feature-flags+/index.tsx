@@ -57,7 +57,7 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 	let audienceParsed: Record<string, unknown> | null = null
 	if (flag.audience) {
 		try {
-			audienceParsed = JSON.parse(flag.audience)
+			audienceParsed = JSON.parse(flag.audience) as Record<string, unknown>
 		} catch {
 			// Invalid JSON — display as-is
 		}
