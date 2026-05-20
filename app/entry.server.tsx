@@ -64,31 +64,29 @@ export default async function handleRequest(...args: DocRequestArgs) {
 					responseHeaders.set('Content-Type', 'text/html')
 					responseHeaders.append('Server-Timing', timings.toString())
 
-					contentSecurity(responseHeaders, {
-						crossOriginEmbedderPolicy: false,
-						contentSecurityPolicy: {
-							// NOTE: Remove reportOnly when you're ready to enforce this CSP
-							reportOnly: true,
-							directives: {
-								fetch: {
-									'connect-src': [
-										MODE === 'development' ? 'ws:' : undefined,
-										process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
-										"'self'",
-									],
-									'font-src': ["'self'"],
-									'frame-src': ["'self'"],
-									'img-src': ["'self'", 'data:'],
-									'script-src': [
-										"'strict-dynamic'",
-										"'self'",
-										`'nonce-${nonce}'`,
-									],
-									'script-src-attr': [`'nonce-${nonce}'`],
-								},
-							},
+				contentSecurity(responseHeaders, {
+				crossOriginEmbedderPolicy: false,
+				contentSecurityPolicy: {
+					directives: {
+						fetch: {
+							'connect-src': [
+								MODE === 'development' ? 'ws:' : undefined,
+								process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
+								"'self'",
+							],
+							'font-src': ["'self'"],
+							'frame-src': ["'self'"],
+							'img-src': ["'self'", 'data:'],
+							'script-src': [
+								"'strict-dynamic'",
+								"'self'",
+								`'nonce-${nonce}'`,
+							],
+							'script-src-attr': [`'nonce-${nonce}'`],
 						},
-					})
+					},
+				},
+			})
 
 					resolve(
 						new Response(createReadableStreamFromReadable(body), {

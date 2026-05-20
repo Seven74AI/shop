@@ -73,8 +73,25 @@ app.use(compression())
 app.disable('x-powered-by')
 
 app.use((_, res, next) => {
-	// The referrerPolicy breaks our redirectTo logic
-	helmet(res, { general: { referrerPolicy: false } })
+	helmet(res, {
+		general: {
+			referrerPolicy: ['strict-origin-when-cross-origin'],
+		},
+	})
+	next()
+})
+
+// Permissions-Policy: restrict browser features to only what the app needs
+app.use((_, res, next) => {
+	res.set(
+		'Permissions-Policy',
+		[
+			'camera=()',
+			'microphone=()',
+			'geolocation=()',
+			'payment=(self)',
+		].join(', '),
+	)
 	next()
 })
 
