@@ -333,7 +333,7 @@ flyctl secrets set SESSION_SECRET="$(openssl rand -hex 32)" HONEYPOT_SECRET="$(o
 flyctl secrets set RESEND_API_KEY="re_<new>" GITHUB_CLIENT_SECRET="<new>" GITHUB_TOKEN="ghp_<new>" --app $APP
 
 # Phase 3: Monitoring + shipping
-flyctl secrets set SENTRY_DSN="<new>" MONDIAL_RELAY_API1_PRIVATE_KEY="<new>" MONDIAL_RELAY_API2_PASSWORD="<new>" --app $APP
+flyctl secrets set SENTRY_DSN="<new>" MONDIAL_RELAY_API1_PRIVATE_KEY="<new>" MONDIAL_RELAY_API2_LOGIN="<new>" MONDIAL_RELAY_API2_PASSWORD="<new>" --app $APP
 
 # Phase 4: CI/CD
 # Update FLY_API_TOKEN, SENTRY_AUTH_TOKEN, SLACK_WEBHOOK_URL in GitHub Actions

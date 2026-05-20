@@ -40,7 +40,7 @@ APP="shop-3ecf-staging"
 #    ⚠️ Never use production data with real customer PII in staging!
 #    Use a sanitized backup or a fresh seed instead.
 
-# 2. Follow the restore procedure from docs/runbooks/backup-restore.md
+# 2. Follow the restore procedure from ./backup-restore.md
 #    Replace "shop-3ecf" with "shop-3ecf-staging"
 
 # 3. Verify
@@ -60,8 +60,8 @@ flyctl ssh console --app "${APP}" --command \
 # 2. Verify the app is broken
 curl -s "https://${APP}.fly.dev" | head -5
 
-# 3. Execute restore procedure from docs/runbooks/disaster-recovery.md, Scenario 2
-# (or docs/runbooks/backup-restore.md for the step-by-step)
+# 3. Execute restore procedure from ./disaster-recovery.md, Scenario 2
+# (or ./backup-restore.md for the step-by-step)
 
 # 4. Verify recovery
 curl -s "https://${APP}.fly.dev/resources/healthcheck"

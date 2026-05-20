@@ -422,6 +422,7 @@ Credentials are stored in two places:
 | `AWS_SECRET_ACCESS_KEY` | Fly.io secrets | Object storage + backups fail | Critical |
 | `INTERNAL_COMMAND_TOKEN` | Fly.io secrets (auto-generated) | Internal commands break | Medium |
 | `MONDIAL_RELAY_API1_PRIVATE_KEY` | Fly.io secrets | Mondial Relay pickup search breaks | Medium |
+| `MONDIAL_RELAY_API2_LOGIN` | Fly.io secrets | Mondial Relay API v2 auth breaks | Medium |
 | `MONDIAL_RELAY_API2_PASSWORD` | Fly.io secrets | Mondial Relay API v2 breaks | Medium |
 | `FLY_API_TOKEN` | GitHub Actions secrets | Deployments fail | High |
 | `SLACK_WEBHOOK_URL` | GitHub Actions vars | Backup failure alerts stop | Low |
@@ -540,7 +541,9 @@ flyctl machine restart --app shop-3ecf $(flyctl machine list --app shop-3ecf --j
 #   Update SENTRY_AUTH_TOKEN in GitHub Actions secrets too
 
 # Mondial Relay: Contact Mondial Relay support for key rotation
-#   Update via: flyctl secrets set MONDIAL_RELAY_API1_PRIVATE_KEY="..." --app shop-3ecf
+#   Update via:
+#   flyctl secrets set MONDIAL_RELAY_API1_PRIVATE_KEY="..." --app shop-3ecf
+#   flyctl secrets set MONDIAL_RELAY_API2_LOGIN="..." MONDIAL_RELAY_API2_PASSWORD="..." --app shop-3ecf
 
 # INTERNAL_COMMAND_TOKEN: Auto-regenerated on next deploy
 #   No manual rotation needed — it's generated in the Dockerfile
