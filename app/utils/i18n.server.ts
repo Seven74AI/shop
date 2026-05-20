@@ -7,6 +7,29 @@ export type Locale = 'fr' | 'en'
 export type TranslationDict = Record<string, string>
 
 const COOKIE_NAME = 'localePreference'
+
+/**
+ * Recursively flatten a nested object into dot-notation keys.
+ *   { footer: { locale: { en: "English" } } } → { "footer.locale.en": "English" }
+ */
+function flattenObject(
+	obj: Record<string, unknown>,
+	prefix = '',
+): Record<string, string> {
+	const result: Record<string, string> = {}
+	for (const [key, value] of Object.entries(obj)) {
+		const fullKey = prefix ? `${prefix}.${key}` : key
+		if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+			Object.assign(
+				result,
+				flattenObject(value as Record<string, unknown>, fullKey),
+			)
+		} else {
+			result[fullKey] = String(value)
+		}
+	}
+	return result
+}
 const SUPPORTED_LOCALES: Locale[] = ['fr', 'en']
 const DEFAULT_LOCALE: Locale = 'en'
 
@@ -59,7 +82,9 @@ export async function getTranslations(
 			const mod = await import(
 				`#app/locales/${locale}/common.json`
 			)
-			return (mod.default ?? mod) as TranslationDict
+			const raw = (mod.default ?? mod) as Record<string, unknown>
+			// Flatten nested objects to dot-notation (e.g. footer.locale.en → "English")
+			return flattenObject(raw)
 		},
 		ttl: 60 * 60 * 1000, // 1 hour
 	})
