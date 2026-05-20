@@ -1,3 +1,73 @@
+/**
+ * Cache Strategy — Two-Layer Caching (LRU + SQLite with LiteFS replication)
+ *
+ * Architecture:
+ *   L1: In-memory LRU cache (max 5000 entries) — fast, per-instance
+ *   L2: SQLite-backed persistent cache — durable, LiteFS-replicated across instances
+ *
+ * The `cachified()` wrapper uses both layers via the `mergeReporters` pattern:
+ * lookups check L1 first, then L2; writes go to both. All keys share a single
+ * namespace across both layers.
+ *
+ * ─── What's cached ───────────────────────────────────────────────────────────
+ *
+ * Key pattern                          | Data                          | TTL
+ * ------------------------------------ | ----------------------------- | -------
+ * settings:currency                    | Store currency (code, symbol) | 24h + 7d SWR
+ * connection-data:github:{providerId}  | GitHub OAuth user displayName | 1m + 7d SWR
+ *
+ * Future candidates (not yet cached, but designed to use this layer):
+ *   products:list          — catalog listing queries
+ *   products:slug:{slug}   — single product detail pages
+ *   categories:list        — category tree
+ *   sitemap                — generated sitemap XML
+ *   vies:{vatNumber}       — VIES VAT validation results
+ *
+ * ─── How invalidation works ──────────────────────────────────────────────────
+ *
+ * 1. TTL-based (automatic):
+ *    Every `cachified()` call specifies a `ttl` (and optionally `swr`).
+ *    Entries expire naturally — no explicit action needed.
+ *
+ * 2. Explicit `cache.delete(key)` on writes (manual):
+ *    When data that's cached changes, the mutation path MUST call
+ *    `cache.delete(key)` for every stale cache key. This prevents
+ *    serving outdated data to users during the TTL window.
+ *
+ *    Current wired invalidations:
+ *      • settings:currency — invalidated in getStoreCurrency() when cached
+ *        value is corrupt (self-healing), but NOT wired on settings mutations
+ *        (see audit below — settings mutations currently have no admin UI).
+ *      • Product mutations — wired in __edit.server.tsx (product:*) and
+ *        $productSlug.delete.ts (product:*).
+ *
+ * 3. LRU eviction (automatic):
+ *    Memory cache evicts least-recently-used entries when cap (5000) is hit.
+ *    SQLite cache has no automatic eviction — it relies on TTL-based
+ *    staleness checks in `cachified()`.
+ *
+ * ─── Cache keys naming convention ────────────────────────────────────────────
+ *
+ *   <domain>:<subtype>[:<identifier>]
+ *
+ *   Domain:    The resource type (settings, products, connection-data, etc.)
+ *   Subtype:   Specific operation or data variant (currency, list, slug, github)
+ *   Identifier: Optional dynamic segment (providerId, slug, etc.)
+ *
+ *   Examples:
+ *     settings:currency
+ *     products:slug:my-product
+ *     connection-data:github:12345
+ *     sitemap
+ *
+ * ─── LiteFS replication ──────────────────────────────────────────────────────
+ *
+ *   On primary instances, cache writes go directly to SQLite; on replicas,
+ *   writes are fire-and-forget forwarded to the primary (currently disabled,
+ *   see commented-out `updatePrimaryCacheValue` calls). Cache reads on
+ *   replicas hit the local SQLite copy replicated by LiteFS.
+ */
+
 import fs from 'node:fs'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'

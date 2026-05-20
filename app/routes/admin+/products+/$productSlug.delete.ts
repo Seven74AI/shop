@@ -1,5 +1,6 @@
 import { invariantResponse } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
+import { cache } from '#app/utils/cache.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { deleteProductImages } from '#app/utils/storage.server.ts'
@@ -36,6 +37,11 @@ export async function action({ params, request }: Route.ActionArgs) {
 	await prisma.product.delete({
 		where: { id: product.id },
 	})
+
+	// Invalidate product caches — deleted product must not appear
+	// in stale cached product lists or detail pages.
+	await cache.delete(`products:slug:${product.slug}`)
+	await cache.delete('products:list')
 
 	// Clean up images from Tigris storage
 	if (imageKeys.length > 0) {

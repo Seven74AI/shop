@@ -2,8 +2,10 @@ import { invariant } from '@epic-web/invariant'
 import { type OrderStatus } from '@prisma/client'
 import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
+import { sendOrderCancellationEmail } from '#app/components/emails/order-cancellation.tsx'
+import { sendOrderConfirmationEmail } from '#app/components/emails/order-confirmation.tsx'
+import { sendOrderStatusUpdateEmail } from '#app/components/emails/order-status-update.tsx'
 import { prisma } from './db.server.ts'
-import { sendEmail } from './email.server.ts'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { stripe } from './stripe.server.ts'
@@ -289,52 +291,18 @@ export async function updateOrderStatus(
 	})
 
 	// Send status update email (non-blocking - don't fail status update if email fails)
-	try {
-		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
-		const statusLabel = getStatusLabel(status)
-		
-		let emailBody = `
-			<h1>Order Status Update</h1>
-			<p>Your order status has been updated.</p>
-			<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-			<p><strong>New Status:</strong> ${statusLabel}</p>
-		`
-		
-		if (status === 'SHIPPED' && order.trackingNumber) {
-			emailBody += `<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>`
-		}
-		
-		emailBody += `<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>`
-		
-		let textBody = `
-Order Status Update
-
-Your order status has been updated.
-
-Order Number: ${order.orderNumber}
-New Status: ${statusLabel}
-`
-		
-		if (status === 'SHIPPED' && order.trackingNumber) {
-			textBody += `Tracking Number: ${order.trackingNumber}\n`
-		}
-		
-		textBody += `View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}`
-		
-		await sendEmail({
-			to: order.email,
-			subject: `Order Status Update - ${order.orderNumber}`,
-			html: emailBody,
-			text: textBody,
-		})
-	} catch (emailError) {
-		// Log email error but don't fail status update
-		// Status was successfully updated, email is secondary
-		Sentry.captureException(emailError, {
-			tags: { context: 'order-status-email' },
-			extra: { orderNumber: order.orderNumber },
-		})
-	}
+	const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
+	const statusLabel = getStatusLabel(status)
+	await sendOrderStatusUpdateEmail(
+		{
+			orderNumber: order.orderNumber,
+			statusLabel,
+			trackingNumber:
+				status === 'SHIPPED' ? (order.trackingNumber ?? null) : null,
+			domainUrl,
+		},
+		order.email,
+	)
 }
 
 /**
@@ -419,38 +387,15 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 	})
 
 	// Send cancellation email (non-blocking)
-	try {
-		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
-		await sendEmail({
-			to: order.email,
-			subject: `Order Cancelled - ${order.orderNumber}`,
-			html: `
-				<h1>Order Cancelled</h1>
-				<p>Your order has been cancelled.</p>
-				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				${refundId ? `<p><strong>Refund ID:</strong> ${refundId}</p>` : ''}
-				<p>${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
-			`,
-			text: `
-Order Cancelled
-
-Your order has been cancelled.
-
-Order Number: ${order.orderNumber}
-${refundId ? `Refund ID: ${refundId}` : ''}
-${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}
-
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
-			`,
-		})
-	} catch (emailError) {
-		// Log email error but don't fail cancellation
-		Sentry.captureException(emailError, {
-			tags: { context: 'order-cancellation-email' },
-			extra: { orderNumber: order.orderNumber },
-		})
-	}
+	const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
+	await sendOrderCancellationEmail(
+		{
+			orderNumber: order.orderNumber,
+			refundId,
+			domainUrl,
+		},
+		order.email,
+	)
 }
 
 /**
@@ -757,36 +702,15 @@ export async function createOrderFromStripeSession(
 	)
 
 	// Send confirmation email (non-blocking - don't fail order creation if email fails)
-	try {
-		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
-		await sendEmail({
-			to: order.email,
-			subject: `Order Confirmation - ${order.orderNumber}`,
-			html: `
-				<h1>Order Confirmation</h1>
-				<p>Thank you for your order!</p>
-				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				<p><strong>Total:</strong> ${(order.total / 100).toFixed(2)}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
-			`,
-			text: `
-Order Confirmation
-
-Thank you for your order!
-
-Order Number: ${order.orderNumber}
-Total: ${(order.total / 100).toFixed(2)}
-
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
-			`,
-		})
-	} catch (emailError) {
-		// Log email error but don't fail order creation
-		Sentry.captureException(emailError, {
-			tags: { context: 'order-confirmation-email' },
-			extra: { orderNumber: order.orderNumber },
-		})
-	}
+	const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
+	await sendOrderConfirmationEmail(
+		{
+			orderNumber: order.orderNumber,
+			total: order.total,
+			domainUrl,
+		},
+		order.email,
+	)
 
 	return { id: order.id, orderNumber: order.orderNumber }
 }

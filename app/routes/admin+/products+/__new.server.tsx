@@ -4,6 +4,7 @@ import { type Prisma } from '@prisma/client'
 import { data } from 'react-router'
 import { MAX_UPLOAD_SIZE } from '#app/schemas/constants'
 import { productSchema } from '#app/schemas/product.ts'
+import { cache } from '#app/utils/cache.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { handlePrismaError } from '#app/utils/prisma-error.server.ts'
@@ -143,6 +144,9 @@ export async function action({ request }: Route.ActionArgs) {
 			
 			return createdProduct
 		})
+
+		// Invalidate product list cache — new product added
+		await cache.delete('products:list')
 
 		return redirectWithToast(`/admin/products/${result.slug}`, {
 			description: 'Product created successfully',
