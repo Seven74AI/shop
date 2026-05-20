@@ -321,6 +321,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 }
 
 export function ErrorBoundary() {
+	const { t } = useTranslation()
 	return (
 		<GeneralErrorBoundary
 			statusHandlers={{

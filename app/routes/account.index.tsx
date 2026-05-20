@@ -20,7 +20,7 @@ import { type Route } from './+types/account.index.ts'
 import { type BreadcrumbHandle } from './account.tsx'
 
 export const handle: BreadcrumbHandle = {
-	breadcrumb: 'Profil',
+	breadcrumb: 'Profile',
 }
 
 const ProfileFormSchema = z.object({

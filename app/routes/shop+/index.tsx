@@ -24,7 +24,7 @@ export async function loader() {
 }
 
 export const meta: Route.MetaFunction = () => [
-	{ title: 'Boutique | Boutique | Epic Shop' },
+	{ title: 'Boutique | Epic Shop' },
 	{ name: 'description', content: 'Parcourir notre catalogue de produits' },
 ]
 

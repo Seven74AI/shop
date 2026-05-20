@@ -14,7 +14,7 @@ export const BreadcrumbHandle = z.object({ breadcrumb: z.union([z.string(), z.an
 export type BreadcrumbHandle = z.infer<typeof BreadcrumbHandle>
 
 export const handle: BreadcrumbHandle = {
-	breadcrumb: 'Paramètres',
+	breadcrumb: 'Settings',
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
