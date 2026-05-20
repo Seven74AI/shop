@@ -2,6 +2,110 @@ import { createHash, createHmac } from 'crypto'
 import { type FileUpload } from '@mjackson/form-data-parser'
 import { createId } from '@paralleldrive/cuid2'
 import * as Sentry from '@sentry/react-router'
+import sharp from 'sharp'
+
+/** Magic byte signatures for supported image formats */
+const IMAGE_SIGNATURES: Record<string, { bytes: number[]; offset?: number }> = {
+	'image/jpeg': { bytes: [0xff, 0xd8, 0xff] },
+	'image/png': { bytes: [0x89, 0x50, 0x4e, 0x47] },
+	'image/gif': { bytes: [0x47, 0x49, 0x46, 0x38] },
+	'image/webp': { bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF container; also check WEBP at offset 8
+}
+
+/** Maximum image dimensions per upload context */
+export const IMAGE_MAX_DIMENSIONS = {
+	PROFILE_IMAGE: { width: 2000, height: 2000 },
+	PRODUCT_IMAGE: { width: 4000, height: 4000 },
+	NOTE_IMAGE: { width: 4000, height: 4000 },
+} as const
+
+export type ImageMaxDimensionKey = keyof typeof IMAGE_MAX_DIMENSIONS
+
+/**
+ * Verifies that a buffer contains a supported image format by checking magic bytes.
+ * Returns the detected MIME type if valid.
+ */
+export function verifyImageMagicBytes(buffer: Buffer): {
+	valid: boolean
+	type?: string
+} {
+	if (buffer.length < 4) return { valid: false }
+
+	for (const [mimeType, sig] of Object.entries(IMAGE_SIGNATURES)) {
+		const offset = sig.offset ?? 0
+		if (buffer.length < offset + sig.bytes.length) continue
+
+		const matches = sig.bytes.every(
+			(byte, i) => buffer[offset + i] === byte,
+		)
+
+		if (matches) {
+			// WebP requires additional check: "WEBP" at offset 8
+			if (mimeType === 'image/webp') {
+				if (buffer.length < 12) continue
+				const webpMagic = Buffer.from('WEBP')
+				if (!buffer.subarray(8, 12).equals(webpMagic)) continue
+			}
+			return { valid: true, type: mimeType }
+		}
+	}
+
+	return { valid: false }
+}
+
+/**
+ * Strips EXIF metadata and enforces dimension limits on an uploaded image.
+ * Returns a new File with the processed image data.
+ * Uses sharp for all image processing.
+ */
+export async function processImageUpload(
+	file: File | FileUpload,
+	options?: {
+		maxWidth?: number
+		maxHeight?: number
+	},
+): Promise<File> {
+	const buffer = Buffer.from(await file.arrayBuffer())
+
+	// 1. Magic-byte verification
+	const verification = verifyImageMagicBytes(buffer)
+	if (!verification.valid) {
+		throw new Error(
+			`File is not a supported image type. ` +
+				`Supported types: JPEG, PNG, GIF, WebP. ` +
+				`Received: ${file.type || 'unknown'}`,
+		)
+	}
+
+	// 2. Process with sharp: strip EXIF + resize if needed
+	const maxWidth = options?.maxWidth
+	const maxHeight = options?.maxHeight
+
+	try {
+		let pipeline = sharp(buffer)
+
+		if (maxWidth || maxHeight) {
+			pipeline = pipeline.resize({
+				width: maxWidth,
+				height: maxHeight,
+				fit: 'inside',
+				withoutEnlargement: true,
+			})
+		}
+
+		// sharp strips EXIF metadata by default
+		const processedBuffer = await pipeline.toBuffer()
+
+		// Return as new File, preserving original filename and detected type
+		return new File([new Uint8Array(processedBuffer)], file.name, {
+			type: verification.type ?? file.type,
+		})
+	} catch (sharpError) {
+		throw new Error(
+			`Failed to process image: ${sharpError instanceof Error ? sharpError.message : 'Unknown error'}`,
+		)
+	}
+}
 
 const STORAGE_ENDPOINT = process.env.AWS_ENDPOINT_URL_S3
 const STORAGE_BUCKET = process.env.BUCKET_NAME
@@ -40,11 +144,15 @@ export async function uploadProfileImage(
 	userId: string,
 	file: File | FileUpload,
 ) {
+	const processedFile = await processImageUpload(file, {
+		maxWidth: IMAGE_MAX_DIMENSIONS.PROFILE_IMAGE.width,
+		maxHeight: IMAGE_MAX_DIMENSIONS.PROFILE_IMAGE.height,
+	})
 	const fileId = createId()
-	const fileExtension = file.name.split('.').pop() || ''
+	const fileExtension = processedFile.name.split('.').pop() || ''
 	const timestamp = Date.now()
 	const key = `users/${userId}/profile-images/${timestamp}-${fileId}.${fileExtension}`
-	return uploadToStorage(file, key)
+	return uploadToStorage(processedFile, key)
 }
 
 export async function uploadNoteImage(
@@ -52,22 +160,30 @@ export async function uploadNoteImage(
 	noteId: string,
 	file: File | FileUpload,
 ) {
+	const processedFile = await processImageUpload(file, {
+		maxWidth: IMAGE_MAX_DIMENSIONS.NOTE_IMAGE.width,
+		maxHeight: IMAGE_MAX_DIMENSIONS.NOTE_IMAGE.height,
+	})
 	const fileId = createId()
-	const fileExtension = file.name.split('.').pop() || ''
+	const fileExtension = processedFile.name.split('.').pop() || ''
 	const timestamp = Date.now()
 	const key = `users/${userId}/notes/${noteId}/images/${timestamp}-${fileId}.${fileExtension}`
-	return uploadToStorage(file, key)
+	return uploadToStorage(processedFile, key)
 }
 
 export async function uploadProductImage(
 	productId: string,
 	file: File | FileUpload,
 ) {
+	const processedFile = await processImageUpload(file, {
+		maxWidth: IMAGE_MAX_DIMENSIONS.PRODUCT_IMAGE.width,
+		maxHeight: IMAGE_MAX_DIMENSIONS.PRODUCT_IMAGE.height,
+	})
 	const fileId = createId()
-	const fileExtension = file.name.split('.').pop() || ''
+	const fileExtension = processedFile.name.split('.').pop() || ''
 	const timestamp = Date.now()
 	const key = `products/${productId}/images/${timestamp}-${fileId}.${fileExtension}`
-	return uploadToStorage(file, key)
+	return uploadToStorage(processedFile, key)
 }
 
 export async function uploadProductImages(
