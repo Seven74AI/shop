@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeAll, afterAll } from 'vitest'
+import { describe, expect, test, beforeEach, afterEach } from 'vitest'
 import { prisma } from './db.server.ts'
 import {
 	validateCoupon,

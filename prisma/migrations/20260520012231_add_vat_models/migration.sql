@@ -26,7 +26,10 @@ CREATE TABLE "new_Order" (
     "shippingState" TEXT,
     "shippingPostal" TEXT NOT NULL,
     "shippingCountry" TEXT NOT NULL,
-    "vatBreakdown" JSONB NOT NULL DEFAULT [],
+    "promotionId" TEXT,
+    "discountCents" INTEGER NOT NULL DEFAULT 0,
+    "couponCode" TEXT,
+    "vatBreakdown" JSONB NOT NULL DEFAULT '[]',
     "vatTotalCents" INTEGER NOT NULL DEFAULT 0,
     "taxCountry" TEXT,
     "customerVatNumber" TEXT,
@@ -47,9 +50,10 @@ CREATE TABLE "new_Order" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Order_shippingMethodId_fkey" FOREIGN KEY ("shippingMethodId") REFERENCES "ShippingMethod" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "Order_shippingMethodId_fkey" FOREIGN KEY ("shippingMethodId") REFERENCES "ShippingMethod" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "Order_promotionId_fkey" FOREIGN KEY ("promotionId") REFERENCES "Promotion" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
-INSERT INTO "new_Order" ("createdAt", "email", "id", "mondialRelayLabelUrl", "mondialRelayPickupPointId", "mondialRelayPickupPointName", "mondialRelayShipmentNumber", "orderNumber", "shippingCarrierName", "shippingCity", "shippingCost", "shippingCountry", "shippingMethodId", "shippingMethodName", "shippingName", "shippingPostal", "shippingState", "shippingStreet", "status", "stripeChargeId", "stripeCheckoutSessionId", "stripePaymentIntentId", "subtotal", "total", "trackingNumber", "updatedAt", "userId") SELECT "createdAt", "email", "id", "mondialRelayLabelUrl", "mondialRelayPickupPointId", "mondialRelayPickupPointName", "mondialRelayShipmentNumber", "orderNumber", "shippingCarrierName", "shippingCity", "shippingCost", "shippingCountry", "shippingMethodId", "shippingMethodName", "shippingName", "shippingPostal", "shippingState", "shippingStreet", "status", "stripeChargeId", "stripeCheckoutSessionId", "stripePaymentIntentId", "subtotal", "total", "trackingNumber", "updatedAt", "userId" FROM "Order";
+INSERT INTO "new_Order" ("couponCode", "createdAt", "discountCents", "email", "id", "mondialRelayLabelUrl", "mondialRelayPickupPointId", "mondialRelayPickupPointName", "mondialRelayShipmentNumber", "orderNumber", "promotionId", "shippingCarrierName", "shippingCity", "shippingCost", "shippingCountry", "shippingMethodId", "shippingMethodName", "shippingName", "shippingPostal", "shippingState", "shippingStreet", "status", "stripeChargeId", "stripeCheckoutSessionId", "stripePaymentIntentId", "subtotal", "total", "trackingNumber", "updatedAt", "userId") SELECT "couponCode", "createdAt", "discountCents", "email", "id", "mondialRelayLabelUrl", "mondialRelayPickupPointId", "mondialRelayPickupPointName", "mondialRelayShipmentNumber", "orderNumber", "promotionId", "shippingCarrierName", "shippingCity", "shippingCost", "shippingCountry", "shippingMethodId", "shippingMethodName", "shippingName", "shippingPostal", "shippingState", "shippingStreet", "status", "stripeChargeId", "stripeCheckoutSessionId", "stripePaymentIntentId", "subtotal", "total", "trackingNumber", "updatedAt", "userId" FROM "Order";
 DROP TABLE "Order";
 ALTER TABLE "new_Order" RENAME TO "Order";
 -- Backfill: set taxCountry to shippingCountry for all existing orders
@@ -64,6 +68,8 @@ CREATE INDEX "Order_createdAt_idx" ON "Order"("createdAt");
 CREATE INDEX "Order_stripeCheckoutSessionId_idx" ON "Order"("stripeCheckoutSessionId");
 CREATE INDEX "Order_stripePaymentIntentId_idx" ON "Order"("stripePaymentIntentId");
 CREATE INDEX "Order_shippingMethodId_idx" ON "Order"("shippingMethodId");
+CREATE INDEX "Order_promotionId_idx" ON "Order"("promotionId");
+CREATE INDEX "Order_couponCode_idx" ON "Order"("couponCode");
 CREATE TABLE "new_Product" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
