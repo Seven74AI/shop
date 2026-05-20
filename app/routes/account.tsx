@@ -156,7 +156,7 @@ export default function AccountLayout() {
 					</aside>
 
 					{/* Main Content */}
-					<div className="flex-1 min-w-0">
+					<div data-sentry-block className="flex-1 min-w-0">
 						<Outlet />
 					</div>
 				</div>

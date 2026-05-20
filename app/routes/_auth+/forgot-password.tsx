@@ -135,7 +135,7 @@ export default function ForgotPasswordRoute() {
 					</p>
 				</div>
 				<div className="mx-auto mt-16 max-w-sm min-w-full sm:min-w-[368px]">
-					<forgotPassword.Form method="POST" {...getFormProps(form)}>
+					<forgotPassword.Form data-sentry-block method="POST" {...getFormProps(form)}>
 						<HoneypotInputs />
 						<div>
 							<Field

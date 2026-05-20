@@ -106,7 +106,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
 
 				<div>
 					<div className="mx-auto w-full max-w-md px-8">
-						<Form method="POST" {...getFormProps(form)}>
+						<Form data-sentry-block method="POST" {...getFormProps(form)}>
 							<HoneypotInputs />
 							<Field
 								labelProps={{ children: 'Username' }}

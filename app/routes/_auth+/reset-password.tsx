@@ -100,7 +100,7 @@ export default function ResetPasswordPage({
 				</p>
 			</div>
 			<div className="mx-auto mt-16 max-w-sm min-w-full sm:min-w-[368px]">
-				<Form method="POST" {...getFormProps(form)}>
+				<Form data-sentry-block method="POST" {...getFormProps(form)}>
 					<Field
 						labelProps={{
 							htmlFor: fields.password.id,

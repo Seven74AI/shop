@@ -359,7 +359,7 @@ export default function CheckoutShipping() {
 					</div>
 				)}
 
-				<Form method="POST" className="space-y-4" {...getFormProps(form)} noValidate>
+				<Form data-sentry-block method="POST" className="space-y-4" {...getFormProps(form)} noValidate>
 					<input
 						type="hidden"
 						name={fields.addressId.name}

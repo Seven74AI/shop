@@ -56,7 +56,7 @@ export default function CheckoutLayout() {
 	const currentStep = loaderData?.currentStep || 'review'
 
 	return (
-		<div className="container mx-auto max-w-4xl px-4 py-8">
+		<div data-sentry-block className="container mx-auto max-w-4xl px-4 py-8">
 			<h1 className="mb-8 text-center text-3xl font-bold">Checkout</h1>
 			<CheckoutSteps currentStep={currentStep} />
 			<div className="min-h-[400px]">
