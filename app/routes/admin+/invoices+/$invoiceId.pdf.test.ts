@@ -175,6 +175,12 @@ describe('admin invoice PDF download', () => {
 	})
 
 	test('includes order items in PDF data', async () => {
+		const category = await prisma.category.upsert({
+			where: { id: 'uncategorized' },
+			update: { name: 'Test Category', slug: `test-cat-${Date.now()}` },
+			create: { id: 'uncategorized', name: 'Test Category', slug: `test-cat-${Date.now()}` },
+		})
+
 		const product = await prisma.product.create({
 			data: {
 				id: `prod-test-pdf-${Date.now()}`,
@@ -182,7 +188,9 @@ describe('admin invoice PDF download', () => {
 				price: 5000,
 				slug: `test-product-pdf-${Date.now()}`,
 				description: 'A test product for PDF',
-				stock: 10,
+				sku: `SKU-TEST-PDF-${Date.now()}`,
+				stockQuantity: 10,
+				categoryId: category.id,
 			},
 		})
 

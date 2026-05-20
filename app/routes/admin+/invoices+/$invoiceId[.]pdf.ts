@@ -51,9 +51,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 							product: {
 								select: { name: true },
 							},
-							variant: {
-								select: { name: true },
-							},
+				variant: {
+					select: { sku: true },
+				},
 						},
 					},
 				},
@@ -68,11 +68,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	// Build item rows for the PDF table
 	const itemRows: InvoicePdfData['items'] = invoice.order.items.map(
 		(item) => {
-			const productName = item.product?.name ?? 'Product'
-			const variantName = item.variant?.name
-			const description = variantName
-				? `${productName} — ${variantName}`
-				: productName
+		const productName = item.product?.name ?? 'Product'
+		const variantSku = item.variant?.sku
+		const description = variantSku
+			? `${productName} (${variantSku})`
+			: productName
 			return {
 				description,
 				quantity: item.quantity,
