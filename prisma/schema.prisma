@@ -427,11 +427,17 @@ model Cart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Abandoned cart recovery tracking
+  recoveryEmailSentAt DateTime? // When the last recovery email was sent (null = never)
+  recoveryEmailCount  Int       @default(0) // How many recovery emails have been sent
+
   user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CartItem[]
 
   @@index([userId])
   @@index([sessionId])
+  @@index([updatedAt])
+  @@index([recoveryEmailSentAt])
 }
 
 model CartItem {
