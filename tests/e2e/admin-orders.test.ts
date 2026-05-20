@@ -38,8 +38,6 @@ test.describe('Admin Order Management', () => {
 
 	test.afterEach(async () => {
 		// Scoped cleanup: use currentPrefix (unique per test) so parallel tests don't delete each other's data
-		// Run individually (not in a transaction) to avoid holding SQLite write locks
-		// while the server is still processing page requests (SQLITE_BUSY contention)
 		if (!currentPrefix) return
 		try { await prisma.order.deleteMany({ where: { stripeCheckoutSessionId: { startsWith: currentPrefix } } }) } catch {}
 		try { await prisma.cartItem.deleteMany({ where: { product: { sku: { startsWith: currentPrefix } } } }) } catch {}
@@ -54,13 +52,9 @@ test.describe('Admin Order Management', () => {
 	}) => {
 		await login()
 		await page.goto('/admin/orders')
-		// requireUserWithRole throws a 403 response, which React Router renders as an error page
-		// Wait for the error page to load
 		await page.waitForLoadState('networkidle')
 		
 		// The error response data contains { error: 'Unauthorized', requiredRole: 'admin', message: ... }
-		// Check for error content that indicates unauthorized access
-		// The ErrorBoundary shows "Unauthorized" as a heading
 		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({ timeout: 5000 })
 	})
 
@@ -101,7 +95,6 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		// Generate second order number after first order is committed
 		const orderNumber2 = `${currentPrefix}-2`
 		await prisma.order.create({
 			data: {
@@ -121,20 +114,17 @@ test.describe('Admin Order Management', () => {
 
 		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
 		
-		// Wait for the orders table to load
 		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
-		// Check that both orders are displayed - use text matching instead of row name
+		// Check that both orders are displayed
 		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
-		// Use .first() to handle strict mode violation when multiple elements match
 		await expect(page.getByText('customer1@example.com').first()).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText('customer2@example.com').first()).toBeVisible({ timeout: 10000 })
 	})
 
-	test('should filter orders by status', async ({ page, navigate: _navigate, login }) => {
+	test('should filter orders by status (server-side, URL-based)', async ({ page, navigate: _navigate, login }) => {
 		
-		// Ensure testProduct exists (created in beforeEach)
 		if (!testProduct?.id) {
 			throw new Error('testProduct was not created in beforeEach')
 		}
@@ -158,7 +148,6 @@ test.describe('Admin Order Management', () => {
 				stripeCheckoutSessionId: `${currentPrefix}-session-1`,
 			},
 		})
-		// Generate second order number after first order is committed
 		const orderNumber2 = `${currentPrefix}-status-2`
 		await prisma.order.create({
 			data: {
@@ -178,20 +167,27 @@ test.describe('Admin Order Management', () => {
 
 		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
 
-		// Filter by CONFIRMED status
-		// The Select component uses aria-label="Filter by status"
+		// Verify both orders visible before filtering
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
+
+		// Filter by CONFIRMED status — Select triggers server-side navigation
 		const statusFilter = page.getByRole('combobox', { name: /filter by status/i })
 		await statusFilter.click()
-		await page.getByRole('option', { name: /confirmed/i }).click()
+		
+		// Wait for navigation when selecting a status option
+		await Promise.all([
+			page.waitForURL(/status=CONFIRMED/, { timeout: 10000 }),
+			page.getByRole('option', { name: /confirmed/i }).click(),
+		])
 
-		// Should show only CONFIRMED orders - wait for filter to apply via assertions
-		await expect(page.getByRole('row', { name: new RegExp(orderNumber1, 'i') })).toBeVisible({ timeout: 10000 })
-		await expect(page.getByRole('row', { name: new RegExp(orderNumber2, 'i') })).not.toBeVisible({ timeout: 5000 })
+		// Should show only CONFIRMED orders
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber2)).not.toBeVisible({ timeout: 5000 })
 	})
 
-	test('should search orders by order number', async ({ page, navigate: _navigate, login }) => {
+	test('should search orders by order number (server-side, URL-based)', async ({ page, navigate: _navigate, login }) => {
 		
-		// Ensure testProduct exists (created in beforeEach)
 		if (!testProduct?.id) {
 			throw new Error('testProduct was not created in beforeEach')
 		}
@@ -214,7 +210,6 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		// Generate second order number after first order is committed
 		const orderNumber2 = `${currentPrefix}-search-2`
 		await prisma.order.create({
 			data: {
@@ -233,28 +228,29 @@ test.describe('Admin Order Management', () => {
 		})
 
 		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
-		
-		// Wait for orders table to load
 		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
 		// Verify both orders are visible initially
 		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
 
-		// Search by order number
+		// Fill search and submit the form (server-side filtering via URL params)
 		const searchInput = page.getByPlaceholder(/search orders/i)
 		await searchInput.fill(orderNumber1)
-		await searchInput.blur() // Trigger change event
+		
+		// Submit the search form and wait for navigation with search param
+		await Promise.all([
+			page.waitForURL(/search=/, { timeout: 10000 }),
+			page.getByRole('button', { name: /search/i }).click(),
+		])
 
-		// Wait for search to complete - assert expected results
 		// Should show only matching order
 		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(orderNumber2)).not.toBeVisible({ timeout: 5000 })
 	})
 
-	test('should search orders by email', async ({ page, navigate: _navigate, login }) => {
+	test('should search orders by email (server-side, URL-based)', async ({ page, navigate: _navigate, login }) => {
 		
-		// Ensure testProduct exists (created in beforeEach)
 		if (!testProduct?.id) {
 			throw new Error('testProduct was not created in beforeEach')
 		}
@@ -281,18 +277,24 @@ test.describe('Admin Order Management', () => {
 
 		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
 
-		// Search by email
+		// Fill search and submit form
 		const searchInput = page
 			.getByRole('textbox', { name: /search/i })
 			.or(page.getByPlaceholder(/search/i))
 			.first()
 		await searchInput.fill('unique-email')
 
+		// Submit and wait for navigation
+		await Promise.all([
+			page.waitForURL(/search=unique-email/, { timeout: 10000 }),
+			page.getByRole('button', { name: /search/i }).click(),
+		])
+
 		// Should show matching order (header + one row)
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
 	})
 
-	test('should display empty state when search has no matches', async ({ page, navigate: _navigate, login }) => {
+	test('should display empty state when search has no matches (server-side)', async ({ page, navigate: _navigate, login }) => {
 		await login({ asAdmin: true })
 
 		const uniqueEmail = `empty-state-${currentPrefix}@example.com`
@@ -315,32 +317,31 @@ test.describe('Admin Order Management', () => {
 		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
 		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
+		// Search for an existing order first (should find it)
 		const searchInput = page
 			.getByRole('textbox', { name: /search/i })
 			.or(page.getByPlaceholder(/search/i))
 			.first()
 		await searchInput.fill(`empty-state-${currentPrefix}`)
+		await Promise.all([
+			page.waitForURL(/search=/, { timeout: 10000 }),
+			page.getByRole('button', { name: /search/i }).click(),
+		])
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
 
-		// Wait for server to finish processing the search before direct DB writes
+		// Delete the order, then search again for the same term — should show empty state
 		await page.waitForLoadState('networkidle')
-
 		await prisma.order.deleteMany({
 			where: { stripeCheckoutSessionId: { startsWith: currentPrefix } },
 		})
 
-		await page.reload({ waitUntil: 'networkidle' })
-		const searchInputAfterReload = page
-			.getByRole('textbox', { name: /search/i })
-			.or(page.getByPlaceholder(/search/i))
-			.first()
-		await searchInputAfterReload.fill(`empty-state-${currentPrefix}`)
+		// Navigate directly to the search URL (simulates search after deletion)
+		await page.goto(`/admin/orders?search=empty-state-${currentPrefix}`, { waitUntil: 'networkidle' })
 		await expect(page.getByText(/no orders match your search criteria/i)).toBeVisible({ timeout: 10000 })
 	})
 
 	test('should link to order detail page from order list', async ({ page, navigate: _navigate, login }) => {
 		
-		// Ensure testProduct exists (created in beforeEach)
 		if (!testProduct?.id) {
 			throw new Error('testProduct was not created in beforeEach')
 		}
@@ -368,11 +369,10 @@ test.describe('Admin Order Management', () => {
 		await page.goto('/admin/orders')
 		await page.waitForLoadState('networkidle')
 
-		// Wait for the order to appear in the list - wait for the order number text first
+		// Wait for the order to appear in the list
 		await expect(page.getByText(orderNumber)).toBeVisible({ timeout: 10000 })
 		
-		// Click on order number link - there are 2 links (text and icon), use first one
-		// Use getByRole with the order number as the accessible name
+		// Click on order number link
 		const orderLink = page.getByRole('link', { name: orderNumber }).first()
 		
 		// Ensure link is visible before clicking
@@ -388,4 +388,3 @@ test.describe('Admin Order Management', () => {
 		await expect(page).toHaveURL(new RegExp(`/admin/orders/${orderNumber}`))
 	})
 })
-

@@ -257,6 +257,112 @@ export async function getGuestOrder(orderNumber: string, email: string) {
 }
 
 /**
+ * Parameters for server-side paginated order queries.
+ */
+export interface GetPaginatedOrdersParams {
+	search?: string
+	status?: string // 'all' or a valid OrderStatus
+	page?: number
+	limit?: number
+}
+
+/**
+ * Result of a paginated orders query.
+ */
+export interface PaginatedOrdersResult {
+	orders: Array<{
+		id: string
+		orderNumber: string
+		email: string
+		status: string
+		subtotal: number
+		total: number
+		createdAt: Date
+		updatedAt: Date
+		shippingName: string
+		shippingStreet: string
+		shippingCity: string
+		shippingPostal: string
+		shippingCountry: string
+		shippingState: string | null
+		shippingCost: number
+		trackingNumber: string | null
+		userId: string | null
+		user: { id: string; email: string; username: string; name: string | null } | null
+		items: Array<{ id: string; quantity: number }>
+	}>
+	total: number
+	page: number
+	totalPages: number
+	limit: number
+}
+
+/**
+ * Gets orders with server-side pagination, search, and status filtering.
+ * This replaces the client-side filtering approach with efficient database queries.
+ * 
+ * @param params - Pagination and filtering parameters
+ * @returns Paginated result with orders, total count, and page info
+ */
+export async function getPaginatedOrders({
+	search = '',
+	status = 'all',
+	page = 1,
+	limit = 25,
+}: GetPaginatedOrdersParams = {}): Promise<PaginatedOrdersResult> {
+	// Build the WHERE clause for Prisma
+	const where: Record<string, unknown> = {}
+
+	// Search by order number or email (via Prisma contains)
+	if (search.trim()) {
+		where.OR = [
+			{ orderNumber: { contains: search.trim() } },
+			{ email: { contains: search.trim() } },
+		]
+	}
+
+	// Filter by status
+	if (status !== 'all') {
+		where.status = status
+	}
+
+	// Run count and query in parallel for performance
+	const [total, orders] = await Promise.all([
+		prisma.order.count({ where }),
+		prisma.order.findMany({
+			where,
+			include: {
+				user: {
+					select: {
+						id: true,
+						email: true,
+						username: true,
+						name: true,
+					},
+				},
+				items: {
+					select: {
+						id: true,
+						quantity: true,
+					},
+				},
+			},
+			orderBy: { createdAt: 'desc' },
+			skip: (page - 1) * limit,
+			take: limit,
+		}),
+	])
+
+	return {
+		orders,
+		total,
+		page,
+		totalPages: Math.ceil(total / limit),
+		limit,
+	}
+}
+
+/**
  * Updates an order status (admin only) and sends email notification.
  * @param orderId - The ID of the order to update
  * @param status - The new status
