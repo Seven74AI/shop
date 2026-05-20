@@ -468,6 +468,9 @@ model Order {
   stripePaymentIntentId   String? // Stripe PaymentIntent ID (from webhook)
   stripeChargeId          String? // Stripe Charge ID (from webhook)
 
+  // Invoice (generated after payment confirmation, linked via Invoice.orderId)
+  invoice Invoice?
+
   // Status tracking
   status         OrderStatus @default(CONFIRMED) // Auto-confirmed on successful payment
   trackingNumber String? // Tracking number for shipped orders
@@ -638,4 +641,44 @@ enum ShippingRateType {
   WEIGHT_BASED // Rate based on total weight
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
+}
+
+// Invoice system models
+
+enum InvoiceKind {
+  INVOICE
+  CREDIT_NOTE
+}
+
+model Invoice {
+  id         String      @id @default(cuid())
+  orderId    String      @unique
+  number     String      @unique // e.g. "2026-000123"
+  fiscalYear Int
+  sequence   Int // zero-padded in number
+  kind       InvoiceKind @default(INVOICE)
+  issuedAt   DateTime    @default(now())
+  totalCents Int
+  vatCents   Int
+
+  // PDF storage (rendered in P1.2.2)
+  pdfObjectKey String?
+
+  // Soft delete / archival
+  archivedAt DateTime?
+
+  // Credit note referencing original invoice
+  parentInvoiceId String?
+  parentInvoice   Invoice?  @relation("CreditNoteOrigin", fields: [parentInvoiceId], references: [id], onDelete: SetNull)
+  creditNotes     Invoice[] @relation("CreditNoteOrigin")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([fiscalYear, sequence])
+  @@index([orderId])
+  @@index([number])
+  @@index([fiscalYear])
 }
