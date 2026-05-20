@@ -76,6 +76,9 @@ export default defineConfig((config) => ({
 			: null,
 	],
 	resolve: {
+		alias: {
+			'#app': './app',
+		},
 		external: ['node:sqlite'],
 	},
 	test: {
