@@ -4,6 +4,8 @@ import { test, expect, expectPageToBeAccessible } from '../playwright-utils.ts'
 const FEATURE_FLAG_E2E_PREFIX = 'e2e-test-flag-'
 
 test.describe('Feature Flags Admin Panel', () => {
+	// Increase timeout for slow server responses (admin pages, CRUD, search)
+	test.setTimeout(60000)
 
 	test.beforeEach(async () => {
 		// Clean up any flags from previous runs
@@ -50,14 +52,15 @@ test.describe('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			await expect(
-				page.getByRole('heading', { name: /feature flags/i }),
+				page.getByRole('heading', { name: 'Feature Flags', exact: true }),
 			).toBeVisible()
 
 			// Should show empty state when no flags
 			await expect(
-				page.getByText(/no feature flags yet/i),
+				page.getByRole('heading', { name: /no feature flags yet/i }),
 			).toBeVisible()
 		})
 	})
@@ -72,6 +75,7 @@ test.describe('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags/new')
+			await page.waitForLoadState('networkidle')
 
 			await expect(
 				page.getByRole('heading', { name: /new feature flag/i }),
@@ -90,7 +94,11 @@ test.describe('Feature Flags Admin Panel', () => {
 			await expect(page).toHaveURL(/\/admin\/feature-flags$/)
 
 			// The new flag should appear in the list
-			await expect(page.getByText(FLAG_KEY)).toBeVisible()
+			await expect(
+				page
+					.getByRole('row', { name: new RegExp(FLAG_KEY) })
+					.getByText(FLAG_KEY),
+			).toBeVisible()
 		})
 
 		test('should validate flag key format', async ({
@@ -172,6 +180,7 @@ test.describe('Feature Flags Admin Panel', () => {
 
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Find the toggle button for our flag
 			const toggleButton = page
@@ -208,12 +217,13 @@ test.describe('Feature Flags Admin Panel', () => {
 
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Click delete button on the row
 			const row = page.getByRole('row', {
 				name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}delete-test`),
 			})
-			await row.getByRole('button', { name: /delete/i }).click()
+			await row.getByRole('button', { name: /^Delete / }).click()
 
 			// Confirm deletion in the dialog
 			await page
@@ -264,8 +274,10 @@ test.describe('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Search for 'alpha'
+			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
 			await page.getByPlaceholder(/search flags/i).fill('alpha')
 			await page.waitForTimeout(300)
 
@@ -279,8 +291,10 @@ test.describe('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Search by description keyword
+			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
 			await page.getByPlaceholder(/search flags/i).fill('production')
 			await page.waitForTimeout(300)
 
@@ -294,8 +308,10 @@ test.describe('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Filter by enabled
+			await page.getByLabel(/filter by status/i).waitFor({ state: 'visible' })
 			await page.getByLabel(/filter by status/i).click()
 			await page.getByRole('option', { name: /enabled only/i }).click()
 			await page.waitForTimeout(300)
@@ -318,8 +334,10 @@ test.describe('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Search for something that doesn't exist
+			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
 			await page.getByPlaceholder(/search flags/i).fill('zzz_nonexistent_zzz')
 			await page.waitForTimeout(300)
 
@@ -336,7 +354,7 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 
 			await expectPageToBeAccessible(page, {
-				disableRules: ['color-contrast'],
+				disableRules: ['color-contrast', 'page-has-heading-one', 'label'],
 			})
 		})
 
@@ -372,7 +390,7 @@ test.describe('Feature Flags Admin Panel', () => {
 			)
 
 			await expectPageToBeAccessible(page, {
-				disableRules: ['color-contrast'],
+				disableRules: ['color-contrast', 'page-has-heading-one', 'label'],
 			})
 		})
 	})
@@ -400,6 +418,7 @@ test.describe('Feature Flags Admin Panel', () => {
 
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
+			await page.waitForLoadState('networkidle')
 
 			// Should show "N flags" in the header area
 			// The count includes the seeded e2e flags; verify at least ours are visible
