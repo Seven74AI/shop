@@ -6,6 +6,7 @@ import { ErrorList, Field } from '#app/components/forms.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { getGuestOrder } from '#app/utils/order.server.ts'
 import { type Route } from './+types/index.ts'
@@ -66,6 +67,7 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	const isPending = useIsPending()
 
 	const [form, fields] = useForm({
@@ -85,10 +87,10 @@ export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
 		<div className="container mx-auto px-4 py-8 space-y-8">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Order History</h1>
-					<p className="text-gray-600">
-						Look up your order by order number and email
-					</p>
+				<h1 className="text-3xl font-bold tracking-tight">{t('shop.orders.title')}</h1>
+				<p className="text-gray-600">
+					{t('shop.orders.guestLookup')}
+				</p>
 				</div>
 			</div>
 
@@ -98,7 +100,7 @@ export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
 						<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center">
 							<Icon name="package" className="w-5 h-5 text-pink-700" />
 						</div>
-						<CardTitle className="text-lg">Look Up Order</CardTitle>
+						<CardTitle className="text-lg">{t('shop.orders.lookUpOrder')}</CardTitle>
 					</div>
 				</CardHeader>
 				<CardContent className="p-0">
@@ -107,11 +109,11 @@ export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
 						<Field
 							labelProps={{
 								htmlFor: fields.orderNumber.id,
-								children: 'Order Number',
-							}}
-							inputProps={{
-								...getInputProps(fields.orderNumber, { type: 'text' }),
-								placeholder: 'ORD-000001',
+						children: t('shop.orders.orderNumber'),
+					}}
+					inputProps={{
+						...getInputProps(fields.orderNumber, { type: 'text' }),
+						placeholder: t('shop.orders.orderNumberPlaceholder'),
 								autoFocus: true,
 							}}
 							errors={fields.orderNumber.errors}
@@ -119,11 +121,11 @@ export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
 						<Field
 							labelProps={{
 								htmlFor: fields.email.id,
-								children: 'Email',
-							}}
-							inputProps={{
-								...getInputProps(fields.email, { type: 'email' }),
-								placeholder: 'your.email@example.com',
+						children: t('shop.checkout.shipping.email'),
+					}}
+					inputProps={{
+						...getInputProps(fields.email, { type: 'email' }),
+						placeholder: t('shop.orders.emailPlaceholder'),
 								autoComplete: 'email',
 							}}
 							errors={fields.email.errors}
@@ -136,7 +138,7 @@ export default function GuestOrderLookup({ actionData }: Route.ComponentProps) {
 								type="submit"
 								disabled={isPending}
 							>
-								Look Up Order
+								{t('shop.orders.lookUpOrder')}
 							</StatusButton>
 						</div>
 					</Form>

@@ -41,7 +41,7 @@ export const meta: Route.MetaFunction = () => [
 export default function ProductsIndex({
 	loaderData,
 }: Route.ComponentProps) {
-	const { locale } = useTranslation()
+	const { t, locale } = useTranslation()
 	const {
 		products,
 		totalCount,
@@ -59,12 +59,12 @@ export default function ProductsIndex({
 			<div className="space-y-6 animate-slide-top">
 				{/* Header */}
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">
-						Products
-					</h1>
-					<p className="text-muted-foreground">
-						{totalCount}{' '}
-						{totalCount === 1 ? 'product' : 'products'}
+				<h1 className="text-3xl font-bold tracking-tight">
+					{t('shop.products.title')}
+				</h1>
+				<p className="text-muted-foreground">
+					{totalCount}{' '}
+					{totalCount === 1 ? t('shop.products.product_one') : t('shop.products.product_other')}
 						{activeQuery ? ` for "${activeQuery}"` : ''}
 					</p>
 				</div>
@@ -110,10 +110,10 @@ export default function ProductsIndex({
 							<input
 								type="search"
 								name="q"
-								placeholder="Search products..."
-								defaultValue={activeQuery}
-								className="flex-1 px-4 py-2 border rounded-md"
-								aria-label="Search products"
+					placeholder={t('shop.products.searchPlaceholder')}
+					defaultValue={activeQuery}
+					className="flex-1 px-4 py-2 border rounded-md"
+					aria-label={t('shop.products.search')}
 								data-testid="product-search-input"
 							/>
 							<button
@@ -149,9 +149,9 @@ export default function ProductsIndex({
 								className="text-center py-12"
 								data-testid="empty-results"
 							>
-								<p className="text-muted-foreground">
-									No products found.
-								</p>
+					<p className="text-muted-foreground">
+						{t('shop.products.noResults')}
+					</p>
 							</div>
 						) : (
 							<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
