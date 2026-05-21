@@ -276,7 +276,7 @@ model Product {
   status        ProductStatus @default(DRAFT)
   stockQuantity Int? // stock quantity for products without variants (nullable)
   weightGrams   Int? // weight in grams (for shipping calculations)
-  taxKind       TaxKind        @default(STANDARD)
+  taxKind       TaxKind       @default(STANDARD)
   categoryId    String
 
   createdAt DateTime @default(now())
@@ -478,10 +478,10 @@ model Order {
   shippingCountry String
 
   // VAT information
-  vatBreakdown       Json    @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
-  vatTotalCents      Int     @default(0) // Total VAT in cents
-  taxCountry         String? // ISO 2-letter country code for tax calculation
-  customerVatNumber  String? // Customer VAT number (for B2B reverse-charge)
+  vatBreakdown        Json    @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
+  vatTotalCents       Int     @default(0) // Total VAT in cents
+  taxCountry          String? // ISO 2-letter country code for tax calculation
+  customerVatNumber   String? // Customer VAT number (for B2B reverse-charge)
   vatValidationStatus String? // VALID | INVALID | UNCHECKED | OUTAGE
 
   // Payment information (Stripe)
@@ -505,6 +505,9 @@ model Order {
   mondialRelayShipmentNumber  String? // Mondial Relay shipment number (from API2)
   mondialRelayLabelUrl        String? // URL to shipping label PDF
 
+  // Return deadline (EU 14-day right of withdrawal)
+  returnDeadlineAt DateTime? // Computed as deliveredAt + 14 days; null until DELIVERED
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -518,6 +521,7 @@ model Order {
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
   invoices       Invoice[]
+  returnRequests ReturnRequest[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -546,13 +550,67 @@ model OrderItem {
   product Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
+  returnItems ReturnItem[]
+
   @@index([orderId])
   @@index([productId])
 }
 
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  RECEIVED
+  REFUNDED
+  REJECTED
+}
+
+// ReturnRequest is the canonical record for a return/refund on an order.
+model ReturnRequest {
+  id      String @id @default(cuid())
+  orderId String
+
+  status             ReturnStatus @default(REQUESTED)
+  reason             String // Customer-provided reason for return
+  customerNotes      String? // Optional additional notes from customer
+  adminNotes         String? // Internal notes from admin review
+  refundAmountCents  Int? // Amount refunded (in cents)
+  restockingFeeCents Int? // Restocking fee deducted (in cents)
+
+  requestedAt DateTime  @default(now()) // When the return was requested
+  receivedAt  DateTime? // When the returned items were received
+  refundedAt  DateTime? // When the refund was processed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items ReturnItem[] // Items being returned
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// ReturnItem links a ReturnRequest to specific OrderItem to allow partial returns.
+model ReturnItem {
+  id              String @id @default(cuid())
+  returnRequestId String
+  orderItemId     String
+
+  quantity   Int // Number of units being returned
+  reasonItem String? // Item-specific reason (e.g., "damaged", "wrong item")
+
+  createdAt DateTime @default(now())
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  @@unique([returnRequestId, orderItemId])
+  @@index([returnRequestId])
+  @@index([orderItemId])
+}
+
 model Invoice {
-  id         String      @id @default(cuid())
-  orderId    String
+  id      String @id @default(cuid())
+  orderId String
 
   // Sequential fiscal-year numbering
   // Invoice number format: "F{year}-{sequence:05d}" (e.g., "F2025-00001").
@@ -584,8 +642,8 @@ model Invoice {
   status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED"
 
   issuedAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
@@ -603,13 +661,13 @@ enum InvoiceKind {
 }
 
 model TaxRate {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   country       String // ISO 2-letter country code
   kind          TaxKind
   rate          Int // Rate in basis points (2000 = 20.00%)
   effectiveFrom DateTime
   effectiveTo   DateTime?
-  isActive      Boolean  @default(true)
+  isActive      Boolean   @default(true)
 
   createdAt DateTime @default(now())
 
@@ -743,13 +801,13 @@ enum ShippingRateType {
 // Only after clicking the link does the subscription become active.
 
 model NewsletterSubscription {
-  id        String                 @id @default(cuid())
-  email     String                 @unique
-  status    NewsletterStatus       @default(PENDING)
-  token     String?                @unique // HMAC-signed confirmation token (null after confirmation)
-  tokenExpiresAt DateTime?         // Token expires after 7 days (null after confirmation)
+  id             String           @id @default(cuid())
+  email          String           @unique
+  status         NewsletterStatus @default(PENDING)
+  token          String?          @unique // HMAC-signed confirmation token (null after confirmation)
+  tokenExpiresAt DateTime? // Token expires after 7 days (null after confirmation)
 
-  confirmedAt   DateTime?
+  confirmedAt    DateTime?
   unsubscribedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -761,8 +819,8 @@ model NewsletterSubscription {
 }
 
 enum NewsletterStatus {
-  PENDING      // Awaiting double-opt-in confirmation
-  CONFIRMED    // Subscribed and active
+  PENDING // Awaiting double-opt-in confirmation
+  CONFIRMED // Subscribed and active
   UNSUBSCRIBED // Opted out
 }
 
@@ -772,7 +830,7 @@ model Flag {
   key               String   @id
   enabled           Boolean  @default(false)
   rolloutPercentage Int?     @default(0)
-  audience          String?  // JSON: user filters (e.g., {"userIds": ["..."], "countries": ["FR", "BE"]})
+  audience          String? // JSON: user filters (e.g., {"userIds": ["..."], "countries": ["FR", "BE"]})
   description       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

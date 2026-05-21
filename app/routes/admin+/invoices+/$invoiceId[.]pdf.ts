@@ -14,7 +14,7 @@ import {
 	type InvoicePdfData,
 } from '#app/utils/invoice-pdf.server.tsx'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
-import { type Route } from './+types/$invoiceId.pdf.ts'
+import { type Route } from './+types/$invoiceId[.]pdf.ts'
 
 export async function loader({ params, request }: Route.LoaderArgs) {
 	await requireUserWithRole(request, 'admin')
@@ -103,12 +103,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 			invoice.fiscalYear,
 			invoice.sequence,
 		),
-		invoiceDate:
-			invoice.issuedAt?.toISOString().split('T')[0] ??
-			invoice.createdAt.toISOString().split('T')[0],
+		invoiceDate: (invoice.issuedAt?.toISOString().split('T')[0] ??
+			invoice.createdAt.toISOString().split('T')[0]) as string,
 		invoiceStatus: invoice.status,
 		orderNumber: invoice.order.orderNumber,
-		orderDate: invoice.order.createdAt.toISOString().split('T')[0],
+		orderDate: invoice.order.createdAt.toISOString().split('T')[0] as string,
 		customer: {
 			name: customerName,
 			email: customerEmail,
@@ -128,7 +127,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		vatTotalCents: invoice.vatTotalCents,
 		shippingCostCents: invoice.order.shippingCost,
 		totalCents: invoice.totalCents,
-		currency,
+		currency: currency as any,
 		storeName: 'Epic Shop',
 		storeAddress: '123 Epic Street, 75001 Paris, France',
 		storeVatNumber: 'FR12345678901',

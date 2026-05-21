@@ -1,120 +1,14 @@
-import { type Prisma } from '@prisma/client'
-import { prisma } from './db.server.ts'
+#!/bin/bash
+# Fix script: add credit note code to invoice.server.ts, run CI, push if green
+set -euo pipefail
 
-/**
- * Promise-chain lock for serializing invoice creation operations.
- * In a single-process LiteFS primary, a Promise-based lock is sufficient
- * to prevent concurrent invoice number generation from racing.
- *
- * Usage: await withInvoiceLock(() => createInvoice(payload))
- */
-let invoiceLock: Promise<void> = Promise.resolve()
+REPO_DIR="/root/.hermes/kanban/boards/shop/workspaces/t_998a22b4"
+cd "$REPO_DIR"
 
-export async function withInvoiceLock<T>(fn: () => Promise<T>): Promise<T> {
-	const prev = invoiceLock
-	let release: () => void
-	invoiceLock = new Promise<void>((resolve) => {
-		release = resolve
-	})
-	await prev
-	try {
-		return await fn()
-	} finally {
-		release!()
-	}
-}
+echo "=== STEP 1: Add credit note code to invoice.server.ts ==="
 
-/**
- * Generates a unique invoice number in the format "F{year}-{sequence:05d}" (e.g., "F2025-00001").
- *
- * Uses a database-level write transaction to atomically read the highest sequence
- * for the given fiscal year and return the next one. The @@unique([fiscalYear, sequence])
- * constraint provides a safety net against race conditions.
- *
- * @param fiscalYear - The fiscal year for the invoice (e.g., 2025).
- * @param tx - Optional transaction client. If provided, uses the existing transaction
- *   instead of creating a new one. This allows the invoice number generation to be
- *   composed within a larger transaction (e.g., creating the invoice record).
- * @returns The formatted invoice number string.
- */
-export async function generateInvoiceNumber(
-	fiscalYear: number,
-	tx?: Prisma.TransactionClient,
-): Promise<string> {
-	// If a transaction client is provided, use it directly
-	if (tx) {
-		const lastInvoice = await tx.invoice.findFirst({
-			where: { fiscalYear },
-			orderBy: { sequence: 'desc' },
-			select: { sequence: true },
-		})
-
-		const nextSequence =
-			lastInvoice && !isNaN(lastInvoice.sequence)
-				? lastInvoice.sequence + 1
-				: 1
-
-		return formatInvoiceNumber(fiscalYear, nextSequence)
-	}
-
-	// For SQLite, we use BEGIN IMMEDIATE to get an exclusive write lock.
-	// This ensures sequential numbering even with concurrent requests.
-	return await prisma.$transaction(
-		async (transactionTx) => {
-			const lastInvoice = await transactionTx.invoice.findFirst({
-				where: { fiscalYear },
-				orderBy: { sequence: 'desc' },
-				select: { sequence: true },
-			})
-
-			const nextSequence =
-				lastInvoice && !isNaN(lastInvoice.sequence)
-					? lastInvoice.sequence + 1
-					: 1
-
-			return formatInvoiceNumber(fiscalYear, nextSequence)
-		},
-		{
-			// Use maxWait to prevent indefinite waits
-			maxWait: 5000, // 5 seconds
-			timeout: 10000, // 10 seconds
-		},
-	)
-}
-
-/**
- * Formats a fiscal year and sequence into the invoice number format.
- *
- * @example
- * formatInvoiceNumber(2025, 1)   // "F2025-00001"
- * formatInvoiceNumber(2025, 42)  // "F2025-00042"
- * formatInvoiceNumber(2026, 150) // "F2026-00150"
- */
-export function formatInvoiceNumber(
-	fiscalYear: number,
-	sequence: number,
-): string {
-	return `F${fiscalYear}-${String(sequence).padStart(5, '0')}`
-}
-
-/**
- * Extracts the fiscal year and sequence from an invoice number string.
- * Returns null if the format is invalid.
- *
- * @example
- * parseInvoiceNumber("F2025-00001") // { fiscalYear: 2025, sequence: 1 }
- * parseInvoiceNumber("F2025-00150") // { fiscalYear: 2025, sequence: 150 }
- */
-export function parseInvoiceNumber(
-	invoiceNumber: string,
-): { fiscalYear: number; sequence: number } | null {
-	const match = invoiceNumber.match(/^F(\d{4})-(\d{5})$/)
-	if (!match || !match[1] || !match[2]) return null
-	const fiscalYear = parseInt(match[1], 10)
-	const sequence = parseInt(match[2], 10)
-	if (isNaN(fiscalYear) || isNaN(sequence)) return null
-	return { fiscalYear, sequence }
-}
+# Append credit note helpers to invoice.server.ts
+cat >> app/utils/invoice.server.ts << 'CREDITEOF'
 
 // ---------------------------------------------------------------------------
 // Credit note helpers
@@ -245,3 +139,43 @@ export async function issueCreditNote(
 		sequence: parsed.sequence,
 	}
 }
+CREDITEOF
+
+echo "=== STEP 2: Prisma generate ==="
+pnpm exec prisma generate 2>&1 | tail -5
+pnpm exec prisma generate --sql 2>&1 | tail -5
+
+echo "=== STEP 3: Vitest ==="
+pnpm exec vitest run 2>&1 | tail -20 > /tmp/vitest-result.txt
+cat /tmp/vitest-result.txt
+
+echo "=== STEP 4: TSC ==="
+pnpm run typecheck 2>&1 | tail -20 > /tmp/tsc-result.txt
+cat /tmp/tsc-result.txt
+
+echo "=== STEP 5: Lint ==="
+pnpm run lint 2>&1 | tail -10 > /tmp/lint-result.txt
+cat /tmp/lint-result.txt
+
+echo "=== DONE ==="
+
+# Check vitest result
+if grep -q "0 failed" /tmp/vitest-result.txt; then
+  echo "VITEST: PASS"
+  echo "PASS" > /tmp/ci-status.txt
+else
+  echo "VITEST: FAIL"
+  echo "FAIL" > /tmp/ci-status.txt
+  grep "FAIL" /tmp/vitest-result.txt >> /tmp/ci-status.txt
+fi
+
+# Check tsc result  
+if grep -q "error" /tmp/tsc-result.txt; then
+  echo "TSC: FAIL" >> /tmp/ci-status.txt
+  grep "error" /tmp/tsc-result.txt >> /tmp/ci-status.txt
+else
+  echo "TSC: PASS" >> /tmp/ci-status.txt
+fi
+
+# Summarize
+cat /tmp/ci-status.txt
