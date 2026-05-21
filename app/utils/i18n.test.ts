@@ -174,6 +174,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -204,6 +206,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -222,6 +226,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: {},
 				children: createElement(TestChild),
 			}),
 		)
@@ -243,6 +249,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: {},
 				children: createElement(TestChild),
 			}),
 		)
@@ -268,6 +276,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -294,6 +304,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -307,15 +319,18 @@ describe('TranslationProvider', () => {
 // ─── useTranslation() ───────────────────────────────────────────────
 
 describe('useTranslation()', () => {
-	test('throws when used outside TranslationProvider', () => {
-		function BadComponent() {
-			useTranslation()
+	test('falls back to identity when used outside TranslationProvider', () => {
+		let captured: { locale: string; t: (key: string) => string } | undefined
+
+		function TestChild() {
+			captured = useTranslation()
 			return createElement('div')
 		}
 
-		expect(() => render(createElement(BadComponent))).toThrow(
-			'useTranslation() must be used within a <TranslationProvider>',
-		)
+		render(createElement(TestChild))
+
+		expect(captured?.locale).toBe('en')
+		expect(captured?.t('any.key')).toBe('any.key')
 	})
 
 	test('returns locale from provider', () => {
@@ -334,6 +349,8 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -357,6 +374,8 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -368,8 +387,8 @@ describe('useTranslation()', () => {
 // ─── useOptionalTranslation() ───────────────────────────────────────
 
 describe('useOptionalTranslation()', () => {
-	test('returns null when used outside TranslationProvider', () => {
-		let captured: unknown
+	test('falls back to identity when used outside TranslationProvider', () => {
+		let captured: ReturnType<typeof useTranslation> | undefined
 
 		function TestChild() {
 			captured = useOptionalTranslation()
@@ -378,7 +397,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(createElement(TestChild))
 
-		expect(captured).toBeNull()
+		expect(captured?.locale).toBe('en')
+		expect(captured?.t('any.key')).toBe('any.key')
 	})
 
 	test('returns context value when inside TranslationProvider', () => {
@@ -396,6 +416,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -423,6 +445,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
