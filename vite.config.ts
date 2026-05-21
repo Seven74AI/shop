@@ -4,6 +4,10 @@ import {
 	sentryReactRouter,
 } from '@sentry/react-router'
 import tailwindcss from '@tailwindcss/vite'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { reactRouterDevTools } from 'react-router-devtools'
 import { defineConfig } from 'vite'
 import { envOnlyMacros } from 'vite-env-only'
 import { iconsSpritesheet } from 'vite-plugin-icons-spritesheet'
@@ -23,6 +27,8 @@ function externalizeNodeBuiltins() {
 }
 
 const MODE = process.env.NODE_ENV
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig((config) => ({
 	build: {
@@ -57,6 +63,8 @@ export default defineConfig((config) => ({
 		externalizeNodeBuiltins(),
 		envOnlyMacros(),
 		tailwindcss(),
+		// reactRouterDevTools(),
+
 		iconsSpritesheet({
 			inputDir: './other/svg-icons',
 			outputDir: './app/components/ui/icons',
@@ -72,6 +80,9 @@ export default defineConfig((config) => ({
 			: null,
 	],
 	resolve: {
+		alias: {
+			'#app': path.resolve(__dirname, 'app'),
+		},
 		external: ['node:sqlite'],
 	},
 	test: {

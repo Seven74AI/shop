@@ -73,7 +73,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 	const { product, currency } = loaderData
 
 	return (
@@ -102,7 +102,7 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					<div>
-						<p className="text-3xl font-bold">{formatPrice(product.price, currency)}</p>
+						<p className="text-3xl font-bold">{formatPrice(product.price, currency, locale)}</p>
 					</div>
 
 					{product.description && (

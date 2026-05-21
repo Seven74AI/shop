@@ -57,7 +57,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function CategoryPage({ loaderData }: Route.ComponentProps) {
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 	const { category, products, allCategories, currency } = loaderData
 	const [selectedCategory, setSelectedCategory] = useState(category.id)
 
@@ -125,7 +125,7 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 						)}
 							<h2 className="font-semibold text-lg mb-1">{product.name}</h2>
 							<p className="text-primary font-medium">
-								{formatPrice(product.price, currency)}
+								{formatPrice(product.price, currency, locale)}
 							</p>
 						</Link>
 					))}

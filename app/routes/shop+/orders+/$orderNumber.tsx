@@ -48,7 +48,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function OrderDetail({ loaderData }: Route.ComponentProps) {
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 	const { order } = loaderData
 	const [showTracking, setShowTracking] = useState(false)
 

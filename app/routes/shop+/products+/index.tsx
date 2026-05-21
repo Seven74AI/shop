@@ -41,7 +41,7 @@ export const meta: Route.MetaFunction = () => [
 export default function ProductsIndex({
 	loaderData,
 }: Route.ComponentProps) {
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 	const {
 		products,
 		totalCount,
@@ -175,7 +175,7 @@ export default function ProductsIndex({
 												{product.categoryId}
 											</p>
 											<p className="text-lg font-bold">
-												{formatPrice(product.price, currency)}
+												{formatPrice(product.price, currency, locale)}
 											</p>
 										</div>
 									</Link>

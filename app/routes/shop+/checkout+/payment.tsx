@@ -235,7 +235,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function CheckoutPayment() {
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 
 	// Auto-submit to create Stripe session on mount
 	useEffect(() => {
@@ -338,7 +338,7 @@ export default function CheckoutPayment() {
 				<div className="space-y-2">
 					<div className="flex justify-between">
 						<span>{t('shop.checkout.payment.subtotal')}</span>
-						<span>{formatPrice(subtotal, currency)}</span>
+						<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
 					<div className="flex justify-between">
 						<span>{t('shop.checkout.payment.shipping')}</span>
@@ -346,7 +346,7 @@ export default function CheckoutPayment() {
 							{shippingCost === 0 ? (
 								<span className="text-green-600">{t('shop.checkout.payment.free')}</span>
 							) : (
-								formatPrice(shippingCost, currency)
+								formatPrice(shippingCost, currency, locale)
 							)}
 						</span>
 					</div>
@@ -355,7 +355,7 @@ export default function CheckoutPayment() {
 							{vatCalculation.breakdown.map((line) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
 									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
-									<span>{formatPrice(line.vatCents, currency)}</span>
+									<span>{formatPrice(line.vatCents, currency, locale)}</span>
 								</div>
 							))}
 						</>

@@ -174,7 +174,7 @@ export const meta: Route.MetaFunction = () => [{ title: 'Delivery | Checkout' }]
 
 export default function CheckoutDelivery() {
 	const loaderData = useLoaderData<typeof loader>()
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 	const isPending = useIsPending()
 
 	// Initialize hooks before early return
@@ -364,7 +364,7 @@ export default function CheckoutDelivery() {
 													<div className="font-semibold">
 														{methodCost === 0
 															? t('shop.checkout.delivery.free')
-															: formatPrice(methodCost, currency)}
+															: formatPrice(methodCost, currency, locale)}
 													</div>
 												</div>
 											</div>
@@ -442,7 +442,7 @@ export default function CheckoutDelivery() {
 				<div className="space-y-2">
 					<div className="flex justify-between">
 					<span>{t('shop.checkout.delivery.subtotal')}</span>
-					<span>{formatPrice(subtotal, currency)}</span>
+					<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
 					<div className="flex justify-between">
 					<span>{t('shop.checkout.delivery.shipping')}</span>
@@ -451,7 +451,7 @@ export default function CheckoutDelivery() {
 								shippingCost === 0 ? (
 									<span className="text-green-600">{t('shop.checkout.delivery.free')}</span>
 								) : (
-									formatPrice(shippingCost, currency)
+									formatPrice(shippingCost, currency, locale)
 								)
 							) : (
 								<span className="text-muted-foreground">—</span>
@@ -462,8 +462,8 @@ export default function CheckoutDelivery() {
 					<span>{t('shop.checkout.delivery.total')}</span>
 					<span>
 							{selectedShippingMethodId
-								? formatPrice(total, currency)
-								: formatPrice(subtotal, currency)}
+								? formatPrice(total, currency, locale)
+								: formatPrice(subtotal, currency, locale)}
 						</span>
 					</div>
 				</div>

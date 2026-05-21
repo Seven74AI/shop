@@ -34,7 +34,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function CheckoutReview() {
 	const loaderData = useLoaderData<typeof loader>()
-	const { t } = useTranslation()
+	const { t, locale } = useTranslation()
 	
 	if (!loaderData) {
 		return <div>{t('shop.checkout.review.loading')}</div>
@@ -85,23 +85,23 @@ export default function CheckoutReview() {
 				<div className="mt-6 border-t pt-4 space-y-2">
 				<div className="flex justify-between text-lg font-semibold">
 					<span>{t('shop.checkout.review.subtotal')}</span>
-						<span>{formatPrice(subtotal, currency)}</span>
+						<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
 					{vatEstimate && vatEstimate.totalVatCents > 0 && (
 						<>
 							{vatEstimate.breakdown.map((line) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
 									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
-									<span>{formatPrice(line.vatCents, currency)}</span>
+									<span>{formatPrice(line.vatCents, currency, locale)}</span>
 								</div>
 							))}
 							<div className="flex justify-between text-sm text-muted-foreground">
 								<span>{t('shop.checkout.review.estimatedVatTotal')}</span>
-								<span>{formatPrice(vatEstimate.totalVatCents, currency)}</span>
+								<span>{formatPrice(vatEstimate.totalVatCents, currency, locale)}</span>
 							</div>
 							<div className="border-t pt-2 flex justify-between text-lg font-bold">
 								<span>{t('shop.checkout.review.estimatedTotal')}</span>
-								<span>{formatPrice(subtotal + vatEstimate.totalVatCents, currency)}</span>
+								<span>{formatPrice(subtotal + vatEstimate.totalVatCents, currency, locale)}</span>
 							</div>
 						</>
 					)}

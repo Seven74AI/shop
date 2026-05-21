@@ -1,4 +1,4 @@
-name: 🚀 Deploy
+name: CI
 on:
   push:
     branches:
@@ -23,51 +23,24 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
 
-      - name: 🔍 Detect package manager
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "manager=pnpm" >> $GITHUB_OUTPUT
-          else
-            echo "manager=npm" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 📦 Setup pnpm
-        if: steps.pm.outputs.manager == 'pnpm'
-        uses: pnpm/action-setup@v6
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
-          cache: ${{ steps.pm.outputs.manager }}
+          node-version: 22
 
-      - name: 📥 Install dependencies (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: ⎔ Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
-
-      - name: 📥 Install dependencies (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        uses: bahmutov/npm-install@v1
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
 
-      - name: 🛠 Setup Database (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
-        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
-
-      - name: 🛠 Setup Database (npm)
-        if: steps.pm.outputs.manager == 'npm'
+      - name: 🛠 Setup Database
         run: npx prisma migrate deploy && npx prisma generate --sql
 
-      - name: 🔬 Lint (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: 🔬 Lint
         run: pnpm lint
-
-      - name: 🔬 Lint (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        run: npm run lint
 
   typecheck:
     name: ʦ TypeScript
@@ -76,59 +49,27 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
 
-      - name: 🔍 Detect package manager
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "manager=pnpm" >> $GITHUB_OUTPUT
-          else
-            echo "manager=npm" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 📦 Setup pnpm
-        if: steps.pm.outputs.manager == 'pnpm'
-        uses: pnpm/action-setup@v6
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
-          cache: ${{ steps.pm.outputs.manager }}
+          node-version: 22
 
-      - name: 📥 Install dependencies (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: ⎔ Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: 📥 Install dependencies (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        uses: bahmutov/npm-install@v1
-
-      - name: 🏗 Build (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: 🏗 Build
         run: pnpm build
-
-      - name: 🏗 Build (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        run: npm run build
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
 
-      - name: 🛠 Setup Database (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
-        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
-
-      - name: 🛠 Setup Database (npm)
-        if: steps.pm.outputs.manager == 'npm'
+      - name: 🛠 Setup Database
         run: npx prisma migrate deploy && npx prisma generate --sql
 
-      - name: 🔎 Type check (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: 🔎 Type check
         run: pnpm typecheck
-
-      - name: 🔎 Type check (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        run: npm run typecheck --if-present
 
   vitest:
     name: ⚡ Vitest
@@ -137,51 +78,24 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
 
-      - name: 🔍 Detect package manager
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "manager=pnpm" >> $GITHUB_OUTPUT
-          else
-            echo "manager=npm" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 📦 Setup pnpm
-        if: steps.pm.outputs.manager == 'pnpm'
-        uses: pnpm/action-setup@v6
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
-          cache: ${{ steps.pm.outputs.manager }}
+          node-version: 22
 
-      - name: 📥 Install dependencies (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: ⎔ Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
-
-      - name: 📥 Install dependencies (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        uses: bahmutov/npm-install@v1
 
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
 
-      - name: 🛠 Setup Database (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
-        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
-
-      - name: 🛠 Setup Database (npm)
-        if: steps.pm.outputs.manager == 'npm'
+      - name: 🛠 Setup Database
         run: npx prisma migrate deploy && npx prisma generate --sql
 
-      - name: ⚡ Run vitest (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: ⚡ Run vitest
         run: pnpm test -- --coverage
-
-      - name: ⚡ Run vitest (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        run: npm run test -- --coverage
 
   playwright:
     name: 🎭 Playwright
@@ -194,47 +108,20 @@ jobs:
       - name: 🏄 Copy test env vars
         run: cp .env.example .env && echo 'MOCKS=true' >> .env && echo 'RESEND_API_KEY=""' >> .env && echo 'PLAYWRIGHT_TEST_BASE_URL=http://localhost:3000' >> .env
 
-      - name: 🔍 Detect package manager
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "manager=pnpm" >> $GITHUB_OUTPUT
-          else
-            echo "manager=npm" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 📦 Setup pnpm
-        if: steps.pm.outputs.manager == 'pnpm'
-        uses: pnpm/action-setup@v6
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
-          cache: ${{ steps.pm.outputs.manager }}
+          node-version: 22
 
-      - name: 📥 Install dependencies (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: ⎔ Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: 📥 Install dependencies (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        uses: bahmutov/npm-install@v1
-
-      - name: 📥 Install Playwright Browsers (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: 📥 Install Playwright Browsers
         run: pnpm test:e2e:install
 
-      - name: 📥 Install Playwright Browsers (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        run: npm run test:e2e:install
-
-      - name: 🛠 Setup Database (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
-        run: pnpm exec prisma migrate deploy && pnpm exec prisma generate --sql
-
-      - name: 🛠 Setup Database (npm)
-        if: steps.pm.outputs.manager == 'npm'
+      - name: 🛠 Setup Database
         run: npx prisma migrate deploy && npx prisma generate --sql
 
       - name: 🏦 Cache Database
@@ -247,28 +134,14 @@ jobs:
             }}-migrations_${{ hashFiles('./prisma/migrations/*/migration.sql')
             }}-prisma7-v2
 
-      - name: 🌱 Seed Database (pnpm)
-        if: steps.db-cache.outputs.cache-hit != 'true' && steps.pm.outputs.manager == 'pnpm'
-        run: pnpm exec prisma migrate reset --force
-
-      - name: 🌱 Seed Database (npm)
-        if: steps.db-cache.outputs.cache-hit != 'true' && steps.pm.outputs.manager == 'npm'
+      - name: 🌱 Seed Database
+        if: steps.db-cache.outputs.cache-hit != 'true'
         run: npx prisma migrate reset --force
 
-      - name: 🏗 Build (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
+      - name: 🏗 Build
         run: pnpm build
 
-      - name: 🏗 Build (npm)
-        if: steps.pm.outputs.manager == 'npm'
-        run: npm run build
-
-      - name: 🎭 Playwright tests (pnpm)
-        if: steps.pm.outputs.manager == 'pnpm'
-        run: pnpm exec playwright test --workers=1
-
-      - name: 🎭 Playwright tests (npm)
-        if: steps.pm.outputs.manager == 'npm'
+      - name: 🎭 Playwright tests
         run: npx playwright test --workers=1
 
       - name: 📊 Upload report
@@ -282,8 +155,8 @@ jobs:
   container:
     name: 📦 Prepare Container
     runs-on: ubuntu-24.04
-    # only prepare container on pushes
-    if: ${{ github.event_name == 'push' }}
+    # Disabled — container build not needed for PR CI
+    if: false
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
@@ -328,9 +201,9 @@ jobs:
   deploy:
     name: 🚀 Deploy
     runs-on: ubuntu-24.04
-    needs: [lint, typecheck, vitest, playwright, container]
-    # only deploy on pushes
-    if: ${{ github.event_name == 'push' }}
+    needs: [lint, typecheck, vitest, playwright]
+    # Disabled — container build not needed for PR CI
+    if: false
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6

@@ -314,7 +314,7 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 														Qty: {item.quantity}
 													</span>
 													<span className="text-sm font-normal text-foreground">
-														{formatPrice(item.price * item.quantity, currency)}
+														{formatPrice(item.price * item.quantity, currency, locale)}
 													</span>
 												</div>
 											</div>
@@ -332,7 +332,7 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 										<div className="flex items-center justify-between">
 											<span className="text-sm text-[var(--text-medium)]">Subtotal</span>
 											<span className="text-sm font-normal text-[var(--text-dark)]">
-												{formatPrice(order.subtotal, currency)}
+												{formatPrice(order.subtotal, currency, locale)}
 											</span>
 										</div>
 										{order.shippingCost !== null && order.shippingCost !== undefined && (
@@ -342,7 +342,7 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 													{order.shippingCost === 0 ? (
 														<span className="text-green-700">Free</span>
 													) : (
-														formatPrice(order.shippingCost, currency)
+														formatPrice(order.shippingCost, currency, locale)
 													)}
 												</span>
 											</div>
@@ -376,7 +376,7 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 										<div className="flex items-center justify-between pt-2 border-t border-border">
 											<span className="text-base font-normal text-foreground">Total</span>
 											<span className="text-lg font-normal text-foreground">
-												{formatPrice(order.total, currency)}
+												{formatPrice(order.total, currency, locale)}
 											</span>
 										</div>
 									</div>

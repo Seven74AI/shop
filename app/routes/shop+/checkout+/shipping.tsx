@@ -220,6 +220,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function CheckoutShipping() {
+	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 	const { t } = useTranslation()
@@ -546,7 +547,7 @@ export default function CheckoutShipping() {
 										</p>
 									</div>
 									<p className="font-medium">
-										{formatPrice(itemTotal, currency)}
+										{formatPrice(itemTotal, currency, locale)}
 									</p>
 								</div>
 							)
@@ -556,7 +557,7 @@ export default function CheckoutShipping() {
 					<div className="border-t pt-4">
 						<div className="flex justify-between text-lg font-semibold">
 							<span>Subtotal</span>
-							<span>{formatPrice(subtotal, currency)}</span>
+							<span>{formatPrice(subtotal, currency, locale)}</span>
 						</div>
 					</div>
 				</div>
