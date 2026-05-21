@@ -181,6 +181,12 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 				<Button variant="outline" asChild>
 					<Link to="/account/orders">Back to Orders</Link>
 				</Button>
+				<Button variant="outline" asChild>
+					<Link to={`/account/returns/new?orderId=${order.id}`}>
+						<Icon name="package" className="h-4 w-4 mr-2" />
+						Request Return
+					</Link>
+				</Button>
 				<Button asChild>
 					<Link to="/shop">Continue Shopping</Link>
 				</Button>
