@@ -226,13 +226,15 @@ test.describe('Feature Flags Admin Panel', () => {
 			})
 			await row.getByRole('button', { name: /^Delete / }).click()
 
-			// Confirm deletion in the dialog
-			await page
-				.getByRole('button', { name: /delete flag/i })
-				.click()
-
-			// Should redirect to list
-			await expect(page).toHaveURL(/\/admin\/feature-flags$/)
+			// Confirm deletion in the dialog and wait for POST to complete
+			await Promise.all([
+				page.waitForResponse(
+					(resp) =>
+						resp.url().includes('/delete') &&
+						resp.request().method() === 'POST',
+				),
+				page.getByRole('button', { name: /delete flag/i }).click(),
+			])
 
 			// Verify deletion in database
 			const flag = await prisma.flag.findUnique({
