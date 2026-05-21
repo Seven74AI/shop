@@ -30,6 +30,10 @@ export interface InvoicePdfData {
 	invoiceStatus: string
 	orderNumber: string
 	orderDate: string
+	/** Invoice kind: 'INVOICE' (Facture) or 'CREDIT_NOTE' (Avoir). Defaults to INVOICE. */
+	kind?: string
+	/** Original invoice number — shown on credit notes as a reference. */
+	parentInvoiceNumber?: string
 	customer: {
 		name: string | null
 		email: string | null
