@@ -24,6 +24,7 @@ import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
 import { EpicToaster } from './components/ui/sonner.tsx'
 import { UserDropdown } from './components/user-dropdown.tsx'
+import { LocaleSwitch } from './routes/resources+/locale-switch.tsx'
 import {
 	ThemeSwitch,
 	useOptionalTheme,
@@ -279,7 +280,10 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
-				<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
+				<div className="flex items-center gap-4">
+					<LocaleSwitch />
+					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
+				</div>
 			</footer>
 			</div>
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
