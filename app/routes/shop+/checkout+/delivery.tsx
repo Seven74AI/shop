@@ -12,7 +12,6 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { getCheckoutData } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
@@ -35,7 +34,7 @@ const DeliveryFormSchema = z.object({
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
-
+	
 	// Get address data from URL params
 	const name = url.searchParams.get('name')
 	const email = url.searchParams.get('email')
@@ -174,11 +173,9 @@ export async function action({ request }: Route.ActionArgs) {
 export const meta: Route.MetaFunction = () => [{ title: 'Delivery | Checkout' }]
 
 export default function CheckoutDelivery() {
-	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const { t, locale } = useTranslation()
 	const isPending = useIsPending()
-	const { t } = useTranslation()
 
 	// Initialize hooks before early return
 	const [selectedShippingMethodId, setSelectedShippingMethodId] = useState<string>('')
@@ -190,7 +187,7 @@ export default function CheckoutDelivery() {
 	const [form, fields] = useForm({
 		id: 'delivery-form',
 		constraint: getZodConstraint(DeliveryFormSchema),
-		lastResult: undefined,
+		lastResult: undefined, // Action only redirects, doesn't return form errors
 		onValidate({ formData }) {
 			return parseWithZod(formData, { schema: DeliveryFormSchema })
 		},
@@ -203,6 +200,7 @@ export default function CheckoutDelivery() {
 	const shippingMethodInput = useInputControl(fields.shippingMethodId as any)
 	const pickupPointInput = useInputControl(fields.mondialRelayPickupPointId as any)
 
+	// Update shipping methods when loaderData changes
 	useEffect(() => {
 		if (loaderData?.shippingMethods) {
 			setShippingMethods(loaderData.shippingMethods)
@@ -211,11 +209,12 @@ export default function CheckoutDelivery() {
 
 	useEffect(() => {
 		if (!loaderData) return
-
+		
 		const subtotal = loaderData.subtotal
 		if (selectedShippingMethodId && shippingMethods.length > 0) {
 			const method = shippingMethods.find((m) => m.id === selectedShippingMethodId)
 			if (method) {
+				// Calculate shipping cost based on method rate type
 				let cost = 0
 				if (method.rateType === 'FLAT') {
 					cost = method.flatRate ?? 0
@@ -245,6 +244,7 @@ export default function CheckoutDelivery() {
 				}
 				setShippingCost(cost)
 
+				// Check if this is a Mondial Relay method
 				if (method.carrier?.apiProvider === 'mondial_relay') {
 					setMondialRelayCarrierId(method.carrier.id)
 				} else {
@@ -262,7 +262,7 @@ export default function CheckoutDelivery() {
 	if (!loaderData) {
 		return (
 			<div className="text-center">
-				<p className="text-muted-foreground">{t('checkout.loading')}</p>
+				<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
 			</div>
 		)
 	}
@@ -278,17 +278,17 @@ export default function CheckoutDelivery() {
 	return (
 		<div className="space-y-6">
 			<div className="rounded-lg border bg-card p-6">
-				<h2 className="mb-4 text-xl font-semibold">{t('checkout.delivery.title')}</h2>
+				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.title')}</h2>
 				<p className="text-muted-foreground mb-6">
-					{t('checkout.delivery.description')}
+					{t('shop.checkout.delivery.subtitle')}
 				</p>
 
 				<Form method="POST" className="space-y-6" {...getFormProps(form)}>
 					<div className="space-y-4">
-						<h3 className="text-lg font-semibold">{t('checkout.delivery.shippingMethod')}</h3>
+						<h3 className="text-lg font-semibold">{t('shop.checkout.delivery.shippingMethod')}</h3>
 						{shippingMethods.length === 0 ? (
 							<div className="text-sm text-muted-foreground">
-								{t('checkout.delivery.noMethods')}
+								{t('shop.checkout.delivery.noMethods')}
 							</div>
 						) : (
 							<div className="space-y-3">
@@ -357,13 +357,13 @@ export default function CheckoutDelivery() {
 														)}
 														{method.estimatedDays && (
 															<div className="text-sm text-muted-foreground">
-																{t('checkout.delivery.estimatedDelivery', { days: method.estimatedDays })}
+																{t('shop.checkout.delivery.estimatedDays', { days: method.estimatedDays })}
 															</div>
 														)}
 													</div>
 													<div className="font-semibold">
 														{methodCost === 0
-															? t('checkout.delivery.free')
+															? t('shop.checkout.delivery.free')
 															: formatPrice(methodCost, currency, locale)}
 													</div>
 												</div>
@@ -384,11 +384,12 @@ export default function CheckoutDelivery() {
 						/>
 					</div>
 
+					{/* Mondial Relay Pickup Point Selector */}
 					{mondialRelayCarrierId && selectedShippingMethodId && (
 						<div className="space-y-4 mt-6">
-							<h3 className="text-lg font-semibold">{t('checkout.delivery.pickupPoint')}</h3>
+							<h3 className="text-lg font-semibold">{t('shop.checkout.delivery.pickupTitle')}</h3>
 							<p className="text-sm text-muted-foreground">
-								{t('checkout.delivery.pickupPointDescription')}
+								{t('shop.checkout.delivery.pickupSubtitle')}
 							</p>
 							<MondialRelayPickupSelector
 								postalCode={shippingInfo.postal}
@@ -422,7 +423,7 @@ export default function CheckoutDelivery() {
 								postal: shippingInfo.postal,
 								country: shippingInfo.country,
 							}).toString()}`}>
-								{t('checkout.delivery.back')}
+								{t('shop.checkout.delivery.backToShipping')}
 							</a>
 						</Button>
 						<StatusButton
@@ -430,25 +431,25 @@ export default function CheckoutDelivery() {
 							status={isPending ? 'pending' : 'idle'}
 							disabled={Boolean(isPending || !selectedShippingMethodId || (mondialRelayCarrierId && !selectedPickupPointId))}
 						>
-							{t('checkout.delivery.continue')}
+							{t('shop.checkout.delivery.continueToPayment')}
 						</StatusButton>
 					</div>
 				</Form>
 			</div>
 
 			<div className="rounded-lg border bg-card p-6">
-				<h2 className="mb-4 text-xl font-semibold">{t('checkout.delivery.orderSummary')}</h2>
+				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.orderSummary')}</h2>
 				<div className="space-y-2">
 					<div className="flex justify-between">
-						<span>{t('checkout.review.subtotal')}</span>
-						<span>{formatPrice(subtotal, currency, locale)}</span>
+					<span>{t('shop.checkout.delivery.subtotal')}</span>
+					<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
 					<div className="flex justify-between">
-						<span>{t('checkout.delivery.shipping')}</span>
-						<span>
+					<span>{t('shop.checkout.delivery.shipping')}</span>
+					<span>
 							{selectedShippingMethodId ? (
 								shippingCost === 0 ? (
-									<span className="text-green-600">{t('checkout.delivery.free')}</span>
+									<span className="text-green-600">{t('shop.checkout.delivery.free')}</span>
 								) : (
 									formatPrice(shippingCost, currency, locale)
 								)
@@ -458,8 +459,8 @@ export default function CheckoutDelivery() {
 						</span>
 					</div>
 					<div className="flex justify-between text-lg font-semibold border-t pt-2">
-						<span>{t('checkout.delivery.total')}</span>
-						<span>
+					<span>{t('shop.checkout.delivery.total')}</span>
+					<span>
 							{selectedShippingMethodId
 								? formatPrice(total, currency, locale)
 								: formatPrice(subtotal, currency, locale)}
@@ -469,7 +470,7 @@ export default function CheckoutDelivery() {
 			</div>
 
 			<div className="rounded-lg border bg-card p-6">
-				<h2 className="mb-4 text-xl font-semibold">{t('checkout.delivery.shippingDetails')}</h2>
+				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.shippingDetails')}</h2>
 				<p>
 					{shippingInfo.name}
 					<br />
