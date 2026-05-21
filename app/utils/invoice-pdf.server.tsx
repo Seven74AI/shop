@@ -16,6 +16,7 @@ import {
 } from '@react-pdf/renderer'
 import { formatPrice } from './price.ts'
 type Currency = {
+	code: string
 	symbol: string
 	decimals: number
 }
@@ -510,7 +511,7 @@ export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
  */
 export async function generateInvoicePdf(
 	data: InvoicePdfData,
-): Promise<Buffer> {
+): Promise<Buffer | Uint8Array> {
 	return renderToBuffer(<InvoiceDocument data={data} />)
 }
 

@@ -67,14 +67,14 @@ export async function action({ params, request }: Route.ActionArgs) {
 
 	try {
 		const result = await withInvoiceLock(async () => {
-			const invoiceNumber = await generateInvoiceNumber(fiscalYear)
+			const invoiceNumber = await generateInvoiceNumber(fiscalYear!)
 
 			// Extract sequence from the generated number
 			const match = invoiceNumber.match(/^F\d{4}-(\d{5})$/)
 			if (!match) {
 				throw new Error(`Invalid generated invoice number: ${invoiceNumber}`)
 			}
-			const sequence = parseInt(match[1], 10)
+			const sequence = parseInt(match[1]!, 10)
 
 			// Build VAT breakdown from order data (snapshot at invoice time)
 			// If order has VAT info, use it; otherwise create a simple breakdown
