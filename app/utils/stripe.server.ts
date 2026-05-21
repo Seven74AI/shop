@@ -2,14 +2,21 @@ import { invariant, invariantResponse } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
 import Stripe from 'stripe'
 
-// In test mode, use the default HTTP client so MSW can intercept requests.
-// In dev/prod, use the fetch-based client to bypass MSW.
-// See: https://github.com/mswjs/msw/issues/2259#issuecomment-2422672039
+/**
+ * Initialize Stripe client with API key from environment variables.
+ * Throws an error if STRIPE_SECRET_KEY is not set.
+ * 
+ * In test mode, we use the default HTTP client so MSW can intercept requests.
+ * In development/production, we use fetch-based HTTP client to bypass MSW.
+ */
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 	apiVersion: '2026-04-22.dahlia',
-	maxNetworkRetries: 0,
-	timeout: 10000,
-	telemetry: false,
+	maxNetworkRetries: 0, // Disable retries to fail fast
+	timeout: 10000, // 10 seconds global timeout
+	telemetry: false, // Disable telemetry for faster requests
+	// Use fetch-based HTTP client in non-test environments to bypass MSW interception
+	// In test mode, use default HTTP client so MSW can intercept requests
+	// See: https://github.com/mswjs/msw/issues/2259#issuecomment-2422672039
 	...(process.env.NODE_ENV !== 'test' && {
 		httpClient: Stripe.createFetchHttpClient(),
 	}),
@@ -20,6 +27,11 @@ invariant(
 	'STRIPE_SECRET_KEY must be set in environment variables',
 )
 
+/**
+ * Handles Stripe errors and returns a user-friendly error message.
+ * @param err - The error to handle
+ * @returns An object with error type and message
+ */
 export function handleStripeError(err: unknown): {
 	type: string
 	message: string
@@ -70,6 +82,9 @@ export function handleStripeError(err: unknown): {
 	}
 }
 
+/**
+ * Cart item with product and variant details for creating checkout session
+ */
 type CartItemWithDetails = {
 	id: string
 	productId: string
@@ -88,15 +103,23 @@ type CartItemWithDetails = {
 	} | null
 }
 
+/**
+ * Creates a Stripe Checkout Session for the given cart.
+ * @param params - Parameters for checkout session creation
+ * @returns Stripe Checkout Session with URL
+ */
 export async function createCheckoutSession({
 	cart,
 	shippingInfo,
 	shippingMethodId,
 	shippingCost,
 	mondialRelayPickupPointId,
+	customerVatNumber,
 	currency,
 	domainUrl,
 	userId,
+	vatTotalCents,
+	vatBreakdown,
 }: {
 	cart: {
 		id: string
@@ -114,11 +137,14 @@ export async function createCheckoutSession({
 	shippingMethodId: string
 	shippingCost: number // in cents
 	mondialRelayPickupPointId?: string | null
+	customerVatNumber?: string | null
 	currency: {
 		code: string
 	}
 	domainUrl: string
 	userId?: string | null
+	vatTotalCents?: number
+	vatBreakdown?: Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -155,6 +181,21 @@ export async function createCheckoutSession({
 		})
 	}
 
+	// Add VAT as a line item if applicable
+	if (vatTotalCents && vatTotalCents > 0) {
+		lineItems.push({
+			price_data: {
+				currency: currency.code.toLowerCase(),
+				product_data: {
+					name: 'VAT',
+					description: 'Value Added Tax',
+				},
+				unit_amount: vatTotalCents,
+			},
+			quantity: 1,
+		})
+	}
+
 	// Create checkout session
 	const sessionParams: any = {
 		line_items: lineItems,
@@ -173,6 +214,15 @@ export async function createCheckoutSession({
 			shippingCountry: shippingInfo.country,
 			shippingMethodId: shippingMethodId,
 			shippingCost: shippingCost.toString(),
+			...(customerVatNumber && {
+				customerVatNumber,
+			}),
+			...(vatTotalCents !== undefined && {
+				vatTotalCents: vatTotalCents.toString(),
+			}),
+			...(vatBreakdown && vatBreakdown.length > 0 && {
+				vatBreakdown: JSON.stringify(vatBreakdown),
+			}),
 			...(mondialRelayPickupPointId && {
 				mondialRelayPickupPointId: mondialRelayPickupPointId,
 			}),
