@@ -1,4 +1,5 @@
-import { cn, useOptionalTranslation } from '#app/utils/misc.tsx'
+import { cn } from '#app/utils/misc.tsx'
+import { useOptionalTranslation } from '#app/utils/i18n.tsx'
 
 export type CheckoutStep = 'review' | 'shipping' | 'delivery' | 'payment'
 
