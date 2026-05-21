@@ -6,9 +6,11 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
+import { formatDate } from '#app/utils/date.ts'
+import { formatAddress } from '#app/utils/address.ts'
 import { formatPrice } from '#app/utils/price.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/$orderNumber.ts'
 
 export async function loader({ params, request }: Route.LoaderArgs) {
@@ -48,8 +50,8 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function OrderDetail({ loaderData }: Route.ComponentProps) {
-	const { t, locale } = useTranslation()
 	const { order } = loaderData
+	const { locale } = useTranslation()
 	const [showTracking, setShowTracking] = useState(false)
 
 	const trackingFetcher = useFetcher<{
@@ -66,6 +68,15 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 		message?: string
 	}>()
 
+	const shippingAddress = formatAddress({
+		name: order.shippingName ?? '',
+		street: order.shippingStreet ?? '',
+		city: order.shippingCity ?? '',
+		state: order.shippingState,
+		postal: order.shippingPostal ?? '',
+		country: order.shippingCountry ?? '',
+	})
+
 	// Fetch tracking info when button is clicked
 	const handleLoadTracking = () => {
 		if (!showTracking && order.mondialRelayShipmentNumber) {
@@ -81,9 +92,9 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 		<div className="container mx-auto px-4 py-8 space-y-8">
 			<div className="flex items-center justify-between">
 				<div>
-				<h1 className="text-3xl font-bold tracking-tight">{t('shop.order.detail.title')}</h1>
-				<p className="text-muted-foreground">
-					{t('shop.order.detail.orderNumber')} <span className="font-semibold">{order.orderNumber}</span>
+					<h1 className="text-3xl font-bold tracking-tight">Order Details</h1>
+					<p className="text-muted-foreground">
+						Order Number: <span className="font-semibold">{order.orderNumber}</span>
 					</p>
 				</div>
 				<OrderStatusBadge status={order.status} className="text-sm" />
@@ -93,7 +104,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 				{/* Order Items */}
 				<Card>
 					<CardHeader>
-						<h2>{t('shop.order.detail.items')}</h2>
+						<h2>Items</h2>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
@@ -115,12 +126,12 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 													.join(', ')}
 											</p>
 										)}
-							<p className="text-sm text-muted-foreground">
-								{t('shop.order.detail.quantity', { count: item.quantity })}
-							</p>
+										<p className="text-sm text-muted-foreground">
+											Quantity: {item.quantity}
+										</p>
 									</div>
 									<div className="text-right">
-										<p className="font-semibold">{formatPrice(item.price)}</p>
+										<p className="font-semibold">{formatPrice(item.price, null, locale)}</p>
 									</div>
 								</div>
 							))}
@@ -132,46 +143,46 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 				<div className="space-y-6">
 					<Card>
 						<CardHeader>
-							<h2>{t('shop.order.detail.orderSummary')}</h2>
+							<h2>Order Summary</h2>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="flex justify-between">
-								<span className="text-muted-foreground">{t('shop.order.detail.subtotal')}</span>
-								<span>{formatPrice(order.subtotal)}</span>
+								<span className="text-muted-foreground">Subtotal</span>
+								<span>{formatPrice(order.subtotal, null, locale)}</span>
 							</div>
 							{order.shippingCost !== null && order.shippingCost !== undefined && (
 								<div className="flex justify-between">
-						<span className="text-muted-foreground">{t('shop.order.detail.shipping')}</span>
-						<span>
-							{order.shippingCost === 0 ? (
-								<span className="text-green-600 font-semibold">{t('shop.order.detail.free')}</span>
+									<span className="text-muted-foreground">Shipping</span>
+									<span>
+										{order.shippingCost === 0 ? (
+											<span className="text-green-600 font-semibold">Free</span>
 										) : (
-											formatPrice(order.shippingCost)
+											formatPrice(order.shippingCost, null, locale)
 										)}
 									</span>
 								</div>
 							)}
 							{order.shippingMethodName && (
 								<div className="text-sm text-muted-foreground pt-2 border-t">
-							{order.shippingCarrierName && (
-								<p>
-									<strong>{t('shop.order.detail.carrier')}</strong> {order.shippingCarrierName}
-								</p>
-							)}
-							<p>
-								<strong>{t('shop.order.detail.method')}</strong> {order.shippingMethodName}
-							</p>
-					{order.mondialRelayPickupPointName && (
-						<p className="mt-1">
-							<strong>{t('shop.order.detail.pickupPoint')}</strong>{' '}
-							{order.mondialRelayPickupPointName}
-						</p>
+									{order.shippingCarrierName && (
+										<p>
+											<strong>Carrier:</strong> {order.shippingCarrierName}
+										</p>
+									)}
+									<p>
+										<strong>Method:</strong> {order.shippingMethodName}
+									</p>
+									{order.mondialRelayPickupPointName && (
+										<p className="mt-1">
+											<strong>Pickup Point:</strong>{' '}
+											{order.mondialRelayPickupPointName}
+										</p>
 									)}
 									{order.mondialRelayShipmentNumber && (
 										<div className="mt-2">
-					<p className="mb-2">
-						<strong>{t('shop.order.detail.shipmentNumber')}</strong> {order.mondialRelayShipmentNumber}
-					</p>
+											<p className="mb-2">
+												<strong>Shipment Number:</strong> {order.mondialRelayShipmentNumber}
+											</p>
 											<Button
 												type="button"
 												variant="outline"
@@ -179,16 +190,16 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 												onClick={handleLoadTracking}
 												disabled={trackingFetcher.state === 'loading'}
 											>
-						{trackingFetcher.state === 'loading' ? (
-							<>
-								<Icon name="update" className="h-4 w-4 animate-spin mr-2" />
-								{t('shop.order.detail.loading')}
-							</>
-						) : (
-							<>
-								<Icon name="magnifying-glass" className="h-4 w-4 mr-2" />
-								{showTracking ? t('shop.order.detail.refreshTracking') : t('shop.order.detail.viewTracking')}
-							</>
+												{trackingFetcher.state === 'loading' ? (
+													<>
+														<Icon name="update" className="h-4 w-4 animate-spin mr-2" />
+														Loading...
+													</>
+												) : (
+													<>
+														<Icon name="magnifying-glass" className="h-4 w-4 mr-2" />
+														{showTracking ? 'Refresh Tracking' : 'View Tracking'}
+													</>
 												)}
 											</Button>
 										</div>
@@ -196,51 +207,43 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 								</div>
 							)}
 							<div className="border-t pt-4 flex justify-between text-lg font-bold">
-								<span>{t('shop.order.detail.total')}</span>
-								<span>{formatPrice(order.total)}</span>
+								<span>Total</span>
+								<span>{formatPrice(order.total, null, locale)}</span>
 							</div>
 						</CardContent>
 					</Card>
 
 					<Card>
 						<CardHeader>
-							<h2>{t('shop.order.detail.shippingAddress')}</h2>
+							<h2>Shipping Address</h2>
 						</CardHeader>
 						<CardContent>
-							<p className="font-semibold">{order.shippingName}</p>
-							<p className="text-muted-foreground">{order.shippingStreet}</p>
-							<p className="text-muted-foreground">
-								{order.shippingCity}
-								{order.shippingState && `, ${order.shippingState}`} {order.shippingPostal}
-							</p>
-							<p className="text-muted-foreground">{order.shippingCountry}</p>
+							{shippingAddress.lines.map((line, i) => (
+								<p key={i} className={i === 0 ? 'font-semibold' : 'text-muted-foreground'}>
+									{line}
+								</p>
+							))}
 						</CardContent>
 					</Card>
 
 					<Card>
 						<CardHeader>
-							<h2>{t('shop.order.detail.orderInfo')}</h2>
+							<h2>Order Information</h2>
 						</CardHeader>
 						<CardContent className="space-y-2">
 							<div>
-								<p className="text-sm text-muted-foreground">{t('shop.order.detail.orderDate')}</p>
+								<p className="text-sm text-muted-foreground">Order Date</p>
 								<p>
-									{new Date(order.createdAt).toLocaleDateString('en-US', {
-										year: 'numeric',
-										month: 'long',
-										day: 'numeric',
-										hour: '2-digit',
-										minute: '2-digit',
-									})}
+									{formatDate(order.createdAt, locale, { dateStyle: 'full', timeStyle: 'short' })}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm text-muted-foreground">{t('shop.order.detail.email')}</p>
+								<p className="text-sm text-muted-foreground">Email</p>
 								<p>{order.email}</p>
 							</div>
 							{order.trackingNumber && (
 								<div>
-									<p className="text-sm text-muted-foreground">{t('shop.order.detail.trackingNumber')}</p>
+									<p className="text-sm text-muted-foreground">Tracking Number</p>
 									<p className="font-mono font-semibold">{order.trackingNumber}</p>
 								</div>
 							)}
@@ -251,13 +254,13 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 					{showTracking && order.mondialRelayShipmentNumber && (
 						<Card>
 							<CardHeader>
-								<h2>{t('shop.order.detail.trackingInfo')}</h2>
+								<h2>Tracking Information</h2>
 							</CardHeader>
 							<CardContent>
 								{trackingFetcher.state === 'loading' && (
 									<div className="text-center py-4">
 										<Icon name="update" className="h-6 w-6 animate-spin mx-auto mb-2" />
-										<p className="text-sm text-muted-foreground">{t('shop.order.detail.loadingTracking')}</p>
+										<p className="text-sm text-muted-foreground">Loading tracking information...</p>
 									</div>
 								)}
 
@@ -273,13 +276,13 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 								{trackingFetcher.data?.trackingInfo && (
 									<div className="space-y-4">
 										<div>
-											<p className="text-sm text-muted-foreground">{t('shop.order.detail.status')}</p>
+											<p className="text-sm text-muted-foreground">Status</p>
 											<p className="font-semibold">{trackingFetcher.data.trackingInfo.status}</p>
 										</div>
 
 										{trackingFetcher.data.trackingInfo.events.length > 0 && (
 											<div>
-												<p className="text-sm text-muted-foreground mb-2">{t('shop.order.detail.trackingEvents')}</p>
+												<p className="text-sm text-muted-foreground mb-2">Tracking Events</p>
 												<div className="space-y-3">
 													{trackingFetcher.data.trackingInfo.events.map((event, index) => (
 														<div
@@ -295,13 +298,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 																	</p>
 																)}
 																<p className="text-xs text-muted-foreground">
-																	{new Date(event.date).toLocaleString('en-US', {
-																		year: 'numeric',
-																		month: 'short',
-																		day: 'numeric',
-																		hour: '2-digit',
-																		minute: '2-digit',
-																	})}
+																	{formatDate(event.date, locale, { dateStyle: 'medium', timeStyle: 'short' })}
 																</p>
 															</div>
 														</div>
@@ -311,9 +308,9 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 										)}
 
 										{trackingFetcher.data.trackingInfo.events.length === 0 && (
-						<p className="text-sm text-muted-foreground">
-							{t('shop.order.detail.noTrackingEvents')}
-						</p>
+											<p className="text-sm text-muted-foreground">
+												No tracking events available yet.
+											</p>
 										)}
 									</div>
 								)}
@@ -325,13 +322,12 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 
 			<div className="flex gap-4">
 				<Button variant="outline" asChild>
-					<a href="/shop/orders">{t('shop.order.detail.backToOrders')}</a>
+					<a href="/shop/orders">Back to Orders</a>
 				</Button>
 				<Button asChild>
-					<a href="/shop">{t('shop.order.detail.continueShopping')}</a>
+					<a href="/shop">Continue Shopping</a>
 				</Button>
 			</div>
 		</div>
 	)
 }
-

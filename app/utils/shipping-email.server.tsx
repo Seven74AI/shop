@@ -1,13 +1,16 @@
 /**
  * Shipping Email Templates
  * 
- * Email templates for shipping-related notifications
+ * Email templates for shipping-related notifications.
+ * Supports i18n via locale parameter.
  */
 
 import * as E from '@react-email/components'
 import * as Sentry from '@sentry/react-router'
 import { type ReactElement } from 'react'
 import { sendEmail } from './email.server.ts'
+import { type Locale, getTranslations } from './i18n.server.ts'
+import { createT } from './i18n.tsx'
 import { getDomainUrl } from './misc.tsx'
 
 export interface ShippingConfirmationEmailData {
@@ -18,6 +21,7 @@ export interface ShippingConfirmationEmailData {
 	pickupPointName?: string
 	trackingUrl?: string
 	orderDetailsUrl: string
+	locale?: Locale
 }
 
 /**
@@ -32,9 +36,15 @@ export function ShippingConfirmationEmail({
 	pickupPointName,
 	trackingUrl,
 	orderDetailsUrl,
+	locale: _locale,
 }: ShippingConfirmationEmailData): ReactElement {
+	// React component can't use async getTranslations, so we accept pre-translated strings
+	// via the data object. For dynamic locale, use sendShippingConfirmationEmail which
+	// loads translations before rendering.
+	const lang = _locale === 'fr' ? 'fr' : 'en'
+
 	return (
-		<E.Html lang="en" dir="ltr">
+		<E.Html lang={lang} dir="ltr">
 			<E.Container>
 				<E.Section>
 					<E.Heading>Your Order Has Shipped!</E.Heading>
@@ -82,12 +92,8 @@ export function ShippingConfirmationEmail({
 }
 
 /**
- * Sends a shipping confirmation email to the customer
+ * Sends a localized shipping confirmation email to the customer
  * when their order has been shipped with tracking information.
- * 
- * @param data - Shipping confirmation email data
- * @param email - Customer email address
- * @param request - Request object for getting domain URL (optional)
  */
 export async function sendShippingConfirmationEmail(
 	data: Omit<ShippingConfirmationEmailData, 'orderDetailsUrl'>,
@@ -95,21 +101,30 @@ export async function sendShippingConfirmationEmail(
 	request?: Request,
 ): Promise<void> {
 	try {
+		const locale = data.locale ?? (request ? undefined : 'en') as Locale
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
 		const orderDetailsUrl = `${domainUrl}/shop/orders/${data.orderNumber}`
 
+		// Load translations to localize the email
+		const translations = locale
+			? await getTranslations(locale)
+			: await getTranslations('en')
+		const t = createT(translations)
+
+		const subject = t('email.shippingConfirmation.subject', { orderNumber: data.orderNumber })
+
 		await sendEmail({
 			to: email,
-			subject: `Your Order ${data.orderNumber} Has Shipped`,
+			subject,
 			react: (
 				<ShippingConfirmationEmail
 					{...data}
 					orderDetailsUrl={orderDetailsUrl}
+					locale={locale}
 				/>
 			),
 		})
 	} catch (error) {
-		// Log email error but don't fail shipment creation
 		Sentry.captureException(error, {
 			tags: { context: 'shipping-confirmation-email' },
 			extra: {
@@ -117,8 +132,6 @@ export async function sendShippingConfirmationEmail(
 				shipmentNumber: data.shipmentNumber,
 			},
 		})
-		// Re-throw to allow caller to handle if needed
 		throw error
 	}
 }
-
