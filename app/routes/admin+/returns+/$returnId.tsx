@@ -16,6 +16,7 @@ import { formatPrice } from '#app/utils/price.ts'
 import { getReturnRequestById } from '#app/utils/return-queries.server.ts'
 import { getReturnStatusLabel } from '#app/utils/return-status.ts'
 import { updateReturnStatus } from '#app/utils/return.server.ts'
+import { processReturnRefund } from '#app/utils/order.server.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { type Route } from './+types/$returnId.ts'
@@ -93,13 +94,18 @@ export async function action({ params, request }: Route.ActionArgs) {
 	const { status, adminNotes, refundAmountCents, restockingFeeCents } =
 		submission.value
 
-	await updateReturnStatus(
-		returnId,
-		status,
-		adminNotes || null,
-		refundAmountCents ? parseInt(refundAmountCents, 10) : null,
-		restockingFeeCents ? parseInt(restockingFeeCents, 10) : null,
-	)
+	if (status === 'REFUNDED') {
+		// Process the full refund via Stripe + credit note
+		await processReturnRefund(returnId, request)
+	} else {
+		await updateReturnStatus(
+			returnId,
+			status,
+			adminNotes || null,
+			refundAmountCents ? parseInt(refundAmountCents, 10) : null,
+			restockingFeeCents ? parseInt(restockingFeeCents, 10) : null,
+		)
+	}
 
 	const statusLabel = getReturnStatusLabel(status)
 
