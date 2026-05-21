@@ -236,6 +236,7 @@ function UpdateProfile({
 	loaderData: Route.ComponentProps['loaderData']
 	actionData?: Route.ComponentProps['actionData']
 }) {
+	const { t } = useTranslation()
 	const fetcher = useFetcher<typeof profileUpdateAction>()
 	const isPending = useIsPending()
 

@@ -10,6 +10,7 @@ import { getOrderByOrderNumber } from '#app/utils/order-queries.server.ts'
 import { getOrderStatusLabel } from '#app/utils/order-status.ts'
 import { updateOrderStatus, cancelOrder } from '#app/utils/order.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
@@ -129,6 +130,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
+	const { locale } = useTranslation()
 	const { order, currency } = loaderData
 
 	return (
