@@ -174,6 +174,11 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'en',
+				translations: createMockTranslations('en'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -204,6 +209,11 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -222,6 +232,11 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'en',
+				translations: {},
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -243,6 +258,11 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'en',
+				translations: {},
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -268,6 +288,11 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'en',
+				translations: createMockTranslations('en'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -294,6 +319,11 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -307,6 +337,7 @@ describe('TranslationProvider', () => {
 // ─── useTranslation() ───────────────────────────────────────────────
 
 describe('useTranslation()', () => {
+<<<<<<< HEAD
 	test('throws when used outside TranslationProvider', () => {
 		function BadComponent() {
 			useTranslation()
@@ -316,6 +347,20 @@ describe('useTranslation()', () => {
 		expect(() => render(createElement(BadComponent))).toThrow(
 			'useTranslation() must be used within a <TranslationProvider>',
 		)
+=======
+	test('falls back to identity when used outside TranslationProvider', () => {
+		let captured: { locale: string; t: (key: string) => string } | undefined
+
+		function TestChild() {
+			captured = useTranslation()
+			return createElement('div')
+		}
+
+		render(createElement(TestChild))
+
+		expect(captured?.locale).toBe('en')
+		expect(captured?.t('any.key')).toBe('any.key')
+>>>>>>> feat/t_bbce3b
 	})
 
 	test('returns locale from provider', () => {
@@ -334,6 +379,11 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -357,6 +407,11 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'en',
+				translations: createMockTranslations('en'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -368,8 +423,13 @@ describe('useTranslation()', () => {
 // ─── useOptionalTranslation() ───────────────────────────────────────
 
 describe('useOptionalTranslation()', () => {
+<<<<<<< HEAD
 	test('returns null when used outside TranslationProvider', () => {
 		let captured: unknown
+=======
+	test('falls back to identity when used outside TranslationProvider', () => {
+		let captured: ReturnType<typeof useTranslation> | undefined
+>>>>>>> feat/t_bbce3b
 
 		function TestChild() {
 			captured = useOptionalTranslation()
@@ -378,7 +438,12 @@ describe('useOptionalTranslation()', () => {
 
 		render(createElement(TestChild))
 
+<<<<<<< HEAD
 		expect(captured).toBeNull()
+=======
+		expect(captured?.locale).toBe('en')
+		expect(captured?.t('any.key')).toBe('any.key')
+>>>>>>> feat/t_bbce3b
 	})
 
 	test('returns context value when inside TranslationProvider', () => {
@@ -396,6 +461,11 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'en',
+				translations: createMockTranslations('en'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -423,6 +493,11 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+<<<<<<< HEAD
+=======
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
+>>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)

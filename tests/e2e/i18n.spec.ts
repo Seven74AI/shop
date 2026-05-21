@@ -24,15 +24,22 @@ test.describe('i18n — locale switching', () => {
 		page,
 	}) => {
 		await page.goto('/')
+<<<<<<< HEAD
 		await page.waitForLoadState('networkidle')
 
 		const frButton = page.getByRole('button', { name: /français/i })
 		await frButton.waitFor({ state: 'visible' })
+=======
+		const frButton = page.getByRole('button', { name: /français/i })
+>>>>>>> feat/t_bbce3b
 		await frButton.click()
 
 		// Should redirect back to home
 		await page.waitForURL('/')
+<<<<<<< HEAD
 		await page.waitForLoadState('networkidle')
+=======
+>>>>>>> feat/t_bbce3b
 
 		// Cookie should be set (fetcher redirects may apply Set-Cookie async)
 		await expect
@@ -61,6 +68,7 @@ test.describe('i18n — locale switching', () => {
 			},
 		])
 		await page.goto('/')
+<<<<<<< HEAD
 		await page.waitForLoadState('networkidle')
 
 		const enButton = page.getByRole('button', { name: /english/i })
@@ -69,6 +77,12 @@ test.describe('i18n — locale switching', () => {
 
 		await page.waitForURL('/')
 		await page.waitForLoadState('networkidle')
+=======
+		const enButton = page.getByRole('button', { name: /english/i })
+		await enButton.click()
+
+		await page.waitForURL('/')
+>>>>>>> feat/t_bbce3b
 
 		// Cookie should be updated (fetcher redirects may apply Set-Cookie async)
 		await expect
@@ -143,15 +157,22 @@ test.describe('i18n — locale switching', () => {
 		page,
 	}) => {
 		await page.goto('/shop')
+<<<<<<< HEAD
 		await page.waitForLoadState('networkidle')
 
 		const frButton = page.getByRole('button', { name: /français/i })
 		await frButton.waitFor({ state: 'visible' })
+=======
+		const frButton = page.getByRole('button', { name: /français/i })
+>>>>>>> feat/t_bbce3b
 		await frButton.click()
 
 		// Should redirect back to /shop, not /
 		await page.waitForURL('/shop')
+<<<<<<< HEAD
 		await page.waitForLoadState('networkidle')
+=======
+>>>>>>> feat/t_bbce3b
 	})
 
 	test('switching locale does not clear cart', async ({ page }) => {

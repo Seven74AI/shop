@@ -4,11 +4,14 @@ import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
 import { prisma } from './db.server.ts'
 import { sendEmail } from './email.server.ts'
+import { type Locale, getLocale, getTranslations } from './i18n.server.ts'
+import { createT } from './i18n.tsx'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { generateInvoiceNumber, parseInvoiceNumber, formatInvoiceNumber } from './invoice.server.ts'
 import { stripe } from './stripe.server.ts'
 import { calculateVat, type TaxableItem } from './tax.server.ts'
+<<<<<<< HEAD
 import { issueCreditNote, type RefundedLineItem } from './invoice.server.ts'
 import {
 	generateInvoicePdf,
@@ -16,6 +19,8 @@ import {
 } from './invoice-pdf.server.tsx'
 import { getReturnRequestById } from './return-queries.server.ts'
 import { updateReturnStatus } from './return.server.ts'
+=======
+>>>>>>> feat/t_bbce3b
 
 /**
  * Type for stock availability issues
@@ -266,6 +271,18 @@ export async function getGuestOrder(orderNumber: string, email: string) {
 }
 
 /**
+ * Returns the best locale for an order's email notification.
+ * Priority: request locale (from cookie/Accept-Language) > taxCountry heuristic > 'en'
+ */
+function getOrderLocale(request?: Request, taxCountry?: string): Locale {
+	if (request) {
+		return getLocale(request)
+	}
+	if (taxCountry?.toUpperCase() === 'FR') return 'fr'
+	return 'en'
+}
+
+/**
  * Updates an order status (admin only) and sends email notification.
  * @param orderId - The ID of the order to update
  * @param status - The new status
@@ -294,45 +311,51 @@ export async function updateOrderStatus(
 			email: true,
 			status: true,
 			trackingNumber: true,
+			shippingCountry: true,
 		},
 	})
 
 	// Send status update email (non-blocking - don't fail status update if email fails)
 	try {
+		const locale = getOrderLocale(request, order.shippingCountry)
+		const translations = await getTranslations(locale)
+		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
 		const statusLabel = getStatusLabel(status)
-		
+
+		const subject = t('email.statusUpdate.subject', { orderNumber: order.orderNumber })
+
 		let emailBody = `
-			<h1>Order Status Update</h1>
-			<p>Your order status has been updated.</p>
-			<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-			<p><strong>New Status:</strong> ${statusLabel}</p>
+			<h1>${t('email.statusUpdate.heading')}</h1>
+			<p>${t('email.statusUpdate.body')}</p>
+			<p><strong>${t('email.statusUpdate.orderNumber')}:</strong> ${order.orderNumber}</p>
+			<p><strong>${t('email.statusUpdate.newStatus')}:</strong> ${statusLabel}</p>
 		`
-		
+
 		if (status === 'SHIPPED' && order.trackingNumber) {
-			emailBody += `<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>`
+			emailBody += `<p><strong>${t('email.statusUpdate.trackingNumber')}:</strong> ${order.trackingNumber}</p>`
 		}
-		
-		emailBody += `<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>`
-		
+
+		emailBody += `<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>`
+
 		let textBody = `
-Order Status Update
+${t('email.statusUpdate.heading')}
 
-Your order status has been updated.
+${t('email.statusUpdate.body')}
 
-Order Number: ${order.orderNumber}
-New Status: ${statusLabel}
+${t('email.statusUpdate.orderNumber')}: ${order.orderNumber}
+${t('email.statusUpdate.newStatus')}: ${statusLabel}
 `
-		
+
 		if (status === 'SHIPPED' && order.trackingNumber) {
-			textBody += `Tracking Number: ${order.trackingNumber}\n`
+			textBody += `${t('email.statusUpdate.trackingNumber')}: ${order.trackingNumber}\n`
 		}
-		
-		textBody += `View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}`
-		
+
+		textBody += `${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}`
+
 		await sendEmail({
 			to: order.email,
-			subject: `Order Status Update - ${order.orderNumber}`,
+			subject,
 			html: emailBody,
 			text: textBody,
 		})
@@ -386,6 +409,7 @@ export async function cancelOrder(
 			stripePaymentIntentId: true,
 			stripeChargeId: true,
 			total: true,
+<<<<<<< HEAD
 			subtotal: true,
 			shippingCost: true,
 			shippingName: true,
@@ -407,6 +431,9 @@ export async function cancelOrder(
 				take: 1,
 				orderBy: { createdAt: 'desc' },
 			},
+=======
+			shippingCountry: true,
+>>>>>>> feat/t_bbce3b
 		},
 	})
 
@@ -455,8 +482,12 @@ export async function cancelOrder(
 
 	// Send cancellation email with credit note PDF if available (non-blocking)
 	try {
+		const locale = getOrderLocale(request, order.shippingCountry)
+		const translations = await getTranslations(locale)
+		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
 
+<<<<<<< HEAD
 		// Attempt to generate credit note PDF for email attachment
 		let creditNotePdfBuffer: Buffer | null = null
 		let creditNoteNumber: string | null = null
@@ -536,11 +567,15 @@ export async function cancelOrder(
 				})
 			}
 		}
+=======
+		const subject = t('email.cancellation.subject', { orderNumber: order.orderNumber })
+>>>>>>> feat/t_bbce3b
 
 		await sendEmail({
 			to: order.email,
-			subject: `Order Cancelled - ${order.orderNumber}`,
+			subject,
 			html: `
+<<<<<<< HEAD
 				<h1>Order Cancelled</h1>
 				<p>Your order has been cancelled.</p>
 				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
@@ -548,18 +583,32 @@ export async function cancelOrder(
 				${creditNoteNumber ? `<p><strong>Credit Note:</strong> ${creditNoteNumber}</p>` : ''}
 				<p>${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}</p>
 				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
+=======
+				<h1>${t('email.cancellation.heading')}</h1>
+				<p>${t('email.cancellation.body')}</p>
+				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
+				${refundId ? `<p><strong>${t('email.cancellation.refundId')}:</strong> ${refundId}</p>` : ''}
+				<p>${refundId ? t('email.cancellation.refundProcessed') : t('email.cancellation.contactSupport')}</p>
+				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
+>>>>>>> feat/t_bbce3b
 			`,
 			text: `
-Order Cancelled
+${t('email.cancellation.heading')}
 
-Your order has been cancelled.
+${t('email.cancellation.body')}
 
+<<<<<<< HEAD
 Order Number: ${order.orderNumber}
 ${refundId ? `Refund ID: ${refundId}` : ''}
 ${creditNoteNumber ? `Credit Note: ${creditNoteNumber}` : ''}
 ${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}
+=======
+${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
+${refundId ? `${t('email.cancellation.refundId')}: ${refundId}` : ''}
+${refundId ? t('email.cancellation.refundProcessed') : t('email.cancellation.contactSupport')}
+>>>>>>> feat/t_bbce3b
 
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
+${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,
 			...(creditNotePdfBuffer
 				? {
@@ -917,6 +966,9 @@ export async function createOrderFromStripeSession(
 
 	// Send confirmation email (non-blocking - don't fail order creation if email fails)
 	try {
+		const locale = getOrderLocale(request, order.shippingCountry)
+		const translations = await getTranslations(locale)
+		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
 		
 		// Build VAT details for email
@@ -937,8 +989,9 @@ export async function createOrderFromStripeSession(
 		
 		await sendEmail({
 			to: order.email,
-			subject: `Order Confirmation - ${order.orderNumber}`,
+			subject: t('email.orderConfirmation.subject', { orderNumber: order.orderNumber }),
 			html: `
+<<<<<<< HEAD
 				<h1>Order Confirmation</h1>
 				<p>Thank you for your order!</p>
 				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
@@ -946,18 +999,34 @@ export async function createOrderFromStripeSession(
 				${vatHtml}
 				<p><strong>Total:</strong> €${(order.total / 100).toFixed(2)}</p>
 				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
+=======
+				<h1>${t('email.orderConfirmation.heading')}</h1>
+				<p>${t('email.orderConfirmation.thankYou')}</p>
+				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
+				<p><strong>Subtotal:</strong> €${(order.subtotal / 100).toFixed(2)}</p>
+				${vatHtml}
+				<p><strong>${t('email.orderConfirmation.total')}:</strong> €${(order.total / 100).toFixed(2)}</p>
+				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
+>>>>>>> feat/t_bbce3b
 			`,
 			text: `
-Order Confirmation
+${t('email.orderConfirmation.heading')}
 
-Thank you for your order!
+${t('email.orderConfirmation.thankYou')}
 
+<<<<<<< HEAD
 Order Number: ${order.orderNumber}
 Subtotal: €${(order.subtotal / 100).toFixed(2)}
 ${vatText}
 Total: €${(order.total / 100).toFixed(2)}
+=======
+${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
+Subtotal: €${(order.subtotal / 100).toFixed(2)}
+${vatText}
+${t('email.orderConfirmation.total')}: €${(order.total / 100).toFixed(2)}
+>>>>>>> feat/t_bbce3b
 
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
+${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,
 		})
 	} catch (emailError) {

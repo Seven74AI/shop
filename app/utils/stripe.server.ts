@@ -2,21 +2,23 @@ import { invariant, invariantResponse } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
 import Stripe from 'stripe'
 
-/**
- * Initialize Stripe client with API key from environment variables.
- * Throws an error if STRIPE_SECRET_KEY is not set.
- * 
- * In test mode, we use the default HTTP client so MSW can intercept requests.
- * In development/production, we use fetch-based HTTP client to bypass MSW.
- */
+// In test mode, use the default HTTP client so MSW can intercept requests.
+// In dev/prod, use the fetch-based client to bypass MSW.
+// See: https://github.com/mswjs/msw/issues/2259#issuecomment-2422672039
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 	apiVersion: '2026-04-22.dahlia',
+<<<<<<< HEAD
 	maxNetworkRetries: 0, // Disable retries to fail fast
 	timeout: 10000, // 10 seconds global timeout
 	telemetry: false, // Disable telemetry for faster requests
 	// Use fetch-based HTTP client in non-test environments to bypass MSW interception
 	// In test mode, use default HTTP client so MSW can intercept requests
 	// See: https://github.com/mswjs/msw/issues/2259#issuecomment-2422672039
+=======
+	maxNetworkRetries: 0,
+	timeout: 10000,
+	telemetry: false,
+>>>>>>> feat/t_bbce3b
 	...(process.env.NODE_ENV !== 'test' && {
 		httpClient: Stripe.createFetchHttpClient(),
 	}),
@@ -27,11 +29,6 @@ invariant(
 	'STRIPE_SECRET_KEY must be set in environment variables',
 )
 
-/**
- * Handles Stripe errors and returns a user-friendly error message.
- * @param err - The error to handle
- * @returns An object with error type and message
- */
 export function handleStripeError(err: unknown): {
 	type: string
 	message: string
@@ -82,9 +79,6 @@ export function handleStripeError(err: unknown): {
 	}
 }
 
-/**
- * Cart item with product and variant details for creating checkout session
- */
 type CartItemWithDetails = {
 	id: string
 	productId: string
@@ -103,11 +97,6 @@ type CartItemWithDetails = {
 	} | null
 }
 
-/**
- * Creates a Stripe Checkout Session for the given cart.
- * @param params - Parameters for checkout session creation
- * @returns Stripe Checkout Session with URL
- */
 export async function createCheckoutSession({
 	cart,
 	shippingInfo,
@@ -118,8 +107,12 @@ export async function createCheckoutSession({
 	currency,
 	domainUrl,
 	userId,
+<<<<<<< HEAD
 	vatTotalCents,
 	vatBreakdown,
+=======
+	locale,
+>>>>>>> feat/t_bbce3b
 }: {
 	cart: {
 		id: string
@@ -143,8 +136,12 @@ export async function createCheckoutSession({
 	}
 	domainUrl: string
 	userId?: string | null
+<<<<<<< HEAD
 	vatTotalCents?: number
 	vatBreakdown?: Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
+=======
+	locale?: string | null
+>>>>>>> feat/t_bbce3b
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -203,6 +200,7 @@ export async function createCheckoutSession({
 		success_url: `${domainUrl}/shop/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
 		cancel_url: `${domainUrl}/shop/checkout?canceled=true`,
 		customer_email: shippingInfo.email,
+		...(locale ? { locale } : {}),
 		metadata: {
 			cartId: cart.id,
 			userId: userId || '',
