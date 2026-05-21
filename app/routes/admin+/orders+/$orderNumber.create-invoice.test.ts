@@ -81,7 +81,7 @@ describe('admin order create-invoice', () => {
 			request,
 		} as any)
 
-		const resultData = ('data' in result ? result.data : result) as any
+		const resultData: any = 'data' in result ? result.data : result
 		expect(resultData).toHaveProperty('success', true)
 		expect(resultData).toHaveProperty('invoice')
 		expect(resultData.invoice).toHaveProperty('number')
@@ -130,7 +130,7 @@ describe('admin order create-invoice', () => {
 			request: request1,
 		} as any)
 
-		const data1 = ('data' in result1 ? result1.data : result1) as any
+		const data1: any = 'data' in result1 ? result1.data : result1
 		expect(data1.success).toBe(true)
 
 		// Second call should return the existing invoice (idempotent)
@@ -143,7 +143,7 @@ describe('admin order create-invoice', () => {
 			request: request2,
 		} as any)
 
-		const data2 = ('data' in result2 ? result2.data : result2) as any
+		const data2: any = 'data' in result2 ? result2.data : result2
 		expect(data2.success).toBe(true)
 		expect(data2.invoice.id).toBe(data1.invoice.id)
 		expect(data2.invoice.number).toBe(data1.invoice.number)
@@ -196,7 +196,7 @@ describe('admin order create-invoice', () => {
 			request,
 		} as any)
 
-		const resultData = ('data' in result ? result.data : result) as any
+		const resultData: any = 'data' in result ? result.data : result
 		expect(resultData).toHaveProperty('error', 'Cannot invoice cancelled order')
 	})
 
@@ -228,10 +228,10 @@ describe('admin order create-invoice', () => {
 		for (let i = 0; i < orders.length; i++) {
 			const request = await createAuthRequest(
 				adminUserId,
-				`https://example.com/admin/orders/${orders[i]!.orderNumber}/create-invoice`,
-			)
-			const result = await action({
-				params: { orderNumber: orders[i]!.orderNumber },
+			`https://example.com/admin/orders/${orders[i]!.orderNumber}/create-invoice`,
+		)
+		const result = await action({
+			params: { orderNumber: orders[i]!.orderNumber },
 				request,
 			} as any)
 			const data = 'data' in result ? result.data : result
