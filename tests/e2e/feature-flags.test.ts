@@ -192,14 +192,17 @@ test.describe('Feature Flags Admin Panel', () => {
 
 			await toggleButton.click()
 
-			// Wait for toggle to complete and page to reload
-			await expect(page).toHaveURL(/\/admin\/feature-flags$/)
+		// Wait for toggle to complete and page to reload
+		await expect(page).toHaveURL(/\/admin\/feature-flags$/)
 
-			// Verify toggle in database
-			const flag = await prisma.flag.findUnique({
-				where: { key: `${FEATURE_FLAG_E2E_PREFIX}toggle-test` },
-			})
-			expect(flag?.enabled).toBe(true)
+		// Wait for DB to reflect toggle (Prisma write may not be committed yet)
+		await page.waitForTimeout(500)
+
+		// Verify toggle in database
+		const flag = await prisma.flag.findUnique({
+			where: { key: `${FEATURE_FLAG_E2E_PREFIX}toggle-test` },
+		})
+		expect(flag?.enabled).toBe(true)
 		})
 
 		test('should delete a feature flag', async ({
