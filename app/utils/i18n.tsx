@@ -68,3 +68,12 @@ export function createT(translations: Record<string, string>) {
 		return value
 	}
 }
+
+/**
+ * Safe version of useTranslation() that falls back to identity function.
+ * Use in components that may render outside a TranslationProvider.
+ * Re-exported here for convenience; primary export is via misc.tsx.
+ */
+export function useOptionalTranslation(): I18nContextValue {
+	return useTranslation()
+}

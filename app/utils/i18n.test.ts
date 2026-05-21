@@ -174,6 +174,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -204,6 +206,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -222,6 +226,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: {},
 				children: createElement(TestChild),
 			}),
 		)
@@ -243,6 +249,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: {},
 				children: createElement(TestChild),
 			}),
 		)
@@ -268,6 +276,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -294,6 +304,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -334,6 +346,8 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -357,6 +371,8 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -396,6 +412,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: createMockTranslations('en'),
 				children: createElement(TestChild),
 			}),
 		)
@@ -423,6 +441,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: createMockTranslations('fr'),
 				children: createElement(TestChild),
 			}),
 		)
