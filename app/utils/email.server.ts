@@ -51,10 +51,7 @@ export async function sendEmail({
 	if (attachments && attachments.length > 0) {
 		email.attachments = attachments.map((att) => ({
 			filename: att.filename,
-			content:
-				typeof att.content === 'string'
-					? att.content
-					: att.content.toString('base64'),
+			content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
 		}))
 	}
 
