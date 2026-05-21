@@ -1,5 +1,5 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { Link, type MetaFunction } from 'react-router'
+import { Link } from 'react-router'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '#app/components/ui/card.tsx'
@@ -67,10 +67,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	return { invoice, currency }
 }
 
-export const meta: MetaFunction = ({ data }) => {
-	const d = data as Record<string, any> | undefined
-	if (!d) return [{ title: 'Invoice Not Found | Admin | Epic Shop' }]
-	const num = `F${d.invoice.fiscalYear}-${String(d.invoice.sequence).padStart(5, '0')}`
+export function meta({ data }: { data: Awaited<ReturnType<typeof loader>> | undefined }) {
+	if (!data) return [{ title: 'Invoice Not Found | Admin | Epic Shop' }]
+	const num = `F${data.invoice.fiscalYear}-${String(data.invoice.sequence).padStart(5, '0')}`
 	return [
 		{ title: `Invoice ${num} | Admin | Epic Shop` },
 		{ name: 'description', content: `View invoice ${num}` },
