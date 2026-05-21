@@ -122,7 +122,6 @@ export async function action({ request }: Route.ActionArgs) {
 		throw error
 	}
 
->>>>>>> feat/t_bbce3b
 	const cartWithItems = await prisma.cart.findUnique({
 		where: { id: cart.id },
 		include: {
@@ -159,25 +158,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const userId = await getUserId(request)
 	const locale = getLocale(request)
 
-<<<<<<< HEAD
-	// Calculate VAT for the order
-	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
-	let vatCalculation = null
-	try {
-		vatCalculation = await calculateCartVat(
-			cartWithItems as any,
-			country,
-			customerVatNumber,
-		)
-	} catch (vatErr) {
-		Sentry.captureException(vatErr, {
-			tags: { context: 'checkout-vat-calculation' },
-		})
-		// Continue without VAT on calculation failure
-	}
 
-	// Create Stripe Checkout Session
-=======
 	try {
 		const domainUrl = getDomainUrl(request)
 		const session = await createCheckoutSession({

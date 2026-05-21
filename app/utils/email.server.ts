@@ -47,20 +47,7 @@ export async function sendEmail({
 		...(react ? await renderReactEmail(react) : null),
 	}
 
-<<<<<<< HEAD
-	// Encode attachments for Resend API (Base64-encoded content)
-	if (attachments && attachments.length > 0) {
-		email.attachments = attachments.map((att) => ({
-			filename: att.filename,
-			content:
-				typeof att.content === 'string'
-					? att.content
-					: att.content.toString('base64'),
-		}))
-	}
 
-=======
->>>>>>> feat/t_bbce3b
 	// Skip real API call when no valid API key or in mocks mode
 	if (!process.env.RESEND_API_KEY || process.env.MOCKS === 'true') {
 		console.info('🔶 Mocking email send (no API key or mocks mode)')

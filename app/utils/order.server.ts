@@ -11,7 +11,6 @@ import { generateOrderNumber } from './order-number.server.ts'
 import { generateInvoiceNumber, parseInvoiceNumber, formatInvoiceNumber } from './invoice.server.ts'
 import { stripe } from './stripe.server.ts'
 import { calculateVat, type TaxableItem } from './tax.server.ts'
->>>>>>> feat/t_bbce3b
 
 /**
  * Type for stock availability issues
@@ -400,29 +399,7 @@ export async function cancelOrder(
 			stripePaymentIntentId: true,
 			stripeChargeId: true,
 			total: true,
-<<<<<<< HEAD
-			subtotal: true,
-			shippingCost: true,
-			shippingName: true,
-			shippingStreet: true,
-			shippingCity: true,
-			shippingPostal: true,
-			shippingCountry: true,
-			createdAt: true,
-			items: {
-				include: {
-					product: { select: { name: true } },
-					variant: {
-						select: { id: true, sku: true },
-					},
-				},
-			},
-			invoices: {
-				where: { kind: 'INVOICE' },
-				take: 1,
-				orderBy: { createdAt: 'desc' },
-			},
-=======
+
 			shippingCountry: true,
 		},
 	})

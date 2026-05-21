@@ -138,7 +138,6 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
->>>>>>> feat/t_bbce3b
 	const processing = loaderData?.processing ?? false
 	const sessionId = loaderData?.sessionId ?? null
 	const defaultMessage = loaderData?.message ?? 'Your order is being processed. Please wait a moment.'
@@ -227,9 +226,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					<h1 className="text-base font-normal text-[#101828] mb-4 leading-[1.5em]">
-<<<<<<< HEAD
-						{isSyncing ? t('shop.checkout.success.creating') : t('shop.checkout.success.title')}
-=======
+
 						{isSyncing ? t('checkout.success.creating') : t('checkout.success.processing')}
 					</h1>
 

@@ -133,7 +133,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
->>>>>>> feat/t_bbce3b
 	const locale = getLocale(request)
 	const translations = await getTranslations(locale)
 
@@ -318,9 +317,7 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
-<<<<<<< HEAD
-				<div className="flex items-center gap-6">
-=======
+
 				<div className="flex items-center gap-4">
 					<LocaleSwitch />
 					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
