@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 
 function formatCents(cents: number, currency: Currency | null): string {
-	return formatPrice(cents, currency)
+	return formatPrice(cents, currency as any)
 }
 
 function formatRate(rate: number): string {

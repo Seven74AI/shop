@@ -309,7 +309,7 @@ export default function CheckoutPayment() {
 		)
 	}
 
-	if (!cart || !currency, locale) {
+	if (!cart || !currency || !locale) {
 		return (
 			<div className="text-center">
 				<p className="text-muted-foreground">Loading...</p>

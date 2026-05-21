@@ -182,8 +182,8 @@ describe('admin invoice detail', () => {
 			request,
 		} as any)
 
-		expect(result.invoice.creditNotes).toHaveLength(1)
-		expect(result.invoice.creditNotes[0].id).toBe(creditNote.id)
+		expect(result.invoice!.creditNotes).toHaveLength(1)
+		expect(result.invoice!.creditNotes[0].id).toBe(creditNote.id)
 		expect(result.invoice.creditNotes[0].kind).toBe('CREDIT_NOTE')
 
 		// Check credit note references parent
@@ -197,8 +197,8 @@ describe('admin invoice detail', () => {
 			request: request2,
 		} as any)
 
-		expect(result2.invoice.parentInvoice).toBeTruthy()
-		expect(result2.invoice.parentInvoice.id).toBe(originalInvoice.id)
+		expect(result2.invoice!.parentInvoice).toBeTruthy()
+		expect(result2.invoice!.parentInvoice!.id).toBe(originalInvoice.id)
 		expect(result2.invoice.kind).toBe('CREDIT_NOTE')
 	})
 

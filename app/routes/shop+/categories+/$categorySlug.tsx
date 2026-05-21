@@ -125,7 +125,7 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 						)}
 							<h2 className="font-semibold text-lg mb-1">{product.name}</h2>
 							<p className="text-primary font-medium">
-								{formatPrice(product.price, currency, locale)}
+								{formatPrice(product.price, currency as any, locale)}
 							</p>
 						</Link>
 					))}
