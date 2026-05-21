@@ -24,11 +24,15 @@ test.describe('i18n — locale switching', () => {
 		page,
 	}) => {
 		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		const frButton = page.getByRole('button', { name: /français/i })
+		await frButton.waitFor({ state: 'visible' })
 		await frButton.click()
 
 		// Should redirect back to home
 		await page.waitForURL('/')
+		await page.waitForLoadState('networkidle')
 
 		// Cookie should be set
 		const cookies = await page.context().cookies()
@@ -52,16 +56,20 @@ test.describe('i18n — locale switching', () => {
 			},
 		])
 		await page.goto('/')
+		await page.waitForLoadState('networkidle')
+
 		const enButton = page.getByRole('button', { name: /english/i })
+		await enButton.waitFor({ state: 'visible' })
 		await enButton.click()
 
 		await page.waitForURL('/')
+		await page.waitForLoadState('networkidle')
 
 		const cookies = await page.context().cookies()
 		const localeCookie = cookies.find(
 			(c) => c.name === 'localePreference',
 		)
-		expect(localeCookie!.value).toBe('en')
+		expect(localeCookie?.value).toBe('en')
 	})
 
 	test('locale persists across page navigation', async ({ page }) => {
@@ -123,11 +131,15 @@ test.describe('i18n — locale switching', () => {
 		page,
 	}) => {
 		await page.goto('/shop')
+		await page.waitForLoadState('networkidle')
+
 		const frButton = page.getByRole('button', { name: /français/i })
+		await frButton.waitFor({ state: 'visible' })
 		await frButton.click()
 
 		// Should redirect back to /shop, not /
 		await page.waitForURL('/shop')
+		await page.waitForLoadState('networkidle')
 	})
 
 	test('switching locale does not clear cart', async ({ page }) => {
