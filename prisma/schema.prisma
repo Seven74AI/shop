@@ -505,14 +505,10 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Return deadline (EU 14-day right of withdrawal)
-  returnDeadlineAt DateTime? // Computed as deliveredAt + 14 days; null until DELIVERED
-
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
   returnRequests ReturnRequest[]
   invoices       Invoice[]
-  returnRequests ReturnRequest[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -786,59 +782,4 @@ enum ShippingRateType {
   WEIGHT_BASED // Rate based on total weight
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
-}
-
-// Return/Refund Models
-
-enum ReturnStatus {
-  REQUESTED
-  APPROVED
-  RECEIVED
-  REFUNDED
-  REJECTED
-}
-
-// ReturnRequest is the canonical record for a return/refund on an order.
-model ReturnRequest {
-  id      String @id @default(cuid())
-  orderId String
-
-  status           ReturnStatus @default(REQUESTED)
-  reason           String // Customer-provided reason for return
-  customerNotes    String? // Optional additional notes from customer
-  adminNotes       String? // Internal notes from admin review
-  refundAmountCents Int? // Amount refunded (in cents)
-  restockingFeeCents Int? // Restocking fee deducted (in cents)
-
-  requestedAt DateTime @default(now()) // When the return was requested
-  receivedAt  DateTime? // When the returned items were received
-  refundedAt  DateTime? // When the refund was processed
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  order Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  items ReturnItem[] // Items being returned
-
-  @@index([orderId])
-  @@index([status])
-}
-
-// ReturnItem links a ReturnRequest to specific OrderItem to allow partial returns.
-model ReturnItem {
-  id             String @id @default(cuid())
-  returnRequestId String
-  orderItemId    String
-
-  quantity   Int // Number of units being returned
-  reasonItem String? // Item-specific reason (e.g., "damaged", "wrong item")
-
-  createdAt DateTime @default(now())
-
-  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
-  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
-
-  @@unique([returnRequestId, orderItemId])
-  @@index([returnRequestId])
-  @@index([orderItemId])
 }
