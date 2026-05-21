@@ -1038,7 +1038,7 @@ export async function processReturnRefund(
 				vatTotalCents: 0,
 				shippingCostCents: -shippingRefundCents,
 				totalCents: -(itemRefundCents - restockingFee),
-				currency: { symbol: '€', decimals: 2 },
+				currency: { code: 'EUR', symbol: '€', decimals: 2 },
 				storeName: 'Epic Shop',
 				storeAddress: '123 Epic Street, 75001 Paris, France',
 				storeVatNumber: 'FR12345678901',
