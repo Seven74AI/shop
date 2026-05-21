@@ -8,10 +8,256 @@ import { type Locale, getLocale, getTranslations } from './i18n.server.ts'
 import { createT } from './i18n.tsx'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
-import { getOrderByCheckoutSessionId } from './order-queries.server.ts'
-import { getOrderStatusLabel } from './order-status.ts'
-import { StockUnavailableError } from './order-stock.server.ts'
 import { stripe } from './stripe.server.ts'
+import { calculateVat, type TaxableItem } from './tax.server.ts'
+
+/**
+ * Type for stock availability issues
+ */
+export type StockIssue = {
+	productName: string
+	requested: number
+	available: number
+}
+
+export class StockValidationError extends Error {
+	constructor(public issues: StockIssue[]) {
+		super('Insufficient stock for one or more items')
+		this.name = 'StockValidationError'
+	}
+}
+
+export class StockUnavailableError extends Error {
+	constructor(public data: StockIssue) {
+		super(`Insufficient stock for ${data.productName}`)
+		this.name = 'StockUnavailableError'
+	}
+}
+
+/**
+ * Validates that all items in the cart have sufficient stock availability.
+ * Checks variant-level stock when variant exists, product-level stock when no variant.
+ * @param cartId - The ID of the cart to validate
+ * @throws StockValidationError if any items have insufficient stock
+ */
+export async function validateStockAvailability(cartId: string): Promise<void> {
+	const cart = await prisma.cart.findUnique({
+		where: { id: cartId },
+		include: {
+			items: {
+				include: {
+					product: {
+						select: {
+							id: true,
+							name: true,
+							stockQuantity: true,
+						},
+					},
+				},
+			},
+		},
+	})
+
+	invariant(cart, 'Cart not found')
+	invariant(cart.items.length > 0, 'Cart is empty')
+
+	const stockIssues: StockIssue[] = []
+
+	for (const item of cart.items) {
+		if (item.variantId) {
+			// Item has variant - check variant-level stock
+			const variant = await prisma.productVariant.findUnique({
+				where: { id: item.variantId },
+				select: { id: true, stockQuantity: true },
+			})
+
+			invariant(
+				variant,
+				`Variant ${item.variantId} not found for product ${item.product.name}`,
+			)
+
+			if (variant.stockQuantity < item.quantity) {
+				stockIssues.push({
+					productName: item.product.name,
+					requested: item.quantity,
+					available: variant.stockQuantity,
+				})
+			}
+		} else {
+			// Item has no variant - check product-level stock
+			if (item.product.stockQuantity !== null) {
+				// Product has stock tracking
+				if (item.product.stockQuantity < item.quantity) {
+					stockIssues.push({
+						productName: item.product.name,
+						requested: item.quantity,
+						available: item.product.stockQuantity,
+					})
+				}
+			}
+			// If stockQuantity is null, treat as unlimited (no validation)
+		}
+	}
+
+	if (stockIssues.length > 0) {
+		throw new StockValidationError(stockIssues)
+	}
+}
+
+/**
+ * Gets an order by ID with full details including items, products, and variants.
+ */
+export async function getOrderById(orderId: string) {
+	return prisma.order.findUnique({
+		where: { id: orderId },
+		include: {
+			user: {
+				select: {
+					id: true,
+					email: true,
+					username: true,
+					name: true,
+				},
+			},
+			items: {
+				include: {
+					product: {
+						select: {
+							id: true,
+							name: true,
+							slug: true,
+							images: {
+								select: {
+									objectKey: true,
+									altText: true,
+								},
+								orderBy: { displayOrder: 'asc' },
+								take: 1,
+							},
+						},
+					},
+					variant: {
+						include: {
+							attributeValues: {
+								include: {
+									attributeValue: {
+										include: {
+											attribute: true,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+/**
+ * Gets an order by order number.
+ */
+export async function getOrderByOrderNumber(orderNumber: string) {
+	return prisma.order.findUnique({
+		where: { orderNumber },
+		include: {
+			user: {
+				select: {
+					id: true,
+					email: true,
+					username: true,
+					name: true,
+				},
+			},
+			items: {
+				include: {
+					product: {
+						select: {
+							id: true,
+							name: true,
+							slug: true,
+							images: {
+								select: {
+									objectKey: true,
+									altText: true,
+								},
+								orderBy: { displayOrder: 'asc' },
+								take: 1,
+							},
+						},
+					},
+					variant: {
+						include: {
+							attributeValues: {
+								include: {
+									attributeValue: {
+										include: {
+											attribute: true,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+/**
+ * Gets all orders for a user, ordered by most recent first.
+ */
+export async function getUserOrders(userId: string) {
+	return prisma.order.findMany({
+		where: { userId },
+		orderBy: { createdAt: 'desc' },
+		include: {
+			items: {
+				include: {
+					product: {
+						select: {
+							name: true,
+							slug: true,
+							images: {
+								select: {
+									objectKey: true,
+									altText: true,
+								},
+								orderBy: { displayOrder: 'asc' },
+								take: 1,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+/**
+ * Gets a guest order by order number and email for security.
+ */
+export async function getGuestOrder(orderNumber: string, email: string) {
+	const order = await getOrderByOrderNumber(orderNumber)
+
+	if (!order) {
+		return null
+	}
+
+	// Verify email matches for security
+	if (order.email.toLowerCase() !== email.toLowerCase()) {
+		return null
+	}
+
+	// Only return guest orders (no userId)
+	if (order.userId) {
+		return null
+	}
+
+	return order
+}
 
 /**
  * Returns the best locale for an order's email notification.
@@ -27,6 +273,10 @@ function getOrderLocale(request?: Request, taxCountry?: string): Locale {
 
 /**
  * Updates an order status (admin only) and sends email notification.
+ * @param orderId - The ID of the order to update
+ * @param status - The new status
+ * @param request - Optional request object for getting domain URL (for email links)
+ * @param trackingNumber - Optional tracking number (required when status is SHIPPED)
  */
 export async function updateOrderStatus(
 	orderId: string,
@@ -34,10 +284,12 @@ export async function updateOrderStatus(
 	request?: Request,
 	trackingNumber?: string | null,
 ): Promise<void> {
+	// Update order status and tracking number
 	const order = await prisma.order.update({
 		where: { id: orderId },
 		data: {
 			status,
+			// Always update trackingNumber when status is SHIPPED (even if it's empty string/null)
 			...(status === 'SHIPPED'
 				? { trackingNumber: trackingNumber ?? '' }
 				: {}),
@@ -52,12 +304,13 @@ export async function updateOrderStatus(
 		},
 	})
 
+	// Send status update email (non-blocking - don't fail status update if email fails)
 	try {
 		const locale = getOrderLocale(request, order.shippingCountry)
 		const translations = await getTranslations(locale)
 		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
-		const statusLabel = getOrderStatusLabel(status)
+		const statusLabel = getStatusLabel(status)
 
 		const subject = t('email.statusUpdate.subject', { orderNumber: order.orderNumber })
 
@@ -96,6 +349,8 @@ ${t('email.statusUpdate.newStatus')}: ${statusLabel}
 			text: textBody,
 		})
 	} catch (emailError) {
+		// Log email error but don't fail status update
+		// Status was successfully updated, email is secondary
 		Sentry.captureException(emailError, {
 			tags: { context: 'order-status-email' },
 			extra: { orderNumber: order.orderNumber },
@@ -104,7 +359,29 @@ ${t('email.statusUpdate.newStatus')}: ${statusLabel}
 }
 
 /**
+ * Gets a human-readable label for order status.
+ */
+function getStatusLabel(status: OrderStatus): string {
+	switch (status) {
+		case 'PENDING':
+			return 'Pending'
+		case 'CONFIRMED':
+			return 'Confirmed'
+		case 'SHIPPED':
+			return 'Shipped'
+		case 'DELIVERED':
+			return 'Delivered'
+		case 'CANCELLED':
+			return 'Cancelled'
+		default:
+			return status
+	}
+}
+
+/**
  * Cancels an order and creates a Stripe refund (admin only).
+ * @param orderId - The ID of the order to cancel
+ * @param request - Optional request object for getting domain URL (for email links)
  */
 export async function cancelOrder(orderId: string, request?: Request): Promise<void> {
 	const order = await prisma.order.findUnique({
@@ -124,6 +401,7 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 	invariant(order, 'Order not found')
 	invariant(order.status !== 'CANCELLED', 'Order is already cancelled')
 
+	// Create refund via Stripe if payment was processed
 	let refundId: string | null = null
 	if (order.stripePaymentIntentId || order.stripeChargeId) {
 		try {
@@ -136,6 +414,7 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 				},
 			}
 
+			// Use payment_intent if available, otherwise use charge
 			if (order.stripePaymentIntentId) {
 				refundParams.payment_intent = order.stripePaymentIntentId
 			} else if (order.stripeChargeId) {
@@ -145,18 +424,23 @@ export async function cancelOrder(orderId: string, request?: Request): Promise<v
 			const refund = await stripe.refunds.create(refundParams)
 			refundId = refund.id
 		} catch (refundError) {
+			// Log refund error but don't fail order cancellation
+			// Admin can manually process refund if needed
 			Sentry.captureException(refundError, {
 				tags: { context: 'order-cancellation-refund' },
 				extra: { orderNumber: order.orderNumber },
 			})
+			// Still proceed with order cancellation
 		}
 	}
 
+	// Update order status to CANCELLED
 	await prisma.order.update({
 		where: { id: orderId },
 		data: { status: 'CANCELLED' },
 	})
 
+	// Send cancellation email (non-blocking)
 	try {
 		const locale = getOrderLocale(request, order.shippingCountry)
 		const translations = await getTranslations(locale)
@@ -189,6 +473,7 @@ ${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.or
 			`,
 		})
 	} catch (emailError) {
+		// Log email error but don't fail cancellation
 		Sentry.captureException(emailError, {
 			tags: { context: 'order-cancellation-email' },
 			extra: { orderNumber: order.orderNumber },
@@ -197,47 +482,88 @@ ${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.or
 }
 
 /**
+ * Gets an order by checkout session ID (for webhook idempotency).
+ */
+export async function getOrderByCheckoutSessionId(
+	checkoutSessionId: string,
+) {
+	return prisma.order.findUnique({
+		where: { stripeCheckoutSessionId: checkoutSessionId },
+		include: {
+			items: {
+				include: {
+					product: true,
+					variant: true,
+				},
+			},
+		},
+	})
+}
+
+/**
  * Creates an order from a Stripe checkout session.
- * Handles payment verification, idempotency, stock validation, atomic
- * order creation + stock decrement + cart deletion.
+ * This function handles the complete order creation process including:
+ * - Payment status verification
+ * - Idempotency checking
+ * - Stock validation
+ * - Atomic order creation with stock reduction and cart deletion
+ * 
+ * @param sessionId - The Stripe checkout session ID
+ * @param fullSession - Optional pre-retrieved session (to avoid duplicate API calls)
+ * @param request - Optional request object for getting domain URL (for email links)
+ * @returns The created or existing order
+ * @throws StockUnavailableError if stock is insufficient
  */
 export async function createOrderFromStripeSession(
 	sessionId: string,
 	fullSession?: Stripe.Checkout.Session,
 	request?: Request,
 ): Promise<{ id: string; orderNumber: string }> {
-	// Idempotency: if order already exists, just ensure cart is cleaned up.
+	// Idempotency check - prevent duplicate order creation
 	const existingOrder = await getOrderByCheckoutSessionId(sessionId)
 	if (existingOrder) {
+		// Order already exists - ensure cart is deleted (idempotent operation)
+		// This handles webhook retries and ensures cart is cleaned up even if
+		// the first call deleted the cart but a retry comes in
 		const session = fullSession || await stripe.checkout.sessions.retrieve(sessionId)
 		const cartId = session.metadata?.cartId
 		if (cartId) {
 			try {
-				await prisma.cartItem.deleteMany({ where: { cartId } })
-				await prisma.cart.delete({ where: { id: cartId } }).catch(() => {
+				// Try to delete cart items first, then cart
+				await prisma.cartItem.deleteMany({
+					where: { cartId },
+				})
+				await prisma.cart.delete({
+					where: { id: cartId },
+				}).catch(() => {
 					// Cart might already be deleted - that's fine
 				})
 			} catch {
 				// Cart might already be deleted or not exist - that's fine
+				// This is idempotent - we don't want to fail if cart is already gone
 			}
 		}
 		return { id: existingOrder.id, orderNumber: existingOrder.orderNumber }
 	}
 
+	// Retrieve full session from Stripe with expanded data if not provided
 	const session = fullSession || await stripe.checkout.sessions.retrieve(sessionId, {
 		expand: ['line_items', 'payment_intent'],
 	})
 
+	// Verify payment status before fulfilling order
 	if (session.payment_status !== 'paid') {
 		throw new Error(
 			`Payment not completed for session ${sessionId}. Payment status: ${session.payment_status}`,
 		)
 	}
 
+	// Extract metadata
 	const cartId = session.metadata?.cartId
 	const userId = session.metadata?.userId || null
 	invariant(cartId, 'Missing cartId in session metadata')
 
+	// Load cart data BEFORE transaction (more efficient)
 	const cart = await prisma.cart.findUnique({
 		where: { id: cartId },
 		include: {
@@ -250,6 +576,7 @@ export async function createOrderFromStripeSession(
 							description: true,
 							price: true,
 							stockQuantity: true,
+							taxKind: true,
 						},
 					},
 					variant: {
@@ -267,10 +594,13 @@ export async function createOrderFromStripeSession(
 	invariant(cart, 'Cart not found')
 	invariant(cart.items.length > 0, 'Cart is empty')
 
+	// Create order in transaction
 	const order = await prisma.$transaction(
 		async (tx) => {
+			// 1. Re-check stock (final validation, handles race conditions)
 			for (const item of cart.items) {
 				if (item.variantId && item.variant) {
+					// Item has variant - check variant-level stock
 					const variant = await tx.productVariant.findUnique({
 						where: { id: item.variantId },
 						select: { id: true, stockQuantity: true },
@@ -287,6 +617,7 @@ export async function createOrderFromStripeSession(
 						})
 					}
 				} else {
+					// Item has no variant - check product-level stock
 					const product = await tx.product.findUnique({
 						where: { id: item.productId },
 						select: { id: true, name: true, stockQuantity: true },
@@ -305,13 +636,16 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
+			// 2. Reduce stock atomically
 			for (const item of cart.items) {
 				if (item.variantId) {
+					// Reduce variant stock
 					await tx.productVariant.update({
 						where: { id: item.variantId },
 						data: { stockQuantity: { decrement: item.quantity } },
 					})
 				} else {
+					// Reduce product stock (if it has stock tracking)
 					const product = await tx.product.findUnique({
 						where: { id: item.productId },
 						select: { stockQuantity: true },
@@ -325,21 +659,27 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
+			// 3. Generate order number (using existing transaction)
 			const orderNumber = await generateOrderNumber(tx)
 
+			// 4. Create order
 			const paymentIntentId =
 				typeof session.payment_intent === 'string'
 					? session.payment_intent
 					: session.payment_intent?.id || null
 
+			// Get payment intent to extract charge ID
 			let chargeId: string | null = null
 			if (paymentIntentId) {
 				try {
-					const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+					const paymentIntent = await stripe.paymentIntents.retrieve(
+						paymentIntentId,
+					)
 					if (typeof paymentIntent.latest_charge === 'string') {
 						chargeId = paymentIntent.latest_charge
 					}
 				} catch (err) {
+					// Log but don't fail order creation if charge retrieval fails
 					Sentry.captureException(err, {
 						tags: { context: 'order-charge-retrieval' },
 						extra: { paymentIntentId },
@@ -347,6 +687,7 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
+			// Extract shipping information from metadata
 			const shippingMethodId = session.metadata?.shippingMethodId || null
 			const shippingCost = session.metadata?.shippingCost
 				? parseInt(session.metadata.shippingCost, 10)
@@ -354,6 +695,7 @@ export async function createOrderFromStripeSession(
 			const mondialRelayPickupPointId =
 				session.metadata?.mondialRelayPickupPointId || null
 
+			// Get shipping method details if available
 			let shippingMethodName: string | null = null
 			let shippingCarrierName: string | null = null
 			let mondialRelayPickupPointName: string | null = null
@@ -376,7 +718,29 @@ export async function createOrderFromStripeSession(
 				}
 			}
 
+			// Calculate subtotal (total - shipping)
 			const calculatedSubtotal = (session.amount_subtotal ?? 0) - shippingCost
+
+			// Calculate VAT for the order
+			const shippingCountry = session.metadata?.shippingCountry || 'US'
+			const customerVatNumber = session.metadata?.customerVatNumber || null
+
+			// Build taxable items from cart
+			const taxableItems: TaxableItem[] = cart.items.map((item) => ({
+				priceCents:
+					item.variantId && item.variant
+						? item.variant.price ?? item.product.price
+						: item.product.price,
+				quantity: item.quantity,
+				taxKind: item.product.taxKind,
+			}))
+
+			// Calculate VAT (separate DB read - TaxRate table is read-only, not part of transaction)
+			const vatCalculation = await calculateVat(
+				taxableItems,
+				shippingCountry,
+				customerVatNumber,
+			)
 
 			const newOrder = await tx.order.create({
 				data: {
@@ -393,13 +757,19 @@ export async function createOrderFromStripeSession(
 					shippingCity: session.metadata?.shippingCity || '',
 					shippingState: session.metadata?.shippingState || null,
 					shippingPostal: session.metadata?.shippingPostal || '',
-					shippingCountry: session.metadata?.shippingCountry || 'US',
+					shippingCountry,
 					shippingMethodId,
 					shippingCost,
 					shippingMethodName,
 					shippingCarrierName,
 					mondialRelayPickupPointId,
 					mondialRelayPickupPointName,
+					// VAT data
+					vatBreakdown: vatCalculation.breakdown as any,
+					vatTotalCents: vatCalculation.totalVatCents,
+					taxCountry: vatCalculation.taxCountry,
+					customerVatNumber,
+					vatValidationStatus: 'UNCHECKED',
 					stripeCheckoutSessionId: session.id,
 					stripePaymentIntentId: paymentIntentId,
 					stripeChargeId: chargeId,
@@ -407,6 +777,7 @@ export async function createOrderFromStripeSession(
 				},
 			})
 
+			// 5. Create order items
 			await Promise.all(
 				cart.items.map((item) =>
 					tx.orderItem.create({
@@ -424,20 +795,46 @@ export async function createOrderFromStripeSession(
 				),
 			)
 
-			await tx.cartItem.deleteMany({ where: { cartId } })
-			await tx.cart.delete({ where: { id: cartId } })
+			// 6. Delete cart items (within transaction for atomicity)
+			await tx.cartItem.deleteMany({
+				where: { cartId },
+			})
+
+			// 7. Delete cart (within transaction for atomicity)
+			await tx.cart.delete({
+				where: { id: cartId },
+			})
 
 			return newOrder
 		},
-		{ timeout: 30000 },
+		{
+			timeout: 30000, // 30 second timeout
+		},
 	)
 
+	// Send confirmation email (non-blocking - don't fail order creation if email fails)
 	try {
 		const locale = getOrderLocale(request, order.shippingCountry)
 		const translations = await getTranslations(locale)
 		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
-
+		
+		// Build VAT details for email
+		let vatHtml = ''
+		let vatText = ''
+		if (order.vatTotalCents > 0 && order.vatBreakdown) {
+			const breakdown = typeof order.vatBreakdown === 'string'
+				? JSON.parse(order.vatBreakdown)
+				: order.vatBreakdown
+			if (Array.isArray(breakdown)) {
+				for (const line of breakdown as Array<{ kind: string; rate: number; vatCents: number }>) {
+					const pct = (line.rate / 100).toFixed(1)
+					vatHtml += `<p><strong>VAT (${line.kind} ${pct}%):</strong> €${(line.vatCents / 100).toFixed(2)}</p>\n`
+					vatText += `VAT (${line.kind} ${pct}%): €${(line.vatCents / 100).toFixed(2)}\n`
+				}
+			}
+		}
+		
 		await sendEmail({
 			to: order.email,
 			subject: t('email.orderConfirmation.subject', { orderNumber: order.orderNumber }),
@@ -445,7 +842,9 @@ export async function createOrderFromStripeSession(
 				<h1>${t('email.orderConfirmation.heading')}</h1>
 				<p>${t('email.orderConfirmation.thankYou')}</p>
 				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
-				<p><strong>${t('email.orderConfirmation.total')}:</strong> ${(order.total / 100).toFixed(2)}</p>
+				<p><strong>Subtotal:</strong> €${(order.subtotal / 100).toFixed(2)}</p>
+				${vatHtml}
+				<p><strong>${t('email.orderConfirmation.total')}:</strong> €${(order.total / 100).toFixed(2)}</p>
 				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
 			`,
 			text: `
@@ -454,12 +853,15 @@ ${t('email.orderConfirmation.heading')}
 ${t('email.orderConfirmation.thankYou')}
 
 ${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
-${t('email.orderConfirmation.total')}: ${(order.total / 100).toFixed(2)}
+Subtotal: €${(order.subtotal / 100).toFixed(2)}
+${vatText}
+${t('email.orderConfirmation.total')}: €${(order.total / 100).toFixed(2)}
 
 ${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,
 		})
 	} catch (emailError) {
+		// Log email error but don't fail order creation
 		Sentry.captureException(emailError, {
 			tags: { context: 'order-confirmation-email' },
 			extra: { orderNumber: order.orderNumber },
@@ -468,3 +870,4 @@ ${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.or
 
 	return { id: order.id, orderNumber: order.orderNumber }
 }
+
