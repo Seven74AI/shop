@@ -15,7 +15,6 @@ import { useIsPending } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { getShippingCost, getShippingMethodsForCountry } from '#app/utils/shipping.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/delivery.ts'
 
 const DeliveryFormSchema = z.object({
@@ -173,7 +172,6 @@ export async function action({ request }: Route.ActionArgs) {
 export const meta: Route.MetaFunction = () => [{ title: 'Delivery | Checkout' }]
 
 export default function CheckoutDelivery() {
-	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const isPending = useIsPending()
 
@@ -364,7 +362,7 @@ export default function CheckoutDelivery() {
 													<div className="font-semibold">
 														{methodCost === 0
 															? 'Free'
-															: formatPrice(methodCost, currency, locale)}
+															: formatPrice(methodCost, currency)}
 													</div>
 												</div>
 											</div>
@@ -442,7 +440,7 @@ export default function CheckoutDelivery() {
 				<div className="space-y-2">
 					<div className="flex justify-between">
 						<span>Subtotal</span>
-						<span>{formatPrice(subtotal, currency, locale)}</span>
+						<span>{formatPrice(subtotal, currency)}</span>
 					</div>
 					<div className="flex justify-between">
 						<span>Shipping</span>
@@ -451,7 +449,7 @@ export default function CheckoutDelivery() {
 								shippingCost === 0 ? (
 									<span className="text-green-600">Free</span>
 								) : (
-									formatPrice(shippingCost, currency, locale)
+									formatPrice(shippingCost, currency)
 								)
 							) : (
 								<span className="text-muted-foreground">—</span>
@@ -462,8 +460,8 @@ export default function CheckoutDelivery() {
 						<span>Total</span>
 						<span>
 							{selectedShippingMethodId
-								? formatPrice(total, currency, locale)
-								: formatPrice(subtotal, currency, locale)}
+								? formatPrice(total, currency)
+								: formatPrice(subtotal, currency)}
 						</span>
 					</div>
 				</div>

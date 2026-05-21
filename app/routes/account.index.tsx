@@ -288,8 +288,8 @@ function UpdateProfile({
 					<textarea
 						id="bio"
 						placeholder="Tell us a bit about yourself..."
-						className="w-full px-3 py-2 rounded-lg border-0 resize-none"
-						style={{ backgroundColor: '#F3F3F5', color: '#717182' }}
+						className="w-full px-3 py-2 rounded-lg border-0 resize-none placeholder:text-[#5a5a6b]"
+						style={{ backgroundColor: '#F3F3F5', color: '#5a5a6b' }}
 						rows={4}
 						aria-label="Bio"
 					/>

@@ -17,7 +17,6 @@ import { getUserId } from '#app/utils/auth.server.ts'
 import { getCheckoutData } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { type Route } from './+types/shipping.ts'
 
@@ -220,7 +219,6 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function CheckoutShipping() {
-	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
@@ -546,7 +544,7 @@ export default function CheckoutShipping() {
 										</p>
 									</div>
 									<p className="font-medium">
-										{formatPrice(itemTotal, currency, locale)}
+										{formatPrice(itemTotal, currency)}
 									</p>
 								</div>
 							)
@@ -556,7 +554,7 @@ export default function CheckoutShipping() {
 					<div className="border-t pt-4">
 						<div className="flex justify-between text-lg font-semibold">
 							<span>Subtotal</span>
-							<span>{formatPrice(subtotal, currency, locale)}</span>
+							<span>{formatPrice(subtotal, currency)}</span>
 						</div>
 					</div>
 				</div>

@@ -17,11 +17,6 @@
 
 import { invariant } from '@epic-web/invariant'
 import { XMLParser } from 'fast-xml-parser'
-import {
-  CircuitBreaker,
-  CircuitOpenError,
-} from '#app/utils/circuit-breaker.server.ts'
-import { getCircuitBreakerConfig } from '#app/utils/circuit-breaker-config.server.ts'
 
 /**
  * Gets environment variables dynamically (for testing support)
@@ -35,30 +30,6 @@ function getApi2Credentials() {
 		collectionMode: process.env.MONDIAL_RELAY_COLLECTION_MODE || 'REL', // Default to REL, but configurable
 	}
 }
-
-/**
- * Circuit breaker for API2 shipment creation
- */
-export const shipmentBreaker = new CircuitBreaker(
-  'mondial-relay-api2-shipment',
-  getCircuitBreakerConfig('mondial-relay-api2-shipment', {
-    failureThreshold: 5,
-    resetTimeoutMs: 30_000,
-    halfOpenMaxRequests: 1,
-  }),
-)
-
-/**
- * Circuit breaker for API2 label retrieval
- */
-export const labelBreaker = new CircuitBreaker(
-  'mondial-relay-api2-label',
-  getCircuitBreakerConfig('mondial-relay-api2-label', {
-    failureThreshold: 5,
-    resetTimeoutMs: 30_000,
-    halfOpenMaxRequests: 1,
-  }),
-)
 
 /**
  * Validates that all required API2 credentials are set
@@ -296,105 +267,97 @@ export async function createShipment(request: ShipmentRequest): Promise<Shipment
 </ShipmentCreationRequest>`
 
 	try {
-		const result = await shipmentBreaker.fire(async () => {
-			const api2BaseUrl = getApi2BaseUrl()
-			const response = await fetch(`${api2BaseUrl}/shipment`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml; charset=utf-8',
-					'Accept': 'application/xml',
-				},
-				body: xmlBody,
-			})
-
-			// Read the full response text first (before parsing)
-			const responseText = await response.text()
-
-			if (!response.ok) {
-				console.error('[Mondial Relay API2] Error response:', responseText)
-				throw new Error(`Mondial Relay API2 error: ${response.status} ${response.statusText} - ${responseText}`)
-			}
-
-			// Parse XML response (API always returns XML when sending XML request)
-			const parser = new XMLParser({
-				ignoreAttributes: false,
-				attributeNamePrefix: '@_',
-				textNodeName: '#text',
-				parseAttributeValue: false,
-				trimValues: true,
-			})
-
-			const parsed = parser.parse(responseText)
-			
-			// Navigate through XML structure - API always returns ShipmentCreationResponse as root
-			const root = parsed.ShipmentCreationResponse
-			if (!root) {
-				throw new Error('Mondial Relay API2 error: Invalid response format - missing ShipmentCreationResponse')
-			}
-			
-			// Check for StatusList (error/warning response)
-			const statusList = root.StatusList
-			if (statusList) {
-				const statuses = Array.isArray(statusList.Status) ? statusList.Status : statusList.Status ? [statusList.Status] : []
-				
-				const errors = statuses.filter((s: any) => s['@_Level'] === 'Error')
-				const warnings = statuses.filter((s: any) => s['@_Level'] === 'Warning')
-				
-				if (errors.length > 0) {
-					const errorMessages = errors.map((e: any) => `${e['@_Code']}: ${e['@_Message']}`).join('; ')
-					console.error('[Mondial Relay API2] API returned errors:', errorMessages)
-					throw new Error(`Mondial Relay API2 error: ${errorMessages}`)
-				}
-				
-				if (warnings.length > 0) {
-					const warningMessages = warnings.map((w: any) => `${w['@_Code']}: ${w['@_Message']}`).join('; ')
-					console.warn('[Mondial Relay API2] API returned warnings:', warningMessages)
-				}
-			}
-			
-			// Extract shipment data from XML response
-			const shipmentsList = root.ShipmentsList
-			if (!shipmentsList) {
-				throw new Error('Mondial Relay API2 error: Invalid response format - missing ShipmentsList')
-			}
-
-			const shipments = Array.isArray(shipmentsList.Shipment) 
-				? shipmentsList.Shipment 
-				: shipmentsList.Shipment 
-					? [shipmentsList.Shipment] 
-					: []
-
-			if (shipments.length === 0) {
-				throw new Error('Mondial Relay API2 error: No shipment data in response')
-			}
-
-			const shipment = shipments[0]
-			// ShipmentNumber is always an attribute on Shipment element
-			const shipmentNumber = shipment['@_ShipmentNumber']
-			if (!shipmentNumber) {
-				throw new Error('Mondial Relay API2 error: Missing ShipmentNumber attribute in response')
-			}
-			
-			// Output is always an element - can be a string or an object with #text property (depending on parser)
-			const outputValue = shipment.Output
-			const labelUrl = typeof outputValue === 'string' 
-				? outputValue 
-				: outputValue?.['#text'] || ''
-
-			return {
-				shipmentNumber: shipmentNumber,
-				labelUrl: labelUrl || '',
-				statusCode: '0',
-				statusMessage: undefined,
-			}
+		const api2BaseUrl = getApi2BaseUrl()
+		const response = await fetch(`${api2BaseUrl}/shipment`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'text/xml; charset=utf-8',
+				'Accept': 'application/xml',
+			},
+			body: xmlBody,
 		})
 
-		return result as ShipmentResponse
-	} catch (error) {
-		if (error instanceof CircuitOpenError) {
-			console.warn(`Mondial Relay API2 circuit breaker OPEN: ${error.message}`)
-			throw error
+		// Read the full response text first (before parsing)
+		const responseText = await response.text()
+
+		if (!response.ok) {
+			console.error('[Mondial Relay API2] Error response:', responseText)
+			throw new Error(`Mondial Relay API2 error: ${response.status} ${response.statusText} - ${responseText}`)
 		}
+
+		// Parse XML response (API always returns XML when sending XML request)
+		const parser = new XMLParser({
+			ignoreAttributes: false,
+			attributeNamePrefix: '@_',
+			textNodeName: '#text',
+			parseAttributeValue: false,
+			trimValues: true,
+		})
+
+		const parsed = parser.parse(responseText)
+		
+		// Navigate through XML structure - API always returns ShipmentCreationResponse as root
+		const root = parsed.ShipmentCreationResponse
+		if (!root) {
+			throw new Error('Mondial Relay API2 error: Invalid response format - missing ShipmentCreationResponse')
+		}
+		
+		// Check for StatusList (error/warning response)
+		const statusList = root.StatusList
+		if (statusList) {
+			const statuses = Array.isArray(statusList.Status) ? statusList.Status : statusList.Status ? [statusList.Status] : []
+			
+			const errors = statuses.filter((s: any) => s['@_Level'] === 'Error')
+			const warnings = statuses.filter((s: any) => s['@_Level'] === 'Warning')
+			
+			if (errors.length > 0) {
+				const errorMessages = errors.map((e: any) => `${e['@_Code']}: ${e['@_Message']}`).join('; ')
+				console.error('[Mondial Relay API2] API returned errors:', errorMessages)
+				throw new Error(`Mondial Relay API2 error: ${errorMessages}`)
+			}
+			
+			if (warnings.length > 0) {
+				const warningMessages = warnings.map((w: any) => `${w['@_Code']}: ${w['@_Message']}`).join('; ')
+				console.warn('[Mondial Relay API2] API returned warnings:', warningMessages)
+			}
+		}
+		
+		// Extract shipment data from XML response
+		const shipmentsList = root.ShipmentsList
+		if (!shipmentsList) {
+			throw new Error('Mondial Relay API2 error: Invalid response format - missing ShipmentsList')
+		}
+
+		const shipments = Array.isArray(shipmentsList.Shipment) 
+			? shipmentsList.Shipment 
+			: shipmentsList.Shipment 
+				? [shipmentsList.Shipment] 
+				: []
+
+		if (shipments.length === 0) {
+			throw new Error('Mondial Relay API2 error: No shipment data in response')
+		}
+
+		const shipment = shipments[0]
+		// ShipmentNumber is always an attribute on Shipment element
+		const shipmentNumber = shipment['@_ShipmentNumber']
+		if (!shipmentNumber) {
+			throw new Error('Mondial Relay API2 error: Missing ShipmentNumber attribute in response')
+		}
+		
+		// Output is always an element - can be a string or an object with #text property (depending on parser)
+		const outputValue = shipment.Output
+		const labelUrl = typeof outputValue === 'string' 
+			? outputValue 
+			: outputValue?.['#text'] || ''
+
+		return {
+			shipmentNumber: shipmentNumber,
+			labelUrl: labelUrl || '',
+			statusCode: '0',
+			statusMessage: undefined,
+		}
+	} catch (error) {
 		console.error('Mondial Relay API2 createShipment error:', error)
 		throw new Error(`Failed to create shipment: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
@@ -410,25 +373,17 @@ export async function getLabel(shipmentNumber: string): Promise<LabelResponse> {
 	validateApi2Credentials()
 
 	try {
-		const result = await labelBreaker.fire(async () => {
-			const api2BaseUrl = getApi2BaseUrl()
-			const response = await fetch(`${api2BaseUrl}/Label/${shipmentNumber}`, {
-				method: 'GET',
-			})
-
-			if (!response.ok) {
-				throw new Error(`Mondial Relay API2 error: ${response.status} ${response.statusText}`)
-			}
-
-			return await response.blob()
+		const api2BaseUrl = getApi2BaseUrl()
+		const response = await fetch(`${api2BaseUrl}/Label/${shipmentNumber}`, {
+			method: 'GET',
 		})
 
-		return result as LabelResponse
-	} catch (error) {
-		if (error instanceof CircuitOpenError) {
-			console.warn(`Mondial Relay API2 circuit breaker OPEN: ${error.message}`)
-			throw error
+		if (!response.ok) {
+			throw new Error(`Mondial Relay API2 error: ${response.status} ${response.statusText}`)
 		}
+
+		return await response.blob()
+	} catch (error) {
 		console.error('Mondial Relay API2 getLabel error:', error)
 		throw new Error(`Failed to get label: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}

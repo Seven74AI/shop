@@ -6,17 +6,16 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
-import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
+import { getCheckoutData } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
 	StockValidationError,
 	validateStockAvailability,
-} from '#app/utils/order.server.ts'
+} from '#app/utils/order-stock.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { createCheckoutSession, handleStripeError } from '#app/utils/stripe.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/payment.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -49,19 +48,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument('/shop/cart')
 	}
 
-	// Calculate VAT for display
-	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
-	let vatCalculation = null
-	try {
-		vatCalculation = await calculateCartVat(
-			checkoutData.cart,
-			country,
-			customerVatNumber,
-		)
-	} catch {
-		// VAT calculation failure shouldn't block checkout
-	}
-
 	return {
 		...checkoutData,
 		shippingInfo: {
@@ -76,7 +62,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 		shippingMethodId,
 		shippingCost,
 		mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
-		vatCalculation,
 	}
 }
 
@@ -133,7 +118,7 @@ export async function action({ request }: Route.ActionArgs) {
 		throw error
 	}
 
-	// Get cart with full product details including taxKind for VAT calculation
+	// Get cart with full product details
 	const cartWithItems = await prisma.cart.findUnique({
 		where: { id: cart.id },
 		include: {
@@ -145,7 +130,6 @@ export async function action({ request }: Route.ActionArgs) {
 							name: true,
 							description: true,
 							price: true,
-							taxKind: true,
 							weightGrams: true,
 						},
 					},
@@ -169,22 +153,6 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const userId = await getUserId(request)
 
-	// Calculate VAT for the order
-	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
-	let vatCalculation = null
-	try {
-		vatCalculation = await calculateCartVat(
-			cartWithItems as any,
-			country,
-			customerVatNumber,
-		)
-	} catch (vatErr) {
-		Sentry.captureException(vatErr, {
-			tags: { context: 'checkout-vat-calculation' },
-		})
-		// Continue without VAT on calculation failure
-	}
-
 	// Create Stripe Checkout Session
 	try {
 		const domainUrl = getDomainUrl(request)
@@ -202,12 +170,9 @@ export async function action({ request }: Route.ActionArgs) {
 			shippingMethodId,
 			shippingCost,
 			mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
-			customerVatNumber,
 			currency,
 			domainUrl,
 			userId: userId || undefined,
-			vatTotalCents: vatCalculation?.totalVatCents ?? 0,
-			vatBreakdown: vatCalculation?.breakdown ?? [],
 		})
 
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
@@ -233,7 +198,6 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function CheckoutPayment() {
-	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 
@@ -262,7 +226,6 @@ export default function CheckoutPayment() {
 		subtotal,
 		shippingInfo,
 		shippingCost,
-		vatCalculation,
 	} = loaderData
 
 	if (actionData?.error) {
@@ -309,7 +272,7 @@ export default function CheckoutPayment() {
 		)
 	}
 
-	if (!cart || !currency, locale) {
+	if (!cart || !currency) {
 		return (
 			<div className="text-center">
 				<p className="text-muted-foreground">Loading...</p>
@@ -338,7 +301,7 @@ export default function CheckoutPayment() {
 				<div className="space-y-2">
 					<div className="flex justify-between">
 						<span>Subtotal</span>
-						<span>{formatPrice(subtotal, currency, locale)}</span>
+						<span>{formatPrice(subtotal, currency)}</span>
 					</div>
 					<div className="flex justify-between">
 						<span>Shipping</span>
@@ -346,29 +309,13 @@ export default function CheckoutPayment() {
 							{shippingCost === 0 ? (
 								<span className="text-green-600">Free</span>
 							) : (
-								formatPrice(shippingCost, currency, locale)
+								formatPrice(shippingCost, currency)
 							)}
 						</span>
 					</div>
-					{vatCalculation && vatCalculation.totalVatCents > 0 && (
-						<>
-							{vatCalculation.breakdown.map((line) => (
-								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
-									<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
-									<span>{formatPrice(line.vatCents, currency, locale)}</span>
-								</div>
-							))}
-						</>
-					)}
-					{vatCalculation && vatCalculation.totalVatCents === 0 && (
-						<div className="flex justify-between text-sm text-muted-foreground">
-							<span>VAT</span>
-							<span>€0.00</span>
-						</div>
-					)}
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
 						<span>Total</span>
-						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency, locale)}</span>
+						<span>{formatPrice(subtotal + shippingCost, currency)}</span>
 					</div>
 				</div>
 			</div>

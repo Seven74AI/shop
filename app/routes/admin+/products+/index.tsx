@@ -93,6 +93,7 @@ function DeleteProductButton({ product }: { product: Route.ComponentProps['loade
 					variant="ghost"
 					size="sm"
 					className="text-destructive hover:text-destructive transition-colors duration-200"
+					aria-label="Delete product"
 				>
 					<Icon name="trash" className="h-4 w-4" />
 				</Button>

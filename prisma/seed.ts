@@ -499,11 +499,6 @@ async function seed() {
 	await seedShippingData()
 	console.timeEnd(`📦 Created shipping data...`)
 
-	// Seed VAT Data
-	console.time(`💰 Created VAT data...`)
-	await seedVatData()
-	console.timeEnd(`💰 Created VAT data...`)
-
 	console.timeEnd(`🌱 Database has been seeded`)
 }
 
@@ -714,117 +709,6 @@ async function seedShippingData() {
 			},
 		})
 	}
-}
-
-async function seedVatData() {
-	// Fixed effective date for seed rates
-	const effectiveFrom = new Date('2024-01-01T00:00:00.000Z')
-
-	// EU-27 standard VAT rates (in basis points: 2000 = 20.00%)
-	const euStandardRates: Array<{ country: string; rate: number }> = [
-		{ country: 'AT', rate: 2000 }, // Austria 20%
-		{ country: 'BE', rate: 2100 }, // Belgium 21%
-		{ country: 'BG', rate: 2000 }, // Bulgaria 20%
-		{ country: 'CY', rate: 1900 }, // Cyprus 19%
-		{ country: 'CZ', rate: 2100 }, // Czech Republic 21%
-		{ country: 'DE', rate: 1900 }, // Germany 19%
-		{ country: 'DK', rate: 2500 }, // Denmark 25%
-		{ country: 'EE', rate: 2200 }, // Estonia 22%
-		{ country: 'ES', rate: 2100 }, // Spain 21%
-		{ country: 'FI', rate: 2550 }, // Finland 25.5%
-		{ country: 'FR', rate: 2000 }, // France 20%
-		{ country: 'GR', rate: 2400 }, // Greece 24%
-		{ country: 'HR', rate: 2500 }, // Croatia 25%
-		{ country: 'HU', rate: 2700 }, // Hungary 27%
-		{ country: 'IE', rate: 2300 }, // Ireland 23%
-		{ country: 'IT', rate: 2200 }, // Italy 22%
-		{ country: 'LT', rate: 2100 }, // Lithuania 21%
-		{ country: 'LU', rate: 1700 }, // Luxembourg 17%
-		{ country: 'LV', rate: 2100 }, // Latvia 21%
-		{ country: 'MT', rate: 1800 }, // Malta 18%
-		{ country: 'NL', rate: 2100 }, // Netherlands 21%
-		{ country: 'PL', rate: 2300 }, // Poland 23%
-		{ country: 'PT', rate: 2300 }, // Portugal 23%
-		{ country: 'RO', rate: 1900 }, // Romania 19%
-		{ country: 'SE', rate: 2500 }, // Sweden 25%
-		{ country: 'SI', rate: 2200 }, // Slovenia 22%
-		{ country: 'SK', rate: 2300 }, // Slovakia 23%
-	]
-
-	for (const { country, rate } of euStandardRates) {
-		await prisma.taxRate.upsert({
-			where: {
-				country_kind_effectiveFrom: {
-					country,
-					kind: 'STANDARD',
-					effectiveFrom,
-				},
-			},
-			create: {
-				country,
-				kind: 'STANDARD',
-				rate,
-				effectiveFrom,
-				isActive: true,
-			},
-			update: {},
-		})
-	}
-
-	// France reduced rates
-	await prisma.taxRate.upsert({
-		where: {
-			country_kind_effectiveFrom: {
-				country: 'FR',
-				kind: 'REDUCED',
-				effectiveFrom,
-			},
-		},
-		create: {
-			country: 'FR',
-			kind: 'REDUCED',
-			rate: 1000, // 10%
-			effectiveFrom,
-			isActive: true,
-		},
-		update: {},
-	})
-
-	await prisma.taxRate.upsert({
-		where: {
-			country_kind_effectiveFrom: {
-				country: 'FR',
-				kind: 'SUPER_REDUCED',
-				effectiveFrom,
-			},
-		},
-		create: {
-			country: 'FR',
-			kind: 'SUPER_REDUCED',
-			rate: 550, // 5.5%
-			effectiveFrom,
-			isActive: true,
-		},
-		update: {},
-	})
-
-	await prisma.taxRate.upsert({
-		where: {
-			country_kind_effectiveFrom: {
-				country: 'FR',
-				kind: 'ZERO',
-				effectiveFrom,
-			},
-		},
-		create: {
-			country: 'FR',
-			kind: 'ZERO',
-			rate: 0, // 0%
-			effectiveFrom,
-			isActive: true,
-		},
-		update: {},
-	})
 }
 
 seed()

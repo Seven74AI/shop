@@ -230,13 +230,6 @@ enum AddressType {
   BOTH
 }
 
-enum TaxKind {
-  STANDARD
-  REDUCED
-  SUPER_REDUCED
-  ZERO
-}
-
 // E-commerce Product Models
 
 model Settings {
@@ -276,7 +269,6 @@ model Product {
   status        ProductStatus @default(DRAFT)
   stockQuantity Int? // stock quantity for products without variants (nullable)
   weightGrams   Int? // weight in grams (for shipping calculations)
-  taxKind       TaxKind        @default(STANDARD)
   categoryId    String
 
   createdAt DateTime @default(now())
@@ -427,17 +419,11 @@ model Cart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Abandoned cart recovery tracking
-  recoveryEmailSentAt DateTime? // When the last recovery email was sent (null = never)
-  recoveryEmailCount  Int       @default(0) // How many recovery emails have been sent
-
   user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   items CartItem[]
 
   @@index([userId])
   @@index([sessionId])
-  @@index([updatedAt])
-  @@index([recoveryEmailSentAt])
 }
 
 model CartItem {
@@ -477,13 +463,6 @@ model Order {
   shippingPostal  String
   shippingCountry String
 
-  // VAT information
-  vatBreakdown       Json    @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
-  vatTotalCents      Int     @default(0) // Total VAT in cents
-  taxCountry         String? // ISO 2-letter country code for tax calculation
-  customerVatNumber  String? // Customer VAT number (for B2B reverse-charge)
-  vatValidationStatus String? // VALID | INVALID | UNCHECKED | OUTAGE
-
   // Payment information (Stripe)
   stripeCheckoutSessionId String  @unique // Stripe Checkout Session ID
   stripePaymentIntentId   String? // Stripe PaymentIntent ID (from webhook)
@@ -508,16 +487,12 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Orders persist after user deletion (User.id → Order.userId becomes null).
-  // This is intentional: French tax law (CGI art. L. 102 B) requires 6-year
-  // retention of all sales documents. Orders are anonymised on user delete:
-  // userId set to null, but shipping address fields and contact email
-  // (legitimate interest for audit) remain. Customers can request full
-  // anonymisation only after the 6-year retention expires.
-  // See: docs/data-retention.md
+  // Return deadline (EU 14-day right of withdrawal)
+  returnDeadlineAt DateTime? // Computed as deliveredAt + 14 days; null until DELIVERED
+
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
-  invoices       Invoice[]
+  returnRequests ReturnRequest[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -546,77 +521,10 @@ model OrderItem {
   product Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
+  returnItems ReturnItem[]
+
   @@index([orderId])
   @@index([productId])
-}
-
-model Invoice {
-  id         String      @id @default(cuid())
-  orderId    String
-
-  // Sequential fiscal-year numbering
-  // Invoice number format: "F{year}-{sequence:05d}" (e.g., "F2025-00001").
-  // Generated atomically via withInvoiceLock() in app/utils/invoice.server.ts —
-  // a Promise-chain lock (not DB lock) sufficient for single-process LiteFS primary.
-  fiscalYear Int
-  sequence   Int
-
-  // Invoice type: INVOICE or CREDIT_NOTE
-  kind InvoiceKind @default(INVOICE)
-
-  // Financial snapshot at invoice time (in cents)
-  subtotalCents Int
-  totalCents    Int
-
-  // VAT snapshot from order at invoice time
-  vatBreakdown  Json @default("[]") // Array<{ kind, rate, baseCents, vatCents }>
-  vatTotalCents Int  @default(0)
-
-  // Self-referencing for credit notes — when kind=CREDIT_NOTE, this references the INVOICE being corrected
-  parentInvoiceId String?
-  parentInvoice   Invoice?  @relation("InvoiceCreditNotes", fields: [parentInvoiceId], references: [id], onDelete: SetNull)
-  creditNotes     Invoice[] @relation("InvoiceCreditNotes")
-
-  // PDF generation placeholder — populated by P1.2.2 PDF rendering
-  pdfObjectKey String?
-
-  // Status lifecycle: DRAFT → FINAL (when issued), or CANCELLED
-  status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED"
-
-  issuedAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
-
-  @@unique([fiscalYear, sequence])
-  @@index([orderId])
-  @@index([fiscalYear])
-  @@index([fiscalYear, sequence])
-  @@index([parentInvoiceId])
-  @@index([status])
-}
-
-enum InvoiceKind {
-  INVOICE
-  CREDIT_NOTE
-}
-
-model TaxRate {
-  id            String   @id @default(cuid())
-  country       String // ISO 2-letter country code
-  kind          TaxKind
-  rate          Int // Rate in basis points (2000 = 20.00%)
-  effectiveFrom DateTime
-  effectiveTo   DateTime?
-  isActive      Boolean  @default(true)
-
-  createdAt DateTime @default(now())
-
-  @@unique([country, kind, effectiveFrom])
-  @@index([country])
-  @@index([kind])
-  @@index([isActive])
 }
 
 enum OrderStatus {
@@ -738,42 +646,57 @@ enum ShippingRateType {
   FREE // Free shipping (with optional threshold)
 }
 
-// Newsletter Subscription System
-// Double-opt-in: users receive a confirmation email with a unique token.
-// Only after clicking the link does the subscription become active.
+// Return/Refund Models
 
-model NewsletterSubscription {
-  id        String                 @id @default(cuid())
-  email     String                 @unique
-  status    NewsletterStatus       @default(PENDING)
-  token     String?                @unique // HMAC-signed confirmation token (null after confirmation)
-  tokenExpiresAt DateTime?         // Token expires after 7 days (null after confirmation)
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  RECEIVED
+  REFUNDED
+  REJECTED
+}
 
-  confirmedAt   DateTime?
-  unsubscribedAt DateTime?
+// ReturnRequest is the canonical record for a return/refund on an order.
+model ReturnRequest {
+  id      String @id @default(cuid())
+  orderId String
+
+  status           ReturnStatus @default(REQUESTED)
+  reason           String // Customer-provided reason for return
+  customerNotes    String? // Optional additional notes from customer
+  adminNotes       String? // Internal notes from admin review
+  refundAmountCents Int? // Amount refunded (in cents)
+  restockingFeeCents Int? // Restocking fee deducted (in cents)
+
+  requestedAt DateTime @default(now()) // When the return was requested
+  receivedAt  DateTime? // When the returned items were received
+  refundedAt  DateTime? // When the refund was processed
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([email])
+  order Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items ReturnItem[] // Items being returned
+
+  @@index([orderId])
   @@index([status])
-  @@index([token])
 }
 
-enum NewsletterStatus {
-  PENDING      // Awaiting double-opt-in confirmation
-  CONFIRMED    // Subscribed and active
-  UNSUBSCRIBED // Opted out
-}
+// ReturnItem links a ReturnRequest to specific OrderItem to allow partial returns.
+model ReturnItem {
+  id             String @id @default(cuid())
+  returnRequestId String
+  orderItemId    String
 
-// Feature Flag System
+  quantity   Int // Number of units being returned
+  reasonItem String? // Item-specific reason (e.g., "damaged", "wrong item")
 
-model Flag {
-  key               String   @id
-  enabled           Boolean  @default(false)
-  rolloutPercentage Int?     @default(0)
-  audience          String?  // JSON: user filters (e.g., {"userIds": ["..."], "countries": ["FR", "BE"]})
-  description       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@unique([returnRequestId, orderItemId])
+  @@index([returnRequestId])
+  @@index([orderItemId])
 }

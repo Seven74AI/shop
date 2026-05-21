@@ -58,27 +58,17 @@ const navData = {
 						{ title: 'Add Category', url: '/admin/categories/new' },
 					],
 				},
-		{
-			title: 'Attributes',
-			url: '/admin/attributes',
-			icon: 'sliders' as IconName,
-			hasSubmenu: true,
-			items: [
-				{ title: 'All Attributes', url: '/admin/attributes' },
-				{ title: 'Add Attribute', url: '/admin/attributes/new' },
+				{
+					title: 'Attributes',
+					url: '/admin/attributes',
+					icon: 'sliders' as IconName,
+					hasSubmenu: true,
+					items: [
+						{ title: 'All Attributes', url: '/admin/attributes' },
+						{ title: 'Add Attribute', url: '/admin/attributes/new' },
+					],
+				},
 			],
-		},
-		{
-			title: 'Feature Flags',
-			url: '/admin/feature-flags',
-			icon: 'settings' as IconName,
-			hasSubmenu: true,
-			items: [
-				{ title: 'All Flags', url: '/admin/feature-flags' },
-				{ title: 'Add Flag', url: '/admin/feature-flags/new' },
-			],
-		},
-	],
 		},
 		{
 			title: 'System',

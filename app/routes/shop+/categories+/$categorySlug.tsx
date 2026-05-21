@@ -4,7 +4,6 @@ import { Link } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/$categorySlug.ts'
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -57,7 +56,6 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function CategoryPage({ loaderData }: Route.ComponentProps) {
-	const { locale } = useTranslation()
 	const { category, products, allCategories, currency } = loaderData
 	const [selectedCategory, setSelectedCategory] = useState(category.id)
 
@@ -125,7 +123,7 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 						)}
 							<h2 className="font-semibold text-lg mb-1">{product.name}</h2>
 							<p className="text-primary font-medium">
-								{formatPrice(product.price, currency, locale)}
+								{formatPrice(product.price, currency)}
 							</p>
 						</Link>
 					))}
