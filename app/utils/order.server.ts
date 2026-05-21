@@ -520,7 +520,7 @@ export async function cancelOrder(
 					vatTotalCents: 0,
 					shippingCostCents: -(order.shippingCost ?? 0),
 					totalCents: -order.total,
-					currency: { symbol: '€', decimals: 2 },
+					currency: { symbol: '€', code: 'EUR', decimals: 2 },
 					storeName: 'Epic Shop',
 					storeAddress: '123 Epic Street, 75001 Paris, France',
 					storeVatNumber: 'FR12345678901',
