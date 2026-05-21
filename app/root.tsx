@@ -133,6 +133,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
+	// i18n: detect locale and load translations
 	const locale = getLocale(request)
 	const translations = await getTranslations(locale)
 
@@ -153,8 +154,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 			ENV: getEnv(),
 			toast,
 			honeyProps,
-			locale,
-			translations,
 		},
 		{
 			headers: combineHeaders(
@@ -317,8 +316,7 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
-
-				<div className="flex items-center gap-4">
+				<div className="flex items-center gap-6">
 					<LocaleSwitch />
 					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 				</div>
@@ -347,7 +345,7 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<TranslationProvider locale={data.locale} translations={data.translations}>
+			<TranslationProvider>
 				<App />
 			</TranslationProvider>
 		</HoneypotProvider>

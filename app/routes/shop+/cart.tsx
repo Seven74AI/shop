@@ -7,7 +7,6 @@ import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/cart.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -96,7 +95,7 @@ export async function action({ request }: Route.ActionArgs) {
 export const meta: Route.MetaFunction = () => [{ title: 'Shopping Cart | Shop | Epic Shop' }]
 
 export default function Cart({ loaderData }: Route.ComponentProps) {
-	const { locale } = useTranslation()
+	const { t, locale } = useTranslation()
 	const { cart, items, currency } = loaderData
 
 	if (!cart || items.length === 0) {
@@ -177,9 +176,9 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
 
 				<div className="lg:col-span-1">
 					<div className="border rounded-lg p-4 space-y-4">
-						<h2 className="text-xl font-semibold">Order Summary</h2>
-						<div className="flex justify-between text-lg">
-							<span>Total:</span>
+					<h2 className="text-xl font-semibold">{t('shop.cart.orderSummary')}</h2>
+					<div className="flex justify-between text-lg">
+						<span>{t('shop.cart.total')}</span>
 							<span className="font-bold">{formatPrice(total, currency, locale)}</span>
 						</div>
 					<Button className="w-full" size="lg" asChild>
