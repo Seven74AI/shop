@@ -74,7 +74,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 			if (!match) {
 				throw new Error(`Invalid generated invoice number: ${invoiceNumber}`)
 			}
-			const sequence = parseInt(match[1], 10)
+			const sequence = parseInt(match[1]!, 10)
 
 			// Build VAT breakdown from order data (snapshot at invoice time)
 			// If order has VAT info, use it; otherwise create a simple breakdown

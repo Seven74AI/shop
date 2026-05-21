@@ -42,7 +42,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	const currency = await getStoreCurrency()
 
-	return { category, products, allCategories, currency: currency || { symbol: '$', decimals: 2 } }
+	return { category, products, allCategories, currency: currency || { code: 'USD', symbol: '$', decimals: 2 } }
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {

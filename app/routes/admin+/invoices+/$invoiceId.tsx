@@ -67,7 +67,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	return { invoice, currency }
 }
 
-export const meta: Route.MetaFunction<typeof loader> = ({ data }) => {
+export function meta({ data }: { data: Awaited<ReturnType<typeof loader>> | undefined }) {
 	if (!data) return [{ title: 'Invoice Not Found | Admin | Epic Shop' }]
 	const num = `F${data.invoice.fiscalYear}-${String(data.invoice.sequence).padStart(5, '0')}`
 	return [

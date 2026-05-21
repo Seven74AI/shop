@@ -183,8 +183,8 @@ describe('admin invoice detail', () => {
 		} as any)
 
 		expect(result.invoice.creditNotes).toHaveLength(1)
-		expect(result.invoice.creditNotes[0].id).toBe(creditNote.id)
-		expect(result.invoice.creditNotes[0].kind).toBe('CREDIT_NOTE')
+		expect(result.invoice.creditNotes[0]!.id).toBe(creditNote.id)
+		expect(result.invoice.creditNotes[0]!.kind).toBe('CREDIT_NOTE')
 
 		// Check credit note references parent
 		const request2 = await createAuthRequest(
@@ -198,7 +198,7 @@ describe('admin invoice detail', () => {
 		} as any)
 
 		expect(result2.invoice.parentInvoice).toBeTruthy()
-		expect(result2.invoice.parentInvoice.id).toBe(originalInvoice.id)
+		expect(result2.invoice.parentInvoice!.id).toBe(originalInvoice.id)
 		expect(result2.invoice.kind).toBe('CREDIT_NOTE')
 	})
 
