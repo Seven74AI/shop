@@ -137,6 +137,7 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto(
 				`/admin/feature-flags/${FEATURE_FLAG_E2E_PREFIX}edit-test/edit`,
 			)
+			await page.waitForLoadState('networkidle')
 
 			await expect(
 				page.getByRole('heading', { name: /edit feature flag/i }),
