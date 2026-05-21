@@ -5,7 +5,10 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
-import { getOrderByOrderNumber } from '#app/utils/order-queries.server.ts'
+import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
+import { formatDate } from '#app/utils/date.ts'
+import { formatAddress } from '#app/utils/address.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { type BreadcrumbHandle } from '../account.tsx'
 import { type Route } from './+types/orders.$orderNumber.ts'
@@ -51,6 +54,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function OrderDetail({ loaderData }: Route.ComponentProps) {
+	const { locale } = useTranslation()
 	const { order } = loaderData
 
 	return (
@@ -104,7 +108,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 										</p>
 									</div>
 									<div className="text-right">
-										<p className="font-semibold">{formatPrice(item.price)}</p>
+										<p className="font-semibold">{formatPrice(item.price, null, locale)}</p>
 									</div>
 								</div>
 							))}
@@ -121,11 +125,27 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 						<CardContent className="space-y-4">
 							<div className="flex justify-between">
 								<span className="text-gray-500">Subtotal</span>
-								<span>{formatPrice(order.subtotal)}</span>
+								<span>{formatPrice(order.subtotal, null, locale)}</span>
 							</div>
+							{order.shippingCost > 0 && (
+								<div className="flex justify-between">
+									<span className="text-gray-500">Shipping</span>
+									<span>{formatPrice(order.shippingCost, null, locale)}</span>
+								</div>
+							)}
+							{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
+								<>
+									{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
+										<div key={i} className="flex justify-between text-sm text-gray-500">
+											<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
+											<span>{formatPrice(line.vatCents, null, locale)}</span>
+										</div>
+									))}
+								</>
+							)}
 							<div className="border-t pt-4 flex justify-between text-lg font-bold">
 								<span>Total</span>
-								<span>{formatPrice(order.total)}</span>
+								<span>{formatPrice(order.total, null, locale)}</span>
 							</div>
 						</CardContent>
 					</Card>
@@ -135,13 +155,25 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							<h2>Shipping Address</h2>
 						</CardHeader>
 						<CardContent>
-							<p className="font-semibold">{order.shippingName}</p>
-							<p className="text-gray-500">{order.shippingStreet}</p>
-							<p className="text-gray-500">
-								{order.shippingCity}
-								{order.shippingState && `, ${order.shippingState}`} {order.shippingPostal}
-							</p>
-							<p className="text-gray-500">{order.shippingCountry}</p>
+							{(() => {
+								const addr = formatAddress({
+									name: order.shippingName ?? '',
+									street: order.shippingStreet ?? '',
+									city: order.shippingCity ?? '',
+									state: order.shippingState,
+									postal: order.shippingPostal ?? '',
+									country: order.shippingCountry ?? '',
+								})
+								return (
+									<>
+										{addr.lines.map((line, i) => (
+											<p key={i} className={i === 0 ? 'font-semibold' : 'text-gray-500'}>
+												{line}
+											</p>
+										))}
+									</>
+								)
+							})()}
 						</CardContent>
 					</Card>
 
@@ -153,13 +185,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							<div>
 								<p className="text-sm text-gray-500">Order Date</p>
 								<p>
-									{new Date(order.createdAt).toLocaleDateString('en-US', {
-										year: 'numeric',
-										month: 'long',
-										day: 'numeric',
-										hour: '2-digit',
-										minute: '2-digit',
-									})}
+								{formatDate(order.createdAt, locale, { dateStyle: 'full', timeStyle: 'short' })}
 								</p>
 							</div>
 							<div>

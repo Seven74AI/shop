@@ -6,6 +6,7 @@ import { Card } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { cn } from '#app/utils/misc.tsx'
 import { type Route } from './+types/account.ts'
 
@@ -58,6 +59,7 @@ function SidebarButton({
 }
 
 export default function AccountLayout() {
+	const { t } = useTranslation()
 	const location = useLocation()
 	const matches = useMatches()
 	const breadcrumbs = matches
@@ -89,7 +91,7 @@ export default function AccountLayout() {
 				{/* Breadcrumb */}
 				{pathname === '/account' ? (
 					<div className="mb-8 text-sm">
-						<span style={{ color: '#0A0A0A' }}>Account</span>
+						<span style={{ color: '#0A0A0A' }}>{t('account.layout.account')}</span>
 					</div>
 				) : (
 					<div className="flex items-center gap-2 mb-8 text-sm">
@@ -98,7 +100,7 @@ export default function AccountLayout() {
 							className="hover:opacity-80 transition-opacity inline-flex items-center"
 							style={{ color: '#717182' }}
 						>
-							Account
+							{t('account.layout.account')}
 						</Link>
 						{breadcrumbs.map((breadcrumb, i, arr) => (
 							<React.Fragment key={i}>
@@ -122,36 +124,36 @@ export default function AccountLayout() {
 					<aside className="lg:w-64 flex-shrink-0">
 						<Card className="p-2" style={{ borderRadius: '14px' }}>
 							<nav aria-label="Account navigation" className="space-y-1">
-								<SidebarButton
-									icon={<Icon name="user" className="w-5 h-5" />}
-									label="Profile"
-									to="/account"
-									active={isProfile}
-								/>
-								<SidebarButton
-									icon={<Icon name="package" className="w-5 h-5" />}
-									label="Orders"
-									to="/account/orders"
-									active={isOrders}
-								/>
-								<SidebarButton
-									icon={<Icon name="map-pin" className="w-5 h-5" />}
-									label="Addresses"
-									to="/account/addresses"
-									active={isAddresses}
-								/>
-								<SidebarButton
-									icon={<Icon name="shield" className="w-5 h-5" />}
-									label="Security"
-									to="/account/security"
-									active={isSecurity}
-								/>
-								<SidebarButton
-									icon={<Icon name="database" className="w-5 h-5" />}
-									label="Privacy & Data"
-									to="/account/privacy"
-									active={isPrivacy}
-								/>
+						<SidebarButton
+							icon={<Icon name="user" className="w-5 h-5" />}
+							label={t('account.layout.profile')}
+							to="/account"
+							active={isProfile}
+						/>
+						<SidebarButton
+							icon={<Icon name="package" className="w-5 h-5" />}
+							label={t('account.layout.orders')}
+							to="/account/orders"
+							active={isOrders}
+						/>
+						<SidebarButton
+							icon={<Icon name="map-pin" className="w-5 h-5" />}
+							label={t('account.layout.addresses')}
+							to="/account/addresses"
+							active={isAddresses}
+						/>
+						<SidebarButton
+							icon={<Icon name="shield" className="w-5 h-5" />}
+							label={t('account.layout.security')}
+							to="/account/security"
+							active={isSecurity}
+						/>
+						<SidebarButton
+							icon={<Icon name="database" className="w-5 h-5" />}
+							label={t('account.layout.privacy')}
+							to="/account/privacy"
+							active={isPrivacy}
+						/>
 							</nav>
 						</Card>
 					</aside>

@@ -5,6 +5,7 @@ import { data, Form, Link, redirect, redirectDocument, useActionData, useLoaderD
 import { z } from 'zod'
 import { ErrorList, Field } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import {
 	Select,
 	SelectContent,
@@ -219,8 +220,10 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function CheckoutShipping() {
+	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
+	const { t } = useTranslation()
 	const isPending = useIsPending()
 	
 	const {
@@ -290,7 +293,7 @@ export default function CheckoutShipping() {
 	if (!cart || !currency) {
 		return (
 			<div className="text-center">
-				<p className="text-muted-foreground">Loading...</p>
+				<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
 			</div>
 		)
 	}
@@ -298,13 +301,13 @@ export default function CheckoutShipping() {
 	return (
 		<div className="grid gap-8 lg:grid-cols-2">
 			<div>
-				<h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
+				<h2 className="text-xl font-semibold mb-4">{t('shop.checkout.shipping.title')}</h2>
 				
 				{savedAddresses.length > 0 && (
 					<div className="mb-6 space-y-3">
-						<label htmlFor="address-select" className="text-sm font-medium">
-							Use Saved Address
-						</label>
+					<label htmlFor="address-select" className="text-sm font-medium">
+						{t('shop.checkout.shipping.useSavedAddress')}
+					</label>
 						<Select
 							value={useNewAddress ? 'new' : selectedAddressId}
 							onValueChange={(value) => {
@@ -327,16 +330,16 @@ export default function CheckoutShipping() {
 							}}
 						>
 							<SelectTrigger id="address-select">
-								<SelectValue placeholder="Select an address" />
+								<SelectValue placeholder={t('shop.checkout.shipping.selectAddress')} />
 							</SelectTrigger>
 							<SelectContent>
 								{savedAddresses.map((address) => (
 									<SelectItem key={address.id} value={address.id}>
 										{address.label || address.name}
-										{address.isDefaultShipping && ' (Default)'}
+										{address.isDefaultShipping && t('shop.checkout.shipping.default')}
 									</SelectItem>
 								))}
-								<SelectItem value="new">Use New Address</SelectItem>
+								<SelectItem value="new">{t('shop.checkout.shipping.useNewAddress')}</SelectItem>
 							</SelectContent>
 						</Select>
 						
@@ -371,20 +374,20 @@ export default function CheckoutShipping() {
 							<Field
 								labelProps={{
 									htmlFor: fields.name.id,
-									children: 'Name',
-								}}
-								inputProps={{
-									...getInputProps(fields.name, { type: 'text' }),
-									autoComplete: 'name',
-									autoFocus: savedAddresses.length === 0,
-								}}
-								errors={fields.name.errors}
-							/>
+					children: t('shop.checkout.shipping.name'),
+				}}
+				inputProps={{
+					...getInputProps(fields.name, { type: 'text' }),
+					autoComplete: 'name',
+					autoFocus: savedAddresses.length === 0,
+				}}
+				errors={fields.name.errors}
+			/>
 
-							<Field
-								labelProps={{
-									htmlFor: fields.email.id,
-									children: 'Email',
+			<Field
+				labelProps={{
+					htmlFor: fields.email.id,
+					children: t('shop.checkout.shipping.email'),
 								}}
 								inputProps={{
 									...getInputProps(fields.email, { type: 'email' }),
@@ -396,7 +399,7 @@ export default function CheckoutShipping() {
 							<Field
 								labelProps={{
 									htmlFor: fields.street.id,
-									children: 'Street Address',
+									children: t('shop.checkout.shipping.street'),
 								}}
 								inputProps={{
 									...getInputProps(fields.street, { type: 'text' }),
@@ -408,11 +411,11 @@ export default function CheckoutShipping() {
 							<Field
 								labelProps={{
 									htmlFor: fields.city.id,
-									children: 'City',
-								}}
-								inputProps={{
-									...getInputProps(fields.city, { type: 'text' }),
-									autoComplete: 'address-level2',
+					children: t('shop.checkout.shipping.city'),
+				}}
+				inputProps={{
+					...getInputProps(fields.city, { type: 'text' }),
+					autoComplete: 'address-level2',
 								}}
 								errors={fields.city.errors}
 							/>
@@ -420,7 +423,7 @@ export default function CheckoutShipping() {
 							<Field
 								labelProps={{
 									htmlFor: fields.state.id,
-									children: 'State / Province',
+									children: t('shop.checkout.shipping.state'),
 								}}
 								inputProps={{
 									...getInputProps(fields.state, { type: 'text' }),
@@ -433,24 +436,24 @@ export default function CheckoutShipping() {
 								<Field
 									labelProps={{
 										htmlFor: fields.postal.id,
-										children: 'Postal Code',
-									}}
-									inputProps={{
-										...getInputProps(fields.postal, { type: 'text' }),
-										autoComplete: 'postal-code',
-									}}
-									errors={fields.postal.errors}
-								/>
+						children: t('shop.checkout.shipping.postal'),
+					}}
+					inputProps={{
+						...getInputProps(fields.postal, { type: 'text' }),
+						autoComplete: 'postal-code',
+					}}
+					errors={fields.postal.errors}
+				/>
 
-								<Field
-									labelProps={{
-										htmlFor: fields.country.id,
-										children: 'Country',
-									}}
-									inputProps={{
-										...getInputProps(fields.country, { type: 'text' }),
-										autoComplete: 'country',
-										placeholder: 'US (2-letter code)',
+				<Field
+					labelProps={{
+						htmlFor: fields.country.id,
+						children: t('shop.checkout.shipping.country'),
+					}}
+					inputProps={{
+						...getInputProps(fields.country, { type: 'text' }),
+						autoComplete: 'country',
+						placeholder: t('shop.checkout.shipping.countryPlaceholder'),
 									}}
 									errors={fields.country.errors}
 								/>
@@ -470,18 +473,18 @@ export default function CheckoutShipping() {
 											htmlFor={fields.saveAddress.id}
 											className="text-sm font-medium leading-none cursor-pointer"
 										>
-											Save this address for future use
+											{t('shop.checkout.shipping.saveAddress')}
 										</label>
 									</div>
 									{isSaveAddressChecked && (
 										<Field
 											labelProps={{
 												htmlFor: fields.label.id,
-												children: 'Address Name (Optional)',
-											}}
-											inputProps={{
-												...getInputProps(fields.label, { type: 'text' }),
-												placeholder: 'e.g., Home, Work, Office',
+						children: t('shop.checkout.shipping.addressNameLabel'),
+					}}
+					inputProps={{
+						...getInputProps(fields.label, { type: 'text' }),
+						placeholder: t('shop.checkout.shipping.addressNamePlaceholder'),
 											}}
 											errors={fields.label.errors}
 										/>
@@ -544,7 +547,7 @@ export default function CheckoutShipping() {
 										</p>
 									</div>
 									<p className="font-medium">
-										{formatPrice(itemTotal, currency)}
+										{formatPrice(itemTotal, currency, locale)}
 									</p>
 								</div>
 							)
@@ -554,7 +557,7 @@ export default function CheckoutShipping() {
 					<div className="border-t pt-4">
 						<div className="flex justify-between text-lg font-semibold">
 							<span>Subtotal</span>
-							<span>{formatPrice(subtotal, currency)}</span>
+							<span>{formatPrice(subtotal, currency, locale)}</span>
 						</div>
 					</div>
 				</div>

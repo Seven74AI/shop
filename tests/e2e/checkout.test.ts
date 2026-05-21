@@ -414,14 +414,17 @@ test.describe('Checkout', () => {
 			page.getByRole('heading', { name: /no shipping methods/i }).waitFor({ timeout: 15000 }),
 		]).catch(() => {})
 		
-		// If "No shipping methods", that's a problem
-		const pageText = await page.textContent('body') || ''
-		if (pageText.includes('No shipping methods available')) {
-			throw new Error('No shipping methods available - shipping zone/method may not have been created correctly')
+		// Wait for shipping method to appear (avoid false-positive textContent
+		// check that catches transient React hydration text)
+		try {
+			await page.waitForSelector('text=Standard Shipping', { timeout: 15000 })
+		} catch {
+			const pageText = await page.textContent('body') || ''
+			if (pageText.includes('No shipping methods available for this country')) {
+				throw new Error('No shipping methods available - shipping zone/method may not have been created correctly')
+			}
+			throw new Error('Shipping method selector did not appear on delivery page')
 		}
-		
-		// Wait for shipping method to appear
-		await page.waitForSelector('text=Standard Shipping', { timeout: 15000 })
 		
 		// Select shipping method - use radio button role
 		const shippingMethodRadio = page.getByRole('radio', { name: /standard shipping/i }).first()
