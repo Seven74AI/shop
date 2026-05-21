@@ -345,7 +345,7 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<TranslationProvider>
+			<TranslationProvider locale={data.locale} translations={data.translations}>
 				<App />
 			</TranslationProvider>
 		</HoneypotProvider>
