@@ -30,13 +30,18 @@ test.describe('i18n — locale switching', () => {
 		// Should redirect back to home
 		await page.waitForURL('/')
 
-		// Cookie should be set
-		const cookies = await page.context().cookies()
-		const localeCookie = cookies.find(
-			(c) => c.name === 'localePreference',
-		)
-		expect(localeCookie).toBeTruthy()
-		expect(localeCookie!.value).toBe('fr')
+		// Cookie should be set (fetcher redirects may apply Set-Cookie async)
+		await expect
+			.poll(
+				async () => {
+					const cookies = await page.context().cookies()
+					return cookies.find(
+						(c) => c.name === 'localePreference',
+					)?.value
+				},
+				{ timeout: 5_000 },
+			)
+			.toBe('fr')
 	})
 
 	test('switches to English when EN button is clicked', async ({
@@ -57,11 +62,18 @@ test.describe('i18n — locale switching', () => {
 
 		await page.waitForURL('/')
 
-		const cookies = await page.context().cookies()
-		const localeCookie = cookies.find(
-			(c) => c.name === 'localePreference',
-		)
-		expect(localeCookie!.value).toBe('en')
+		// Cookie should be updated (fetcher redirects may apply Set-Cookie async)
+		await expect
+			.poll(
+				async () => {
+					const cookies = await page.context().cookies()
+					return cookies.find(
+						(c) => c.name === 'localePreference',
+					)?.value
+				},
+				{ timeout: 5_000 },
+			)
+			.toBe('en')
 	})
 
 	test('locale persists across page navigation', async ({ page }) => {
