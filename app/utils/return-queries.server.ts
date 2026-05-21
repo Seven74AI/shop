@@ -31,19 +31,11 @@ const returnRequestInclude = {
 							},
 						},
 						variant: {
-							select: {
-								id: true,
+							include: {
 								attributeValues: {
-									select: {
+									include: {
 										attributeValue: {
-											select: {
-												value: true,
-												attribute: {
-													select: {
-														name: true,
-													},
-												},
-											},
+											include: { attribute: true },
 										},
 									},
 								},
@@ -103,5 +95,26 @@ export async function createReturnRequest(data: {
 			},
 		},
 		...returnRequestInclude,
+	})
+}
+
+export async function getAllReturnRequests() {
+	return prisma.returnRequest.findMany({
+		include: {
+			order: {
+				select: {
+					orderNumber: true,
+					email: true,
+					id: true,
+				},
+			},
+			items: {
+				select: {
+					id: true,
+					quantity: true,
+				},
+			},
+		},
+		orderBy: { requestedAt: 'desc' },
 	})
 }
