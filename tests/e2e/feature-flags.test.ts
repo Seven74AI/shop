@@ -195,13 +195,15 @@ test.describe('Feature Flags Admin Panel', () => {
 		// Wait for toggle to complete and page to reload
 		await expect(page).toHaveURL(/\/admin\/feature-flags$/)
 
-		// Wait for DB to reflect toggle (Prisma write may not be committed yet)
-		await page.waitForTimeout(500)
-
-		// Verify toggle in database
-		const flag = await prisma.flag.findUnique({
-			where: { key: `${FEATURE_FLAG_E2E_PREFIX}toggle-test` },
-		})
+		// Retry DB verification — Prisma write may lag behind page render
+		let flag = null
+		for (let i = 0; i < 10; i++) {
+			flag = await prisma.flag.findUnique({
+				where: { key: `${FEATURE_FLAG_E2E_PREFIX}toggle-test` },
+			})
+			if (flag !== null) break
+			await new Promise((r) => setTimeout(r, 500))
+		}
 		expect(flag?.enabled).toBe(true)
 		})
 
