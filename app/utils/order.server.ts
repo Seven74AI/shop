@@ -880,6 +880,16 @@ export async function processReturnRefund(
 		}
 	}
 
+	// Validate status transition BEFORE Stripe refund — prevents processing
+	// a refund when the return is not in RECEIVED state, which would leave
+	// money refunded without the return being marked as REFUNDED.
+	if (returnRequest.status !== 'RECEIVED') {
+		throw new Response(
+			`Invalid status transition: ${returnRequest.status} → REFUNDED`,
+			{ status: 400 },
+		)
+	}
+
 	const order = await prisma.order.findUnique({
 		where: { id: returnRequest.orderId },
 		select: {
