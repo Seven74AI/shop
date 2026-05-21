@@ -6,7 +6,7 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
-import { getCheckoutData } from '#app/utils/checkout.server.ts'
+import { calculateCartVat, getCheckoutData } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getLocale } from '#app/utils/i18n.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
@@ -18,7 +18,6 @@ import {
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { createCheckoutSession, handleStripeError } from '#app/utils/stripe.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/payment.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -49,6 +48,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument('/shop/cart')
 	}
 
+	// Compute VAT for display
+	const vatCalculation = await calculateCartVat(
+		checkoutData.cart,
+		country,
+		null, // No customer VAT number at this stage
+	)
+
 	return {
 		...checkoutData,
 		shippingInfo: {
@@ -63,6 +69,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		shippingMethodId,
 		shippingCost,
 		mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+		vatCalculation,
 	}
 }
 
@@ -223,6 +230,7 @@ export default function CheckoutPayment() {
 		subtotal,
 		shippingInfo,
 		shippingCost,
+		vatCalculation,
 	} = loaderData
 
 	if (actionData?.error) {
@@ -271,7 +279,7 @@ export default function CheckoutPayment() {
 		)
 	}
 
-	if (!cart || !currency, locale) {
+	if (!cart || !currency || !locale) {
 		return (
 			<div className="text-center">
 				<p className="text-muted-foreground">{t('checkout.loading')}</p>

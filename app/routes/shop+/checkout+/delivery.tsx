@@ -16,7 +16,6 @@ import { useIsPending } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { getShippingCost, getShippingMethodsForCountry } from '#app/utils/shipping.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/delivery.ts'
 
 const DeliveryFormSchema = z.object({
