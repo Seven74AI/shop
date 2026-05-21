@@ -67,9 +67,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	return { invoice, currency }
 }
 
-export const meta: MetaFunction = ({ data }: { data: unknown }) => {
-	if (!data) return [{ title: 'Invoice Not Found | Admin | Epic Shop' }]
-	const num = `F${data.invoice.fiscalYear}-${String(data.invoice.sequence).padStart(5, '0')}`
+export const meta: MetaFunction = ({ data }) => {
+	const d = data as Record<string, any> | undefined
+	if (!d) return [{ title: 'Invoice Not Found | Admin | Epic Shop' }]
+	const num = `F${d.invoice.fiscalYear}-${String(d.invoice.sequence).padStart(5, '0')}`
 	return [
 		{ title: `Invoice ${num} | Admin | Epic Shop` },
 		{ name: 'description', content: `View invoice ${num}` },

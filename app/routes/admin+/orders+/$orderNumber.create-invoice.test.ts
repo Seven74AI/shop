@@ -228,7 +228,7 @@ describe('admin order create-invoice', () => {
 		for (let i = 0; i < orders.length; i++) {
 			const request = await createAuthRequest(
 				adminUserId,
-				`https://example.com/admin/orders/${orders[i].orderNumber}/create-invoice`,
+				`https://example.com/admin/orders/${orders[i]!.orderNumber}/create-invoice`,
 			)
 			const result = await action({
 				params: { orderNumber: orders[i]!.orderNumber },

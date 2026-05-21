@@ -118,8 +118,8 @@ describe('admin invoices list', () => {
 
 		expect(result.invoices).toHaveLength(2)
 		// Most recent first
-		expect(result.invoices![0].id).toBe(inv2.id)
-		expect(result.invoices![1].id).toBe(inv1.id)
+		expect(result.invoices![0]!.id).toBe(inv2.id)
+		expect(result.invoices![1]!.id).toBe(inv1.id)
 
 		// Verify each invoice has order data
 		result.invoices.forEach((inv: any) => {

@@ -183,8 +183,8 @@ describe('admin invoice detail', () => {
 		} as any)
 
 		expect(result.invoice!.creditNotes).toHaveLength(1)
-		expect(result.invoice!.creditNotes[0].id).toBe(creditNote.id)
-		expect(result.invoice.creditNotes[0].kind).toBe('CREDIT_NOTE')
+		expect(result.invoice!.creditNotes![0].id).toBe(creditNote.id)
+		expect(result.invoice!.creditNotes![0].kind).toBe('CREDIT_NOTE')
 
 		// Check credit note references parent
 		const request2 = await createAuthRequest(
