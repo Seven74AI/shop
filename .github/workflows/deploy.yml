@@ -97,6 +97,10 @@ jobs:
   playwright:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v6
@@ -138,7 +142,7 @@ jobs:
         run: pnpm build
 
       - name: 🎭 Playwright tests
-        run: npx playwright test --workers=1
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: 📊 Upload report
         uses: actions/upload-artifact@v7
@@ -147,6 +151,14 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+  playwright-gate:
+    needs: playwright
+    runs-on: ubuntu-24.04
+    if: always()
+    steps:
+      - run: |
+          if [ "${{ needs.playwright.result }}" = "success" ]; then exit 0; else exit 1; fi
 
   container:
     runs-on: ubuntu-24.04
@@ -195,7 +207,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-24.04
-    needs: [lint, typecheck, vitest, playwright]
+    needs: [lint, typecheck, vitest, playwright-gate]
     # Disabled — container build not needed for PR CI
     if: false
     steps:
