@@ -6,14 +6,9 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
-<<<<<<< HEAD
-import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
-import { prisma } from '#app/utils/db.server.ts'
-=======
 import { calculateCartVat, getCheckoutData } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getLocale } from '#app/utils/i18n.server.ts'
->>>>>>> feat/t_bbce3b
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
@@ -53,27 +48,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument('/shop/cart')
 	}
 
-<<<<<<< HEAD
-	// Calculate VAT for display
-	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
-	let vatCalculation = null
-	try {
-		vatCalculation = await calculateCartVat(
-			checkoutData.cart,
-			country,
-			customerVatNumber,
-		)
-	} catch {
-		// VAT calculation failure shouldn't block checkout
-	}
-=======
 	// Compute VAT for display
 	const vatCalculation = await calculateCartVat(
 		checkoutData.cart,
 		country,
 		null, // No customer VAT number at this stage
 	)
->>>>>>> feat/t_bbce3b
 
 	return {
 		...checkoutData,
@@ -142,9 +122,6 @@ export async function action({ request }: Route.ActionArgs) {
 		throw error
 	}
 
-<<<<<<< HEAD
-	// Get cart with full product details including taxKind for VAT calculation
-=======
 >>>>>>> feat/t_bbce3b
 	const cartWithItems = await prisma.cart.findUnique({
 		where: { id: cart.id },
@@ -201,7 +178,6 @@ export async function action({ request }: Route.ActionArgs) {
 
 	// Create Stripe Checkout Session
 =======
->>>>>>> feat/t_bbce3b
 	try {
 		const domainUrl = getDomainUrl(request)
 		const session = await createCheckoutSession({
@@ -222,12 +198,7 @@ export async function action({ request }: Route.ActionArgs) {
 			currency,
 			domainUrl,
 			userId: userId || undefined,
-<<<<<<< HEAD
-			vatTotalCents: vatCalculation?.totalVatCents ?? 0,
-			vatBreakdown: vatCalculation?.breakdown ?? [],
-=======
 			locale,
->>>>>>> feat/t_bbce3b
 		})
 
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
@@ -255,11 +226,7 @@ export default function CheckoutPayment() {
 	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
-<<<<<<< HEAD
-	const { t, locale } = useTranslation()
-=======
 	const { t } = useTranslation()
->>>>>>> feat/t_bbce3b
 
 	useEffect(() => {
 		if (!actionData?.error && loaderData) {
@@ -274,17 +241,10 @@ export default function CheckoutPayment() {
 	if (!loaderData) {
 		return (
 			<div className="text-center">
-<<<<<<< HEAD
-			<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
-		</div>
-	)
-}
-=======
 				<p className="text-muted-foreground">{t('checkout.loading')}</p>
 			</div>
 		)
 	}
->>>>>>> feat/t_bbce3b
 
 	const {
 		cart,
@@ -301,13 +261,9 @@ export default function CheckoutPayment() {
 				<Card>
 					<CardContent className="pt-6">
 						<div className="text-center space-y-4">
-<<<<<<< HEAD
-							<h2 className="text-2xl font-bold text-destructive">{t('shop.checkout.payment.error')}</h2>
-=======
 							<h2 className="text-2xl font-bold text-destructive">
 								{t('checkout.payment.error')}
 							</h2>
->>>>>>> feat/t_bbce3b
 							<p className="text-muted-foreground">
 								{'message' in actionData ? actionData.message : actionData.error}
 							</p>
@@ -331,19 +287,11 @@ export default function CheckoutPayment() {
 										shippingMethodId: loaderData.shippingMethodId,
 										shippingCost: loaderData.shippingCost.toString(),
 									}).toString()}`}>
-<<<<<<< HEAD
-										{t('shop.checkout.payment.backToDelivery')}
-									</Link>
-								</Button>
-								<Button asChild>
-									<Link to="/shop/cart">{t('shop.checkout.payment.returnToCart')}</Link>
-=======
 										{t('checkout.payment.backToDelivery')}
 									</Link>
 								</Button>
 								<Button asChild>
 									<Link to="/shop/cart">{t('checkout.payment.returnToCart')}</Link>
->>>>>>> feat/t_bbce3b
 								</Button>
 							</div>
 						</div>
@@ -366,17 +314,10 @@ export default function CheckoutPayment() {
 			<Card>
 				<CardContent className="pt-6">
 					<div className="text-center space-y-4">
-<<<<<<< HEAD
-					<h2 className="text-2xl font-bold">{t('shop.checkout.payment.title')}</h2>
-					<p className="text-muted-foreground">
-						{t('shop.checkout.payment.redirecting')}
-					</p>
-=======
 						<h2 className="text-2xl font-bold">{t('checkout.payment.title')}</h2>
 						<p className="text-muted-foreground">
 							{t('checkout.payment.redirecting')}
 						</p>
->>>>>>> feat/t_bbce3b
 						<div className="flex justify-center">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 						</div>
@@ -385,19 +326,6 @@ export default function CheckoutPayment() {
 			</Card>
 
 			<div className="border rounded-lg p-6 space-y-4">
-<<<<<<< HEAD
-				<h3 className="text-lg font-semibold">{t('shop.checkout.payment.orderSummary')}</h3>
-				<div className="space-y-2">
-					<div className="flex justify-between">
-						<span>{t('shop.checkout.payment.subtotal')}</span>
-						<span>{formatPrice(subtotal, currency, locale)}</span>
-					</div>
-					<div className="flex justify-between">
-						<span>{t('shop.checkout.payment.shipping')}</span>
-						<span>
-							{shippingCost === 0 ? (
-								<span className="text-green-600">{t('shop.checkout.payment.free')}</span>
-=======
 				<h3 className="text-lg font-semibold">{t('checkout.payment.orderSummary')}</h3>
 				<div className="space-y-2">
 					<div className="flex justify-between">
@@ -409,7 +337,6 @@ export default function CheckoutPayment() {
 						<span>
 							{shippingCost === 0 ? (
 								<span className="text-green-600">{t('checkout.delivery.free')}</span>
->>>>>>> feat/t_bbce3b
 							) : (
 								formatPrice(shippingCost, currency, locale)
 							)}
@@ -419,11 +346,7 @@ export default function CheckoutPayment() {
 						<>
 							{vatCalculation.breakdown.map((line) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
-<<<<<<< HEAD
-									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
-=======
 									<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
->>>>>>> feat/t_bbce3b
 									<span>{formatPrice(line.vatCents, currency, locale)}</span>
 								</div>
 							))}
@@ -431,33 +354,20 @@ export default function CheckoutPayment() {
 					)}
 					{vatCalculation && vatCalculation.totalVatCents === 0 && (
 						<div className="flex justify-between text-sm text-muted-foreground">
-<<<<<<< HEAD
-							<span>{t('shop.checkout.payment.vat')}</span>
-=======
 							<span>VAT</span>
->>>>>>> feat/t_bbce3b
 							<span>€0.00</span>
 						</div>
 					)}
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
-<<<<<<< HEAD
-						<span>{t('shop.checkout.payment.total')}</span>
-						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency)}</span>
-=======
 						<span>{t('checkout.payment.total')}</span>
 						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency, locale)}</span>
->>>>>>> feat/t_bbce3b
 					</div>
 				</div>
 			</div>
 
 			{shippingInfo && (
 				<div className="border rounded-lg p-6">
-<<<<<<< HEAD
-					<h3 className="text-lg font-semibold mb-4">{t('shop.checkout.payment.shippingTo')}</h3>
-=======
 					<h3 className="text-lg font-semibold mb-4">{t('checkout.payment.shippingTo')}</h3>
->>>>>>> feat/t_bbce3b
 					<p className="font-medium">{shippingInfo.name}</p>
 					<p className="text-sm text-muted-foreground">{shippingInfo.street}</p>
 					<p className="text-sm text-muted-foreground">

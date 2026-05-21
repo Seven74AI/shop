@@ -8,16 +8,11 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { fulfillOrder } from '#app/utils/fulfillment.server.ts'
-<<<<<<< HEAD
-import { getOrderByCheckoutSessionId } from '#app/utils/order-queries.server.ts'
-import { createOrderFromStripeSession } from '#app/utils/order.server.ts'
-=======
 import { useTranslation } from '#app/utils/i18n.tsx'
 import {
 	createOrderFromStripeSession,
 	getOrderByCheckoutSessionId,
 } from '#app/utils/order.server.ts'
->>>>>>> feat/t_bbce3b
 import { type StoreAddress } from '#app/utils/shipment.server.ts'
 import { stripe } from '#app/utils/stripe.server.ts'
 import { type Route } from './+types/success.ts'
@@ -143,10 +138,6 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
-<<<<<<< HEAD
-	const { t } = useTranslation()
-	// Ensure we have the required data with defaults
-=======
 >>>>>>> feat/t_bbce3b
 	const processing = loaderData?.processing ?? false
 	const sessionId = loaderData?.sessionId ?? null
@@ -240,16 +231,11 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 						{isSyncing ? t('shop.checkout.success.creating') : t('shop.checkout.success.title')}
 =======
 						{isSyncing ? t('checkout.success.creating') : t('checkout.success.processing')}
->>>>>>> feat/t_bbce3b
 					</h1>
 
 					<p className="text-base font-normal text-[#4A5565] mb-6 leading-[1.5em]">
 						{isSyncing
-<<<<<<< HEAD
-							? t('shop.checkout.success.paymentSuccess')
-=======
 							? t('checkout.success.paymentSuccessful')
->>>>>>> feat/t_bbce3b
 							: message}
 					</p>
 
@@ -270,11 +256,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 								className="h-9 px-4 rounded-lg font-medium border border-[#D1D5DC] bg-white text-[#101828] hover:bg-gray-50"
 							>
 								<Icon name="update" className="mr-2 h-4 w-4" />
-<<<<<<< HEAD
-								{t('shop.checkout.success.syncButton')}
-=======
 								{t('checkout.success.syncNow')}
->>>>>>> feat/t_bbce3b
 							</Button>
 						</div>
 					)}
@@ -288,19 +270,6 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 								}}
 								className="h-9 px-4 rounded-lg font-medium border border-[#D1D5DC] bg-white text-[#101828] hover:bg-gray-50"
 							>
-<<<<<<< HEAD
-								{t('shop.checkout.success.refreshButton')}
-							</Button>
-						</div>
-					)}
-					
-					{/* Cart Info */}
-				<p className="text-sm font-normal text-[#4A5565] mb-4 leading-[1.4285714285714286em]">
-					{t('shop.checkout.success.cartInfo')}
-				</p>
-					
-					{/* Session ID */}
-=======
 								{t('checkout.success.refreshNow')}
 							</Button>
 						</div>
@@ -310,7 +279,6 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 						{t('checkout.success.cartInfo')}
 					</p>
 
->>>>>>> feat/t_bbce3b
 					{sessionId && (
 						<p className="text-sm font-normal text-[#6A7282] leading-[1.4285714285714286em]">
 							{t('shop.checkout.success.sessionIdLabel')} {sessionId.substring(0, 20)}...

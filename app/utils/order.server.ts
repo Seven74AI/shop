@@ -11,15 +11,6 @@ import { generateOrderNumber } from './order-number.server.ts'
 import { generateInvoiceNumber, parseInvoiceNumber, formatInvoiceNumber } from './invoice.server.ts'
 import { stripe } from './stripe.server.ts'
 import { calculateVat, type TaxableItem } from './tax.server.ts'
-<<<<<<< HEAD
-import { issueCreditNote, type RefundedLineItem } from './invoice.server.ts'
-import {
-	generateInvoicePdf,
-	type InvoicePdfData,
-} from './invoice-pdf.server.tsx'
-import { getReturnRequestById } from './return-queries.server.ts'
-import { updateReturnStatus } from './return.server.ts'
-=======
 >>>>>>> feat/t_bbce3b
 
 /**
@@ -433,7 +424,6 @@ export async function cancelOrder(
 			},
 =======
 			shippingCountry: true,
->>>>>>> feat/t_bbce3b
 		},
 	})
 
@@ -487,126 +477,27 @@ export async function cancelOrder(
 		const t = createT(translations)
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
 
-<<<<<<< HEAD
-		// Attempt to generate credit note PDF for email attachment
-		let creditNotePdfBuffer: Buffer | null = null
-		let creditNoteNumber: string | null = null
-
-		const parentInvoice = order.invoices[0]
-		if (parentInvoice && order.items.length > 0) {
-			try {
-				// Build refunded line items from order items
-				const refundedItems: RefundedLineItem[] = order.items.map((oi) => ({
-					description:
-						oi.variant?.sku ?? oi.product.name,
-					quantity: oi.quantity,
-					unitPriceCents: oi.price,
-					totalCents: oi.price * oi.quantity,
-				}))
-
-				const refundedShippingCents = order.shippingCost ?? 0
-
-				// Issue credit note (shared gapless sequence)
-				const creditNote = await issueCreditNote(
-					parentInvoice.id,
-					refundedItems,
-					refundedShippingCents,
-				)
-
-				creditNoteNumber = creditNote.number
-
-				// Format parent invoice number
-				const parentInvoiceNumber = `F${parentInvoice.fiscalYear}-${String(parentInvoice.sequence).padStart(5, '0')}`
-
-				// Generate PDF for the credit note
-				const pdfData: InvoicePdfData = {
-					kind: 'CREDIT_NOTE',
-					invoiceNumber: creditNote.number,
-					parentInvoiceNumber,
-					invoiceDate: new Date().toLocaleDateString('fr-FR'),
-					invoiceStatus: 'FINAL',
-					orderNumber: order.orderNumber,
-					orderDate: order.createdAt.toLocaleDateString('fr-FR'),
-					customer: {
-						name: order.shippingName,
-						email: order.email,
-						company: null,
-						vatNumber: null,
-					},
-					shipping: {
-						name: order.shippingName,
-						street: order.shippingStreet,
-						city: order.shippingCity,
-						postal: order.shippingPostal,
-						country: order.shippingCountry,
-					},
-					items: refundedItems.map((item) => ({
-						description: item.description,
-						quantity: -item.quantity,
-						unitPriceCents: item.unitPriceCents,
-						totalCents: -item.totalCents,
-					})),
-					subtotalCents: -order.subtotal,
-					vatBreakdown: [],
-					vatTotalCents: 0,
-					shippingCostCents: -(order.shippingCost ?? 0),
-					totalCents: -order.total,
-					currency: { symbol: '€', code: 'EUR', decimals: 2 },
-					storeName: 'Epic Shop',
-					storeAddress: '123 Epic Street, 75001 Paris, France',
-					storeVatNumber: 'FR12345678901',
-					storeEmail: 'support@epicstack.dev',
-				}
-
-				creditNotePdfBuffer = await generateInvoicePdf(pdfData)
-			} catch (creditNoteError) {
-				// Log credit note error but don't fail cancellation
-				Sentry.captureException(creditNoteError, {
-					tags: { context: 'order-cancellation-credit-note' },
-					extra: { orderNumber: order.orderNumber },
-				})
-			}
-		}
-=======
 		const subject = t('email.cancellation.subject', { orderNumber: order.orderNumber })
->>>>>>> feat/t_bbce3b
 
 		await sendEmail({
 			to: order.email,
 			subject,
 			html: `
-<<<<<<< HEAD
-				<h1>Order Cancelled</h1>
-				<p>Your order has been cancelled.</p>
-				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				${refundId ? `<p><strong>Refund ID:</strong> ${refundId}</p>` : ''}
-				${creditNoteNumber ? `<p><strong>Credit Note:</strong> ${creditNoteNumber}</p>` : ''}
-				<p>${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
-=======
 				<h1>${t('email.cancellation.heading')}</h1>
 				<p>${t('email.cancellation.body')}</p>
 				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
 				${refundId ? `<p><strong>${t('email.cancellation.refundId')}:</strong> ${refundId}</p>` : ''}
 				<p>${refundId ? t('email.cancellation.refundProcessed') : t('email.cancellation.contactSupport')}</p>
 				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
->>>>>>> feat/t_bbce3b
 			`,
 			text: `
 ${t('email.cancellation.heading')}
 
 ${t('email.cancellation.body')}
 
-<<<<<<< HEAD
-Order Number: ${order.orderNumber}
-${refundId ? `Refund ID: ${refundId}` : ''}
-${creditNoteNumber ? `Credit Note: ${creditNoteNumber}` : ''}
-${refundId ? 'A refund has been processed and will appear in your account within 5-10 business days.' : 'If you have already been charged, please contact support for a refund.'}
-=======
 ${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
 ${refundId ? `${t('email.cancellation.refundId')}: ${refundId}` : ''}
 ${refundId ? t('email.cancellation.refundProcessed') : t('email.cancellation.contactSupport')}
->>>>>>> feat/t_bbce3b
 
 ${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,
@@ -991,15 +882,6 @@ export async function createOrderFromStripeSession(
 			to: order.email,
 			subject: t('email.orderConfirmation.subject', { orderNumber: order.orderNumber }),
 			html: `
-<<<<<<< HEAD
-				<h1>Order Confirmation</h1>
-				<p>Thank you for your order!</p>
-				<p><strong>Order Number:</strong> ${order.orderNumber}</p>
-				<p><strong>Subtotal:</strong> €${(order.subtotal / 100).toFixed(2)}</p>
-				${vatHtml}
-				<p><strong>Total:</strong> €${(order.total / 100).toFixed(2)}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
-=======
 				<h1>${t('email.orderConfirmation.heading')}</h1>
 				<p>${t('email.orderConfirmation.thankYou')}</p>
 				<p><strong>${t('email.orderConfirmation.orderNumber')}:</strong> ${order.orderNumber}</p>
@@ -1007,24 +889,16 @@ export async function createOrderFromStripeSession(
 				${vatHtml}
 				<p><strong>${t('email.orderConfirmation.total')}:</strong> €${(order.total / 100).toFixed(2)}</p>
 				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">${t('email.orderConfirmation.viewDetails')}</a></p>
->>>>>>> feat/t_bbce3b
 			`,
 			text: `
 ${t('email.orderConfirmation.heading')}
 
 ${t('email.orderConfirmation.thankYou')}
 
-<<<<<<< HEAD
-Order Number: ${order.orderNumber}
-Subtotal: €${(order.subtotal / 100).toFixed(2)}
-${vatText}
-Total: €${(order.total / 100).toFixed(2)}
-=======
 ${t('email.orderConfirmation.orderNumber')}: ${order.orderNumber}
 Subtotal: €${(order.subtotal / 100).toFixed(2)}
 ${vatText}
 ${t('email.orderConfirmation.total')}: €${(order.total / 100).toFixed(2)}
->>>>>>> feat/t_bbce3b
 
 ${t('email.orderConfirmation.viewDetails')}: ${domainUrl}/shop/orders/${order.orderNumber}
 			`,

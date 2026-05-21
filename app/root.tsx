@@ -133,9 +133,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const honeyProps = await honeypot.getInputProps()
 
-<<<<<<< HEAD
-	// i18n: detect locale and load translations
-=======
 >>>>>>> feat/t_bbce3b
 	const locale = getLocale(request)
 	const translations = await getTranslations(locale)
@@ -325,7 +322,6 @@ function App() {
 				<div className="flex items-center gap-6">
 =======
 				<div className="flex items-center gap-4">
->>>>>>> feat/t_bbce3b
 					<LocaleSwitch />
 					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 				</div>
@@ -354,11 +350,7 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-<<<<<<< HEAD
-			<TranslationProvider>
-=======
 			<TranslationProvider locale={data.locale} translations={data.translations}>
->>>>>>> feat/t_bbce3b
 				<App />
 			</TranslationProvider>
 		</HoneypotProvider>

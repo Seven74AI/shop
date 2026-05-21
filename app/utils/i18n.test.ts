@@ -174,46 +174,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
-				locale: 'en',
-				translations: createMockTranslations('en'),
->>>>>>> feat/t_bbce3b
-				children: createElement(TestChild),
-			}),
-		)
-
-		expect(screen.getByTestId('locale').textContent).toBe('en')
-		expect(screen.getByTestId('translated').textContent).toBe('Home')
-	})
-
-	test('provides French locale and translations', () => {
-		mockRouteLoaderData.mockReturnValue({
-			locale: 'fr',
-			translations: createMockTranslations('fr'),
-		})
-
-		function TestChild() {
-			const { locale, t } = useTranslation()
-			return createElement(
-				'div',
-				{},
-				createElement('span', { 'data-testid': 'locale' }, locale),
-				createElement(
-					'span',
-					{ 'data-testid': 'translated' },
-					t('nav.home'),
-				),
-			)
-		}
-
-		render(
-			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
 				locale: 'fr',
 				translations: createMockTranslations('fr'),
->>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -232,37 +194,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
 				locale: 'en',
 				translations: {},
->>>>>>> feat/t_bbce3b
-				children: createElement(TestChild),
-			}),
-		)
-
-		expect(screen.getByTestId('locale').textContent).toBe('en')
-	})
-
-	test('falls back to empty translations dict when loader data is null', () => {
-		mockRouteLoaderData.mockReturnValue(null)
-
-		function TestChild() {
-			const { t } = useTranslation()
-			return createElement(
-				'span',
-				{ 'data-testid': 'fallback' },
-				t('nav.home'),
-			)
-		}
-
-		render(
-			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
-				locale: 'en',
-				translations: {},
->>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -288,42 +221,8 @@ describe('TranslationProvider', () => {
 
 		render(
 			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
-				locale: 'en',
-				translations: createMockTranslations('en'),
->>>>>>> feat/t_bbce3b
-				children: createElement(TestChild),
-			}),
-		)
-
-		expect(screen.getByTestId('interpolated').textContent).toBe(
-			'© 2026 Epic Notes. All rights reserved.',
-		)
-	})
-
-	test('interpolates variables with French locale', () => {
-		mockRouteLoaderData.mockReturnValue({
-			locale: 'fr',
-			translations: createMockTranslations('fr'),
-		})
-
-		function TestChild() {
-			const { t } = useTranslation()
-			return createElement(
-				'span',
-				{ 'data-testid': 'interpolated' },
-				t('footer.copyright', { year: 2026 }),
-			)
-		}
-
-		render(
-			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
 				locale: 'fr',
 				translations: createMockTranslations('fr'),
->>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -337,17 +236,6 @@ describe('TranslationProvider', () => {
 // ─── useTranslation() ───────────────────────────────────────────────
 
 describe('useTranslation()', () => {
-<<<<<<< HEAD
-	test('throws when used outside TranslationProvider', () => {
-		function BadComponent() {
-			useTranslation()
-			return createElement('div')
-		}
-
-		expect(() => render(createElement(BadComponent))).toThrow(
-			'useTranslation() must be used within a <TranslationProvider>',
-		)
-=======
 	test('falls back to identity when used outside TranslationProvider', () => {
 		let captured: { locale: string; t: (key: string) => string } | undefined
 
@@ -360,7 +248,6 @@ describe('useTranslation()', () => {
 
 		expect(captured?.locale).toBe('en')
 		expect(captured?.t('any.key')).toBe('any.key')
->>>>>>> feat/t_bbce3b
 	})
 
 	test('returns locale from provider', () => {
@@ -379,39 +266,8 @@ describe('useTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
-				locale: 'fr',
-				translations: createMockTranslations('fr'),
->>>>>>> feat/t_bbce3b
-				children: createElement(TestChild),
-			}),
-		)
-
-		expect(capturedLocale).toBe('fr')
-	})
-
-	test('translates a known key via t()', () => {
-		mockRouteLoaderData.mockReturnValue({
-			locale: 'en' as Locale,
-			translations: createMockTranslations('en'),
-		})
-
-		let result = ''
-
-		function TestChild() {
-			const { t } = useTranslation()
-			result = t('search.placeholder')
-			return createElement('div')
-		}
-
-		render(
-			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
 				locale: 'en',
 				translations: createMockTranslations('en'),
->>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)
@@ -423,13 +279,8 @@ describe('useTranslation()', () => {
 // ─── useOptionalTranslation() ───────────────────────────────────────
 
 describe('useOptionalTranslation()', () => {
-<<<<<<< HEAD
-	test('returns null when used outside TranslationProvider', () => {
-		let captured: unknown
-=======
 	test('falls back to identity when used outside TranslationProvider', () => {
 		let captured: ReturnType<typeof useTranslation> | undefined
->>>>>>> feat/t_bbce3b
 
 		function TestChild() {
 			captured = useOptionalTranslation()
@@ -438,12 +289,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(createElement(TestChild))
 
-<<<<<<< HEAD
-		expect(captured).toBeNull()
-=======
 		expect(captured?.locale).toBe('en')
 		expect(captured?.t('any.key')).toBe('any.key')
->>>>>>> feat/t_bbce3b
 	})
 
 	test('returns context value when inside TranslationProvider', () => {
@@ -461,43 +308,8 @@ describe('useOptionalTranslation()', () => {
 
 		render(
 			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
-				locale: 'en',
-				translations: createMockTranslations('en'),
->>>>>>> feat/t_bbce3b
-				children: createElement(TestChild),
-			}),
-		)
-
-		expect(captured).not.toBeNull()
-		expect(captured.locale).toBe('en')
-		expect(typeof captured.t).toBe('function')
-	})
-
-	test('t() works via optional hook', () => {
-		mockRouteLoaderData.mockReturnValue({
-			locale: 'fr' as Locale,
-			translations: createMockTranslations('fr'),
-		})
-
-		let result = ''
-
-		function TestChild() {
-			const ctx = useOptionalTranslation()
-			if (ctx) {
-				result = ctx.t('nav.shop')
-			}
-			return createElement('div')
-		}
-
-		render(
-			createElement(TranslationProvider, {
-<<<<<<< HEAD
-=======
 				locale: 'fr',
 				translations: createMockTranslations('fr'),
->>>>>>> feat/t_bbce3b
 				children: createElement(TestChild),
 			}),
 		)

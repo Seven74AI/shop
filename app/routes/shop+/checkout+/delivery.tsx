@@ -262,11 +262,7 @@ export default function CheckoutDelivery() {
 	if (!loaderData) {
 		return (
 			<div className="text-center">
-<<<<<<< HEAD
-				<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
-=======
 				<p className="text-muted-foreground">{t('checkout.loading')}</p>
->>>>>>> feat/t_bbce3b
 			</div>
 		)
 	}
@@ -282,30 +278,17 @@ export default function CheckoutDelivery() {
 	return (
 		<div className="space-y-6">
 			<div className="rounded-lg border bg-card p-6">
-<<<<<<< HEAD
-				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.title')}</h2>
-				<p className="text-muted-foreground mb-6">
-					{t('shop.checkout.delivery.subtitle')}
-=======
 				<h2 className="mb-4 text-xl font-semibold">{t('checkout.delivery.title')}</h2>
 				<p className="text-muted-foreground mb-6">
 					{t('checkout.delivery.description')}
->>>>>>> feat/t_bbce3b
 				</p>
 
 				<Form method="POST" className="space-y-6" {...getFormProps(form)}>
 					<div className="space-y-4">
-<<<<<<< HEAD
-						<h3 className="text-lg font-semibold">{t('shop.checkout.delivery.shippingMethod')}</h3>
-						{shippingMethods.length === 0 ? (
-							<div className="text-sm text-muted-foreground">
-								{t('shop.checkout.delivery.noMethods')}
-=======
 						<h3 className="text-lg font-semibold">{t('checkout.delivery.shippingMethod')}</h3>
 						{shippingMethods.length === 0 ? (
 							<div className="text-sm text-muted-foreground">
 								{t('checkout.delivery.noMethods')}
->>>>>>> feat/t_bbce3b
 							</div>
 						) : (
 							<div className="space-y-3">
@@ -374,21 +357,13 @@ export default function CheckoutDelivery() {
 														)}
 														{method.estimatedDays && (
 															<div className="text-sm text-muted-foreground">
-<<<<<<< HEAD
-																{t('shop.checkout.delivery.estimatedDays', { days: method.estimatedDays })}
-=======
 																{t('checkout.delivery.estimatedDelivery', { days: method.estimatedDays })}
->>>>>>> feat/t_bbce3b
 															</div>
 														)}
 													</div>
 													<div className="font-semibold">
 														{methodCost === 0
-<<<<<<< HEAD
-															? t('shop.checkout.delivery.free')
-=======
 															? t('checkout.delivery.free')
->>>>>>> feat/t_bbce3b
 															: formatPrice(methodCost, currency, locale)}
 													</div>
 												</div>
@@ -411,15 +386,9 @@ export default function CheckoutDelivery() {
 
 					{mondialRelayCarrierId && selectedShippingMethodId && (
 						<div className="space-y-4 mt-6">
-<<<<<<< HEAD
-							<h3 className="text-lg font-semibold">{t('shop.checkout.delivery.pickupTitle')}</h3>
-							<p className="text-sm text-muted-foreground">
-								{t('shop.checkout.delivery.pickupSubtitle')}
-=======
 							<h3 className="text-lg font-semibold">{t('checkout.delivery.pickupPoint')}</h3>
 							<p className="text-sm text-muted-foreground">
 								{t('checkout.delivery.pickupPointDescription')}
->>>>>>> feat/t_bbce3b
 							</p>
 							<MondialRelayPickupSelector
 								postalCode={shippingInfo.postal}
@@ -453,11 +422,7 @@ export default function CheckoutDelivery() {
 								postal: shippingInfo.postal,
 								country: shippingInfo.country,
 							}).toString()}`}>
-<<<<<<< HEAD
-								{t('shop.checkout.delivery.backToShipping')}
-=======
 								{t('checkout.delivery.back')}
->>>>>>> feat/t_bbce3b
 							</a>
 						</Button>
 						<StatusButton
@@ -465,31 +430,13 @@ export default function CheckoutDelivery() {
 							status={isPending ? 'pending' : 'idle'}
 							disabled={Boolean(isPending || !selectedShippingMethodId || (mondialRelayCarrierId && !selectedPickupPointId))}
 						>
-<<<<<<< HEAD
-							{t('shop.checkout.delivery.continueToPayment')}
-=======
 							{t('checkout.delivery.continue')}
->>>>>>> feat/t_bbce3b
 						</StatusButton>
 					</div>
 				</Form>
 			</div>
 
 			<div className="rounded-lg border bg-card p-6">
-<<<<<<< HEAD
-				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.orderSummary')}</h2>
-				<div className="space-y-2">
-					<div className="flex justify-between">
-					<span>{t('shop.checkout.delivery.subtotal')}</span>
-					<span>{formatPrice(subtotal, currency, locale)}</span>
-					</div>
-					<div className="flex justify-between">
-					<span>{t('shop.checkout.delivery.shipping')}</span>
-					<span>
-							{selectedShippingMethodId ? (
-								shippingCost === 0 ? (
-									<span className="text-green-600">{t('shop.checkout.delivery.free')}</span>
-=======
 				<h2 className="mb-4 text-xl font-semibold">{t('checkout.delivery.orderSummary')}</h2>
 				<div className="space-y-2">
 					<div className="flex justify-between">
@@ -502,7 +449,6 @@ export default function CheckoutDelivery() {
 							{selectedShippingMethodId ? (
 								shippingCost === 0 ? (
 									<span className="text-green-600">{t('checkout.delivery.free')}</span>
->>>>>>> feat/t_bbce3b
 								) : (
 									formatPrice(shippingCost, currency, locale)
 								)
@@ -512,13 +458,8 @@ export default function CheckoutDelivery() {
 						</span>
 					</div>
 					<div className="flex justify-between text-lg font-semibold border-t pt-2">
-<<<<<<< HEAD
-					<span>{t('shop.checkout.delivery.total')}</span>
-					<span>
-=======
 						<span>{t('checkout.delivery.total')}</span>
 						<span>
->>>>>>> feat/t_bbce3b
 							{selectedShippingMethodId
 								? formatPrice(total, currency, locale)
 								: formatPrice(subtotal, currency, locale)}
@@ -528,11 +469,7 @@ export default function CheckoutDelivery() {
 			</div>
 
 			<div className="rounded-lg border bg-card p-6">
-<<<<<<< HEAD
-				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.shippingDetails')}</h2>
-=======
 				<h2 className="mb-4 text-xl font-semibold">{t('checkout.delivery.shippingDetails')}</h2>
->>>>>>> feat/t_bbce3b
 				<p>
 					{shippingInfo.name}
 					<br />

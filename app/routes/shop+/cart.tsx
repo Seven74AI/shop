@@ -96,11 +96,7 @@ export async function action({ request }: Route.ActionArgs) {
 export const meta: Route.MetaFunction = () => [{ title: 'Shopping Cart | Shop | Epic Shop' }]
 
 export default function Cart({ loaderData }: Route.ComponentProps) {
-<<<<<<< HEAD
-	const { t, locale } = useTranslation()
-=======
 	const { locale } = useTranslation()
->>>>>>> feat/t_bbce3b
 	const { cart, items, currency } = loaderData
 
 	if (!cart || items.length === 0) {
@@ -181,15 +177,9 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
 
 				<div className="lg:col-span-1">
 					<div className="border rounded-lg p-4 space-y-4">
-<<<<<<< HEAD
-					<h2 className="text-xl font-semibold">{t('shop.cart.orderSummary')}</h2>
-					<div className="flex justify-between text-lg">
-						<span>{t('shop.cart.total')}</span>
-=======
 						<h2 className="text-xl font-semibold">Order Summary</h2>
 						<div className="flex justify-between text-lg">
 							<span>Total:</span>
->>>>>>> feat/t_bbce3b
 							<span className="font-bold">{formatPrice(total, currency, locale)}</span>
 						</div>
 					<Button className="w-full" size="lg" asChild>

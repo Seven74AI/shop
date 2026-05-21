@@ -7,18 +7,9 @@ import Stripe from 'stripe'
 // See: https://github.com/mswjs/msw/issues/2259#issuecomment-2422672039
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 	apiVersion: '2026-04-22.dahlia',
-<<<<<<< HEAD
-	maxNetworkRetries: 0, // Disable retries to fail fast
-	timeout: 10000, // 10 seconds global timeout
-	telemetry: false, // Disable telemetry for faster requests
-	// Use fetch-based HTTP client in non-test environments to bypass MSW interception
-	// In test mode, use default HTTP client so MSW can intercept requests
-	// See: https://github.com/mswjs/msw/issues/2259#issuecomment-2422672039
-=======
 	maxNetworkRetries: 0,
 	timeout: 10000,
 	telemetry: false,
->>>>>>> feat/t_bbce3b
 	...(process.env.NODE_ENV !== 'test' && {
 		httpClient: Stripe.createFetchHttpClient(),
 	}),
@@ -107,12 +98,7 @@ export async function createCheckoutSession({
 	currency,
 	domainUrl,
 	userId,
-<<<<<<< HEAD
-	vatTotalCents,
-	vatBreakdown,
-=======
 	locale,
->>>>>>> feat/t_bbce3b
 }: {
 	cart: {
 		id: string
@@ -136,12 +122,7 @@ export async function createCheckoutSession({
 	}
 	domainUrl: string
 	userId?: string | null
-<<<<<<< HEAD
-	vatTotalCents?: number
-	vatBreakdown?: Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
-=======
 	locale?: string | null
->>>>>>> feat/t_bbce3b
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
