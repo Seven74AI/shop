@@ -3,6 +3,7 @@ import { Link, redirect } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
 import { addToCart, getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$slug.ts'
@@ -72,6 +73,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
+	const { locale } = useTranslation()
 	const { product, currency } = loaderData
 
 	return (
@@ -100,7 +102,7 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					<div>
-						<p className="text-3xl font-bold">{formatPrice(product.price, currency)}</p>
+						<p className="text-3xl font-bold">{formatPrice(product.price, currency, locale)}</p>
 					</div>
 
 					{product.description && (

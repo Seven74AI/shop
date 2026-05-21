@@ -16,6 +16,7 @@ import {
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { createCheckoutSession, handleStripeError } from '#app/utils/stripe.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/payment.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -232,6 +233,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function CheckoutPayment() {
+	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 
@@ -307,7 +309,7 @@ export default function CheckoutPayment() {
 		)
 	}
 
-	if (!cart || !currency) {
+	if (!cart || !currency, locale) {
 		return (
 			<div className="text-center">
 				<p className="text-muted-foreground">Loading...</p>
@@ -336,7 +338,7 @@ export default function CheckoutPayment() {
 				<div className="space-y-2">
 					<div className="flex justify-between">
 						<span>Subtotal</span>
-						<span>{formatPrice(subtotal, currency)}</span>
+						<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
 					<div className="flex justify-between">
 						<span>Shipping</span>
@@ -344,7 +346,7 @@ export default function CheckoutPayment() {
 							{shippingCost === 0 ? (
 								<span className="text-green-600">Free</span>
 							) : (
-								formatPrice(shippingCost, currency)
+								formatPrice(shippingCost, currency, locale)
 							)}
 						</span>
 					</div>
@@ -353,7 +355,7 @@ export default function CheckoutPayment() {
 							{vatCalculation.breakdown.map((line) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
 									<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
-									<span>{formatPrice(line.vatCents, currency)}</span>
+									<span>{formatPrice(line.vatCents, currency, locale)}</span>
 								</div>
 							))}
 						</>
@@ -366,7 +368,7 @@ export default function CheckoutPayment() {
 					)}
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
 						<span>Total</span>
-						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency)}</span>
+						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency, locale)}</span>
 					</div>
 				</div>
 			</div>
