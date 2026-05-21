@@ -505,6 +505,8 @@ model Order {
   mondialRelayShipmentNumber  String? // Mondial Relay shipment number (from API2)
   mondialRelayLabelUrl        String? // URL to shipping label PDF
 
+  returnDeadlineAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -517,6 +519,7 @@ model Order {
   // See: docs/data-retention.md
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   items          OrderItem[]
+  returnRequests ReturnRequest[]
   invoices       Invoice[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
@@ -545,6 +548,8 @@ model OrderItem {
   order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  returnItems ReturnItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -737,6 +742,59 @@ enum ShippingRateType {
   PRICE_BASED // Rate based on order total
   FREE // Free shipping (with optional threshold)
 }
+
+// Return/Refund Models
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  RECEIVED
+  REFUNDED
+  REJECTED
+}
+
+model ReturnRequest {
+  id      String @id @default(cuid())
+  orderId String
+
+  status           ReturnStatus @default(REQUESTED)
+  reason           String
+  customerNotes    String?
+  adminNotes       String?
+  refundAmountCents Int?
+  restockingFeeCents Int?
+
+  requestedAt DateTime @default(now())
+  receivedAt  DateTime?
+  refundedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items ReturnItem[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model ReturnItem {
+  id              String @id @default(cuid())
+  returnRequestId String
+  orderItemId     String
+  quantity        Int
+  reasonItem      String?
+
+  createdAt DateTime @default(now())
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@unique([returnRequestId, orderItemId])
+  @@index([returnRequestId])
+  @@index([orderItemId])
+}
+
 
 // Newsletter Subscription System
 // Double-opt-in: users receive a confirmation email with a unique token.

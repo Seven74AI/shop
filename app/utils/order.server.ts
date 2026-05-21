@@ -8,6 +8,13 @@ import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { stripe } from './stripe.server.ts'
 import { calculateVat, type TaxableItem } from './tax.server.ts'
+import { issueCreditNote, type RefundedLineItem } from './invoice.server.ts'
+import {
+	generateInvoicePdf,
+	type InvoicePdfData,
+} from './invoice-pdf.server.tsx'
+import { getReturnRequestById } from './return-queries.server.ts'
+import { updateReturnStatus } from './return.server.ts'
 
 /**
  * Type for stock availability issues
@@ -841,3 +848,95 @@ View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
 	return { id: order.id, orderNumber: order.orderNumber }
 }
 
+
+
+export async function processReturnRefund(
+	returnRequestId: string,
+	request?: Request,
+): Promise<{ refundId: string | null; creditNoteNumber: string | null }> {
+	const returnRequest = await getReturnRequestById(returnRequestId)
+	invariant(returnRequest, 'Return request not found')
+
+	// Idempotency: if already refunded, don't process again
+	if (returnRequest.status === 'REFUNDED') {
+		return { refundId: null, creditNoteNumber: null }
+	}
+
+	// Validate status transition BEFORE Stripe refund — prevents processing
+	// a refund when the return is not in RECEIVED state, which would leave
+	// money refunded without the return being marked as REFUNDED.
+	if (returnRequest.status !== 'RECEIVED') {
+		throw new Response(
+			`Invalid status transition: ${returnRequest.status} → REFUNDED`,
+			{ status: 400 },
+		)
+	}
+
+	const order = await prisma.order.findUnique({
+		where: { id: returnRequest.orderId },
+		select: {
+			id: true, orderNumber: true, email: true,
+			stripePaymentIntentId: true, stripeChargeId: true,
+			shippingName: true, shippingStreet: true, shippingCity: true,
+			shippingPostal: true, shippingCountry: true, createdAt: true,
+		},
+	})
+	invariant(order, 'Order not found for return request')
+
+	let itemRefundCents = 0
+	const refundedItems: RefundedLineItem[] = []
+	for (const returnItem of returnRequest.items) {
+		const oi = returnItem.orderItem
+		if (!oi) continue
+		const lineRefundCents = oi.price * returnItem.quantity
+		itemRefundCents += lineRefundCents
+		refundedItems.push({
+			description: oi.product?.name ?? `Item ${oi.id}`,
+			quantity: returnItem.quantity,
+			unitPriceCents: oi.price,
+			totalCents: lineRefundCents,
+		})
+	}
+
+	const restockingFee = returnRequest.restockingFeeCents ?? 0
+	const shippingRefundCents = 0
+	const refundAmountCents = itemRefundCents - restockingFee
+	invariant(refundAmountCents > 0, 'Refund amount must be positive')
+
+	let refundId: string | null = null
+	if (order.stripePaymentIntentId || order.stripeChargeId) {
+		try {
+			const refundParams: Stripe.RefundCreateParams = {
+				amount: refundAmountCents,
+				reason: 'requested_by_customer',
+				metadata: { orderNumber: order.orderNumber, returnRequestId: returnRequest.id, returnedBy: 'admin' },
+			}
+			if (order.stripePaymentIntentId) refundParams.payment_intent = order.stripePaymentIntentId
+			else if (order.stripeChargeId) refundParams.charge = order.stripeChargeId
+			const refund = await stripe.refunds.create(refundParams)
+			refundId = refund.id
+		} catch (refundError) {
+			Sentry.captureException(refundError, { tags: { context: 'return-refund-stripe' }, extra: { orderNumber: order.orderNumber, returnRequestId: returnRequest.id } })
+			throw new Response('Failed to process Stripe refund', { status: 500 })
+		}
+	}
+
+	await updateReturnStatus(returnRequest.id, 'REFUNDED', null, refundAmountCents, restockingFee > 0 ? restockingFee : null)
+
+	let creditNoteNumber: string | null = null
+	try {
+		const invoice = await prisma.invoice.findFirst({
+			where: { orderId: order.id, status: 'FINAL', kind: 'INVOICE' },
+			orderBy: { issuedAt: 'desc' },
+			select: { id: true },
+		})
+		if (invoice) {
+			const creditNote = await issueCreditNote(invoice.id, refundedItems, shippingRefundCents)
+			creditNoteNumber = creditNote.number
+		}
+	} catch (creditNoteError) {
+		Sentry.captureException(creditNoteError, { tags: { context: 'return-refund-credit-note' }, extra: { orderNumber: order.orderNumber, returnRequestId: returnRequest.id } })
+	}
+
+	return { refundId, creditNoteNumber }
+}

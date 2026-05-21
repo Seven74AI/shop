@@ -115,3 +115,67 @@ export function parseInvoiceNumber(
 	if (isNaN(fiscalYear) || isNaN(sequence)) return null
 	return { fiscalYear, sequence }
 }
+
+
+// ---------------------------------------------------------------------------
+// Credit note helpers
+// ---------------------------------------------------------------------------
+
+export interface RefundedLineItem {
+	description: string
+	quantity: number
+	unitPriceCents: number
+	totalCents: number
+}
+
+export interface VatBreakdownEntry {
+	kind: string
+	rate: number
+	baseCents: number
+	vatCents: number
+}
+
+export async function issueCreditNote(
+	parentInvoiceId: string,
+	refundedItems: RefundedLineItem[],
+	refundedShippingCents: number,
+	tx?: Prisma.TransactionClient,
+) {
+	const db = tx ?? prisma
+
+	const parent = await db.invoice.findUnique({
+		where: { id: parentInvoiceId },
+		select: { id: true, orderId: true, fiscalYear: true, vatBreakdown: true, vatTotalCents: true, status: true },
+	})
+	if (!parent) throw new Error(`Parent invoice ${parentInvoiceId} not found`)
+
+	const subtotalCents = refundedItems.reduce((sum, item) => sum + -item.totalCents, 0)
+	const shippingCents = -refundedShippingCents
+
+	const vatBreakdown = parent.vatBreakdown as VatBreakdownEntry[] | null
+	const creditNoteVatBreakdown: VatBreakdownEntry[] = []
+	let vatTotalCents = 0
+	if (Array.isArray(vatBreakdown) && vatBreakdown.length > 0) {
+		for (const entry of vatBreakdown) {
+			creditNoteVatBreakdown.push({ kind: entry.kind, rate: entry.rate, baseCents: -Math.abs(entry.baseCents), vatCents: -Math.abs(entry.vatCents) })
+			vatTotalCents += -Math.abs(entry.vatCents)
+		}
+	}
+
+	const totalCents = subtotalCents + shippingCents + vatTotalCents
+	const fiscalYear = new Date().getFullYear()
+	const invoiceNumber = await generateInvoiceNumber(fiscalYear, tx)
+	const parsed = parseInvoiceNumber(invoiceNumber)
+	if (!parsed) throw new Error(`Failed to parse generated invoice number: ${invoiceNumber}`)
+
+	const creditNote = await db.invoice.create({
+		data: {
+			fiscalYear, sequence: parsed.sequence, kind: 'CREDIT_NOTE',
+			orderId: parent.orderId, parentInvoiceId,
+			subtotalCents, totalCents,
+			vatBreakdown: creditNoteVatBreakdown as any, vatTotalCents,
+			status: 'FINAL', issuedAt: new Date(),
+		},
+	})
+	return { id: creditNote.id, number: invoiceNumber, fiscalYear, sequence: parsed.sequence }
+}
