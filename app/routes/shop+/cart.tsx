@@ -4,9 +4,9 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Input } from '#app/components/ui/input.tsx'
 import { getOrCreateCartFromRequest, updateCartItemQuantity, removeFromCart } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/cart.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -95,17 +95,17 @@ export async function action({ request }: Route.ActionArgs) {
 export const meta: Route.MetaFunction = () => [{ title: 'Shopping Cart | Shop | Epic Shop' }]
 
 export default function Cart({ loaderData }: Route.ComponentProps) {
-	const { locale } = useTranslation()
+	const { t, locale } = useTranslation()
 	const { cart, items, currency } = loaderData
 
 	if (!cart || items.length === 0) {
 		return (
 			<div className="container py-8">
-				<h1 className="text-3xl font-bold tracking-tight mb-6">Shopping Cart</h1>
+				<h1 className="text-3xl font-bold tracking-tight mb-6">{t('shop.cart.title')}</h1>
 				<div className="text-center py-12">
-					<p className="text-muted-foreground text-lg mb-4">Your cart is empty</p>
+					<p className="text-muted-foreground text-lg mb-4">{t('shop.cart.empty')}</p>
 					<Link to="/shop/products">
-						<Button>Continue Shopping</Button>
+						<Button>{t('shop.cart.continueShopping')}</Button>
 					</Link>
 				</div>
 			</div>
@@ -118,7 +118,7 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="container py-8">
-			<h1 className="text-3xl font-bold tracking-tight mb-6">Shopping Cart</h1>
+			<h1 className="text-3xl font-bold tracking-tight mb-6">{t('shop.cart.title')}</h1>
 
 			<div className="grid gap-8 lg:grid-cols-3">
 				<div className="lg:col-span-2">
@@ -146,9 +146,9 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
 											defaultValue={item.quantity}
 											min="1"
 											className="w-20"
-											aria-label="Quantity"
+											aria-label={t('shop.cart.quantity')}
 										/>
-										<Button type="submit" size="sm">Update</Button>
+										<Button type="submit" size="sm">{t('shop.cart.update')}</Button>
 										<Button
 											type="submit"
 											size="sm"
@@ -165,8 +165,8 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
 												}
 											}}
 										>
-											Remove
-										</Button>
+									{t('shop.cart.remove')}
+								</Button>
 									</form>
 								</div>
 							</div>
@@ -176,14 +176,14 @@ export default function Cart({ loaderData }: Route.ComponentProps) {
 
 				<div className="lg:col-span-1">
 					<div className="border rounded-lg p-4 space-y-4">
-						<h2 className="text-xl font-semibold">Order Summary</h2>
-						<div className="flex justify-between text-lg">
-							<span>Total:</span>
+					<h2 className="text-xl font-semibold">{t('shop.cart.orderSummary')}</h2>
+					<div className="flex justify-between text-lg">
+						<span>{t('shop.cart.total')}</span>
 							<span className="font-bold">{formatPrice(total, currency, locale)}</span>
 						</div>
-						<Button className="w-full" size="lg" asChild>
-							<Link to="/shop/checkout">Checkout</Link>
-						</Button>
+					<Button className="w-full" size="lg" asChild>
+						<Link to="/shop/checkout">{t('shop.cart.checkout')}</Link>
+					</Button>
 					</div>
 				</div>
 			</div>

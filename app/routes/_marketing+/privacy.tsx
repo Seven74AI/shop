@@ -1,3 +1,6 @@
+import { useTranslation } from '#app/utils/i18n.tsx'
+
 export default function PrivacyRoute() {
-	return <div>Privacy</div>
+	const { t } = useTranslation()
+	return <div>{t('marketing.privacy')}</div>
 }

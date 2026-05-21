@@ -73,7 +73,7 @@ export const links: Route.LinksFunction = () => {
 export const meta: Route.MetaFunction = ({ loaderData }) => {
 	return [
 		{ title: loaderData ? 'Epic Notes' : 'Error | Epic Notes' },
-		{ name: 'description', content: `Your own captain's log` },
+		{ name: 'description', content: "Your own captain's log" },
 	]
 }
 
@@ -301,9 +301,9 @@ function App() {
 							{user ? (
 								<UserDropdown />
 							) : (
-								<Button asChild variant="default" size="lg">
-									<Link to="/login">Log In</Link>
-								</Button>
+							<Button asChild variant="default" size="lg">
+								<Link to="/login">{t('nav.login')}</Link>
+							</Button>
 							)}
 						</div>
 						<div className="block w-full sm:hidden">{searchBar}</div>

@@ -27,6 +27,7 @@ import {
 	SelectValue,
 } from '#app/components/ui/select.tsx'
 import { getOrderStatusLabel } from '#app/utils/order-status.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { getOrderByOrderNumber, updateOrderStatus, cancelOrder } from '#app/utils/order.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
@@ -146,6 +147,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
+	const { locale } = useTranslation()
 	const { order, currency } = loaderData
 	const statusFetcher = useFetcher()
 	const cancelFetcher = useFetcher()

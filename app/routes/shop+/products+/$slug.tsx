@@ -73,7 +73,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
-	const { locale } = useTranslation()
+	const { t, locale } = useTranslation()
 	const { product, currency } = loaderData
 
 	return (
@@ -89,7 +89,7 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 						/>
 					) : (
 						<div className="aspect-square w-full rounded-lg border bg-muted flex items-center justify-center">
-							<span className="text-muted-foreground">No image</span>
+							<span className="text-muted-foreground">{t('shop.product.detail.noImage')}</span>
 						</div>
 					)}
 				</div>
@@ -107,22 +107,22 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 
 					{product.description && (
 						<div>
-							<h2 className="text-lg font-semibold mb-2">Description</h2>
+							<h2 className="text-lg font-semibold mb-2">{t('shop.product.detail.description')}</h2>
 							<p className="text-muted-foreground whitespace-pre-wrap">{product.description}</p>
 						</div>
 					)}
 
 					<form method="post" className="space-y-4">
 						<input type="hidden" name="intent" value="add-to-cart" />
-						<Button type="submit" size="lg" className="w-full">
-							Add to Cart
-						</Button>
+					<Button type="submit" size="lg" className="w-full">
+						{t('shop.product.detail.addToCart')}
+					</Button>
 					</form>
 
 					<div className="pt-4 border-t">
-						<Link to="/shop/products" className="text-sm text-muted-foreground hover:underline">
-							← Back to Products
-						</Link>
+					<Link to="/shop/products" className="text-sm text-muted-foreground hover:underline">
+						{t('shop.product.detail.backToProducts')}
+					</Link>
 					</div>
 				</div>
 			</div>
