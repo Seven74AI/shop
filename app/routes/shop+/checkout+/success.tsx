@@ -6,9 +6,12 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { fulfillOrder } from '#app/utils/fulfillment.server.ts'
-import { getOrderByCheckoutSessionId } from '#app/utils/order-queries.server.ts'
-import { createOrderFromStripeSession } from '#app/utils/order.server.ts'
+import {
+	createOrderFromStripeSession,
+	getOrderByCheckoutSessionId,
+} from '#app/utils/order.server.ts'
 import { type StoreAddress } from '#app/utils/shipment.server.ts'
 import { stripe } from '#app/utils/stripe.server.ts'
 import { type Route } from './+types/success.ts'
@@ -153,6 +156,7 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	// Ensure we have the required data with defaults
 	const processing = loaderData?.processing ?? false
 	const sessionId = loaderData?.sessionId ?? null
@@ -250,13 +254,13 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 					
 					{/* Heading */}
 					<h1 className="text-base font-normal text-[#101828] mb-4 leading-[1.5em]">
-						{isSyncing ? 'Creating Your Order...' : 'Processing Your Order'}
+						{isSyncing ? t('shop.checkout.success.creating') : t('shop.checkout.success.title')}
 					</h1>
 					
 					{/* Message */}
 					<p className="text-base font-normal text-[#4A5565] mb-6 leading-[1.5em]">
 						{isSyncing
-							? 'Your payment was successful! We are creating your order now. This may take a few moments.'
+							? t('shop.checkout.success.paymentSuccess')
 							: message}
 					</p>
 					
@@ -279,7 +283,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 								className="h-9 px-4 rounded-lg font-medium border border-[#D1D5DC] bg-white text-[#101828] hover:bg-gray-50"
 							>
 								<Icon name="update" className="mr-2 h-4 w-4" />
-								Sync Order Now
+								{t('shop.checkout.success.syncButton')}
 							</Button>
 						</div>
 					)}
@@ -294,20 +298,20 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 								}}
 								className="h-9 px-4 rounded-lg font-medium border border-[#D1D5DC] bg-white text-[#101828] hover:bg-gray-50"
 							>
-								Refresh Now
+								{t('shop.checkout.success.refreshButton')}
 							</Button>
 						</div>
 					)}
 					
 					{/* Cart Info */}
-					<p className="text-sm font-normal text-[#4A5565] mb-4 leading-[1.4285714285714286em]">
-						Your cart will be cleared once your order is created. If this takes longer than expected, please check your email for order confirmation or contact support.
-					</p>
+				<p className="text-sm font-normal text-[#4A5565] mb-4 leading-[1.4285714285714286em]">
+					{t('shop.checkout.success.cartInfo')}
+				</p>
 					
 					{/* Session ID */}
 					{sessionId && (
 						<p className="text-sm font-normal text-[#6A7282] leading-[1.4285714285714286em]">
-							Session ID: {sessionId.substring(0, 20)}...
+							{t('shop.checkout.success.sessionIdLabel')} {sessionId.substring(0, 20)}...
 						</p>
 					)}
 				</CardContent>
@@ -317,6 +321,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 }
 
 export function ErrorBoundary() {
+	const { t } = useTranslation()
 	return (
 		<GeneralErrorBoundary
 			statusHandlers={{
@@ -325,10 +330,10 @@ export function ErrorBoundary() {
 						<Card className="max-w-2xl mx-auto border-primary/50 bg-primary/5">
 							<CardContent className="pt-12 pb-12 text-center">
 								<Icon name="question-mark-circled" className="h-16 w-16 text-primary mx-auto mb-6" />
-								<h1 className="text-3xl font-bold mb-4">Page Not Found</h1>
-								<p className="text-muted-foreground mb-6">
-									The checkout success page could not be found.
-								</p>
+					<h1 className="text-3xl font-bold mb-4">{t('shop.checkout.success.pageNotFoundTitle')}</h1>
+					<p className="text-muted-foreground mb-6">
+						{t('shop.checkout.success.pageNotFound')}
+					</p>
 							</CardContent>
 						</Card>
 					</div>
@@ -339,10 +344,10 @@ export function ErrorBoundary() {
 					<Card className="max-w-2xl mx-auto border-primary/50 bg-primary/5">
 						<CardContent className="pt-12 pb-12 text-center">
 							<Icon name="question-mark-circled" className="h-16 w-16 text-primary mx-auto mb-6" />
-							<h1 className="text-3xl font-bold mb-4">Error Loading Page</h1>
-							<p className="text-muted-foreground mb-6">
-								An error occurred while loading the checkout success page. Please try again or contact support.
-							</p>
+					<h1 className="text-3xl font-bold mb-4">{t('shop.checkout.success.errorTitle')}</h1>
+					<p className="text-muted-foreground mb-6">
+						{t('shop.checkout.success.errorMessage')}
+					</p>
 						</CardContent>
 					</Card>
 				</div>

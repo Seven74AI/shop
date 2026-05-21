@@ -2,6 +2,7 @@ import { invariantResponse } from '@epic-web/invariant'
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$categorySlug.ts'
@@ -56,6 +57,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 }
 
 export default function CategoryPage({ loaderData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	const { category, products, allCategories, currency } = loaderData
 	const [selectedCategory, setSelectedCategory] = useState(category.id)
 
@@ -79,7 +81,7 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 					<p className="text-muted-foreground mt-2">{category.description}</p>
 				)}
 				<p className="text-muted-foreground mt-1">
-					{filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+					{filteredProducts.length} {filteredProducts.length === 1 ? t('shop.products.product_one') : t('shop.products.product_other')}
 				</p>
 			</div>
 
@@ -89,7 +91,7 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 					value={selectedCategory}
 					onChange={(e) => setSelectedCategory(e.target.value)}
 					className="w-full px-4 py-2 border rounded-md"
-					aria-label="Filter by category"
+					aria-label={t('shop.category.filterLabel')}
 				>
 					{allCategories.map((cat) => (
 						<option key={cat.id} value={cat.id}>
@@ -102,7 +104,7 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
 			{/* Products Grid */}
 			{filteredProducts.length === 0 ? (
 				<div className="text-center py-12">
-					<p className="text-muted-foreground">No products available in this category.</p>
+					<p className="text-muted-foreground">{t('shop.category.noProducts')}</p>
 				</div>
 			) : (
 				<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

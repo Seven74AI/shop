@@ -11,6 +11,7 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { twoFAVerificationType } from '#app/routes/account+/security+/two-factor.tsx'
 import { requireUserId, sessionKey } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { getUserImgSrc, useIsPending } from '#app/utils/misc.tsx'
 import { authSessionStorage } from '#app/utils/session.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
@@ -174,15 +175,16 @@ async function deleteDataAction({ userId }: ProfileActionArgs) {
 	await prisma.user.delete({ where: { id: userId } })
 	return redirectWithToast('/', {
 		type: 'success',
-		title: 'Data Deleted',
-		description: 'All of your data has been deleted',
+		title: 'Supprimé',
+		description: 'Toutes vos données ont été supprimées',
 	})
 }
 
 export default function AccountPage({ loaderData, actionData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	return (
 		<Card className="p-8" style={{ borderRadius: '14px' }}>
-			<h2 className="text-base font-normal mb-6" style={{ fontSize: '16px', lineHeight: '1.5em', color: '#0A0A0A' }}>Profile Information</h2>
+			<h2 className="text-base font-normal mb-6" style={{ fontSize: '16px', lineHeight: '1.5em', color: '#0A0A0A' }}>{t('account.profile.information')}</h2>
 			
 			<div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-8">
 				{/* Avatar */}
@@ -207,8 +209,8 @@ export default function AccountPage({ loaderData, actionData }: Route.ComponentP
 						<Link
 							preventScrollReset
 							to="/account/profile/photo"
-							title="Change profile photo"
-							aria-label="Change profile photo"
+							title={t('account.profile.changePhoto')}
+							aria-label={t('account.profile.changePhoto')}
 						>
 							<Icon name="camera" className="w-5 h-5" />
 						</Link>
@@ -216,9 +218,9 @@ export default function AccountPage({ loaderData, actionData }: Route.ComponentP
 				</div>
 
 				<div className="flex-1 w-full">
-					<p className="text-sm mb-4" style={{ color: '#717182' }}>
-						This is your personal space. Update your profile picture and information to make it truly yours.
-					</p>
+				<p className="text-sm mb-4" style={{ color: '#717182' }}>
+					{t('account.profile.description')}
+				</p>
 				</div>
 			</div>
 
@@ -258,24 +260,24 @@ function UpdateProfile({
 			<div className="space-y-6">
 				<div className="grid md:grid-cols-2 gap-6">
 					<div className="space-y-2">
-						<label htmlFor={fields.username.id} className="block text-sm" style={{ color: '#717182' }}>Username</label>
+						<label htmlFor={fields.username.id} className="block text-sm" style={{ color: '#717182' }}>{t('account.profile.usernameLabel')}</label>
 						<input
 							{...getInputProps(fields.username, { type: 'text' })}
 							className="w-full px-3 py-1 rounded-lg border-0"
 							style={{ backgroundColor: '#F3F3F5', color: '#0A0A0A' }}
-							aria-label="Username"
+							aria-label={t('account.profile.username')}
 						/>
 						{fields.username.errors && (
 							<p className="text-sm text-red-600 mt-1">{fields.username.errors[0]}</p>
 						)}
 					</div>
 					<div className="space-y-2">
-						<label htmlFor={fields.name.id} className="block text-sm" style={{ color: '#717182' }}>Display Name</label>
+						<label htmlFor={fields.name.id} className="block text-sm" style={{ color: '#717182' }}>{t('account.profile.displayNameLabel')}</label>
 						<input
 							{...getInputProps(fields.name, { type: 'text' })}
 							className="w-full px-3 py-1 rounded-lg border-0"
 							style={{ backgroundColor: '#F3F3F5', color: '#0A0A0A' }}
-							aria-label="Display Name"
+							aria-label={t('account.profile.displayName')}
 						/>
 						{fields.name.errors && (
 							<p className="text-sm text-red-600 mt-1">{fields.name.errors[0]}</p>
@@ -284,14 +286,14 @@ function UpdateProfile({
 				</div>
 
 				<div className="space-y-2">
-					<label htmlFor="bio" className="block text-sm" style={{ color: '#717182' }}>Bio</label>
+					<label htmlFor="bio" className="block text-sm" style={{ color: '#717182' }}>{t('account.profile.bio')}</label>
 					<textarea
 						id="bio"
-						placeholder="Tell us a bit about yourself..."
-						className="w-full px-3 py-2 rounded-lg border-0 resize-none placeholder:text-[#5a5a6b]"
-						style={{ backgroundColor: '#F3F3F5', color: '#5a5a6b' }}
+						placeholder={t('account.profile.bioPlaceholder')}
+						className="w-full px-3 py-2 rounded-lg border-0 resize-none"
+						style={{ backgroundColor: '#F3F3F5', color: '#717182' }}
 						rows={4}
-						aria-label="Bio"
+							aria-label={t('account.profile.bio')}
 					/>
 				</div>
 
@@ -304,7 +306,7 @@ function UpdateProfile({
 						className="px-8 py-2 rounded-lg"
 						style={{ backgroundColor: '#030213', color: '#FFFFFF' }}
 					>
-						{isPending || fetcher.state !== 'idle' ? 'Saving...' : 'Save Changes'}
+						{isPending || fetcher.state !== 'idle' ? t('account.profile.saving') : t('account.profile.saveChanges')}
 					</Button>
 				</div>
 			</div>

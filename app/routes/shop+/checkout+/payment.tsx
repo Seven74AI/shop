@@ -6,13 +6,14 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
-import { getCheckoutData } from '#app/utils/checkout.server.ts'
+import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
 	StockValidationError,
 	validateStockAvailability,
-} from '#app/utils/order-stock.server.ts'
+} from '#app/utils/order.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { createCheckoutSession, handleStripeError } from '#app/utils/stripe.server.ts'
@@ -48,6 +49,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument('/shop/cart')
 	}
 
+	// Calculate VAT for display
+	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
+	let vatCalculation = null
+	try {
+		vatCalculation = await calculateCartVat(
+			checkoutData.cart,
+			country,
+			customerVatNumber,
+		)
+	} catch {
+		// VAT calculation failure shouldn't block checkout
+	}
+
 	return {
 		...checkoutData,
 		shippingInfo: {
@@ -62,6 +76,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		shippingMethodId,
 		shippingCost,
 		mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+		vatCalculation,
 	}
 }
 
@@ -118,7 +133,7 @@ export async function action({ request }: Route.ActionArgs) {
 		throw error
 	}
 
-	// Get cart with full product details
+	// Get cart with full product details including taxKind for VAT calculation
 	const cartWithItems = await prisma.cart.findUnique({
 		where: { id: cart.id },
 		include: {
@@ -130,6 +145,7 @@ export async function action({ request }: Route.ActionArgs) {
 							name: true,
 							description: true,
 							price: true,
+							taxKind: true,
 							weightGrams: true,
 						},
 					},
@@ -153,6 +169,22 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const userId = await getUserId(request)
 
+	// Calculate VAT for the order
+	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
+	let vatCalculation = null
+	try {
+		vatCalculation = await calculateCartVat(
+			cartWithItems as any,
+			country,
+			customerVatNumber,
+		)
+	} catch (vatErr) {
+		Sentry.captureException(vatErr, {
+			tags: { context: 'checkout-vat-calculation' },
+		})
+		// Continue without VAT on calculation failure
+	}
+
 	// Create Stripe Checkout Session
 	try {
 		const domainUrl = getDomainUrl(request)
@@ -170,9 +202,12 @@ export async function action({ request }: Route.ActionArgs) {
 			shippingMethodId,
 			shippingCost,
 			mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+			customerVatNumber,
 			currency,
 			domainUrl,
 			userId: userId || undefined,
+			vatTotalCents: vatCalculation?.totalVatCents ?? 0,
+			vatBreakdown: vatCalculation?.breakdown ?? [],
 		})
 
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
@@ -200,6 +235,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function CheckoutPayment() {
 	const loaderData = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
+	const { t } = useTranslation()
 
 	// Auto-submit to create Stripe session on mount
 	useEffect(() => {
@@ -215,10 +251,10 @@ export default function CheckoutPayment() {
 	if (!loaderData) {
 		return (
 			<div className="text-center">
-				<p className="text-muted-foreground">Loading...</p>
-			</div>
-		)
-	}
+			<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
+		</div>
+	)
+}
 
 	const {
 		cart,
@@ -226,6 +262,7 @@ export default function CheckoutPayment() {
 		subtotal,
 		shippingInfo,
 		shippingCost,
+		vatCalculation,
 	} = loaderData
 
 	if (actionData?.error) {
@@ -234,7 +271,7 @@ export default function CheckoutPayment() {
 				<Card>
 					<CardContent className="pt-6">
 						<div className="text-center space-y-4">
-							<h2 className="text-2xl font-bold text-destructive">Payment Error</h2>
+							<h2 className="text-2xl font-bold text-destructive">{t('shop.checkout.payment.error')}</h2>
 							<p className="text-muted-foreground">
 								{'message' in actionData ? actionData.message : actionData.error}
 							</p>
@@ -258,11 +295,11 @@ export default function CheckoutPayment() {
 										shippingMethodId: loaderData.shippingMethodId,
 										shippingCost: loaderData.shippingCost.toString(),
 									}).toString()}`}>
-										Back to Delivery
+										{t('shop.checkout.payment.backToDelivery')}
 									</Link>
 								</Button>
 								<Button asChild>
-									<Link to="/shop/cart">Return to Cart</Link>
+									<Link to="/shop/cart">{t('shop.checkout.payment.returnToCart')}</Link>
 								</Button>
 							</div>
 						</div>
@@ -285,10 +322,10 @@ export default function CheckoutPayment() {
 			<Card>
 				<CardContent className="pt-6">
 					<div className="text-center space-y-4">
-						<h2 className="text-2xl font-bold">Processing Payment</h2>
-						<p className="text-muted-foreground">
-							Redirecting to secure payment...
-						</p>
+					<h2 className="text-2xl font-bold">{t('shop.checkout.payment.title')}</h2>
+					<p className="text-muted-foreground">
+						{t('shop.checkout.payment.redirecting')}
+					</p>
 						<div className="flex justify-center">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 						</div>
@@ -297,32 +334,48 @@ export default function CheckoutPayment() {
 			</Card>
 
 			<div className="border rounded-lg p-6 space-y-4">
-				<h3 className="text-lg font-semibold">Order Summary</h3>
+				<h3 className="text-lg font-semibold">{t('shop.checkout.payment.orderSummary')}</h3>
 				<div className="space-y-2">
 					<div className="flex justify-between">
-						<span>Subtotal</span>
+						<span>{t('shop.checkout.payment.subtotal')}</span>
 						<span>{formatPrice(subtotal, currency)}</span>
 					</div>
 					<div className="flex justify-between">
-						<span>Shipping</span>
+						<span>{t('shop.checkout.payment.shipping')}</span>
 						<span>
 							{shippingCost === 0 ? (
-								<span className="text-green-600">Free</span>
+								<span className="text-green-600">{t('shop.checkout.payment.free')}</span>
 							) : (
 								formatPrice(shippingCost, currency)
 							)}
 						</span>
 					</div>
+					{vatCalculation && vatCalculation.totalVatCents > 0 && (
+						<>
+							{vatCalculation.breakdown.map((line) => (
+								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
+									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
+									<span>{formatPrice(line.vatCents, currency)}</span>
+								</div>
+							))}
+						</>
+					)}
+					{vatCalculation && vatCalculation.totalVatCents === 0 && (
+						<div className="flex justify-between text-sm text-muted-foreground">
+							<span>{t('shop.checkout.payment.vat')}</span>
+							<span>€0.00</span>
+						</div>
+					)}
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
-						<span>Total</span>
-						<span>{formatPrice(subtotal + shippingCost, currency)}</span>
+						<span>{t('shop.checkout.payment.total')}</span>
+						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency)}</span>
 					</div>
 				</div>
 			</div>
 
 			{shippingInfo && (
 				<div className="border rounded-lg p-6">
-					<h3 className="text-lg font-semibold mb-4">Shipping To</h3>
+					<h3 className="text-lg font-semibold mb-4">{t('shop.checkout.payment.shippingTo')}</h3>
 					<p className="font-medium">{shippingInfo.name}</p>
 					<p className="text-sm text-muted-foreground">{shippingInfo.street}</p>
 					<p className="text-sm text-muted-foreground">

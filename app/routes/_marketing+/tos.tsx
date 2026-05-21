@@ -1,3 +1,6 @@
+import { useTranslation } from '#app/utils/i18n.tsx'
+
 export default function TermsOfServiceRoute() {
-	return <div>Terms of service</div>
+	const { t } = useTranslation()
+	return <div>{t('marketing.tos')}</div>
 }
