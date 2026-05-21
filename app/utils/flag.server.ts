@@ -63,7 +63,7 @@ export function invalidateFlagCache(): void {
  */
 function isInRollout(flagKey: string, userId: string, rolloutPercentage: number): boolean {
 	const hash = createHash('sha256')
-	hash.update(flagKey + userId)
+	hash.update(flagKey + ':' + userId)
 	const digest = hash.digest()
 	// Take first 4 bytes as a 32-bit unsigned integer, then mod 100
 	const num = digest.readUInt32BE(0) % 100
@@ -142,6 +142,7 @@ export async function isFlagEnabled(
 			audience = FlagAudienceSchema.parse(JSON.parse(flag.audience))
 		} catch {
 			// Invalid JSON → deny (fail-closed)
+			console.warn(`[flag.server] Invalid audience JSON for flag "${key}": ${(flag.audience ?? '').slice(0, 100)}`)
 			return false
 		}
 
