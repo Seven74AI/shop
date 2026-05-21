@@ -16,6 +16,7 @@ import {
 } from '@react-pdf/renderer'
 import { formatPrice } from './price.ts'
 type Currency = {
+	code: string
 	symbol: string
 	decimals: number
 }
