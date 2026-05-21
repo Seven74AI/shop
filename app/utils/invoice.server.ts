@@ -127,7 +127,7 @@ export interface RefundedLineItem {
 	totalCents: number
 }
 
-interface VatBreakdownEntry {
+export interface VatBreakdownEntry {
 	kind: string
 	rate: number
 	baseCents: number
@@ -153,7 +153,7 @@ export async function issueCreditNote(
 	parentInvoiceId: string,
 	refundedItems: RefundedLineItem[],
 	refundedShippingCents: number,
-	tx?: import('@prisma/client').Prisma.TransactionClient,
+	tx?: Prisma.TransactionClient,
 ) {
 	const db = tx ?? prisma
 
@@ -178,7 +178,7 @@ export async function issueCreditNote(
 	const negativeItems = refundedItems.map((item) => ({
 		description: item.description,
 		quantity: -item.quantity,
-		unitPriceCents: item.unitPriceCents,
+		unitPriceCents: item.unitPriceCents, // unit price stays positive for display
 		totalCents: -item.totalCents,
 	}))
 

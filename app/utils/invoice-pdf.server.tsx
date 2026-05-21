@@ -14,7 +14,12 @@ import {
 	renderToBuffer,
 	renderToStream,
 } from '@react-pdf/renderer'
-import { formatPrice, type Currency } from './price.ts'
+import { formatPrice } from './price.ts'
+type Currency = {
+	code: string
+	symbol: string
+	decimals: number
+}
 
 // ---------------------------------------------------------------------------
 // TypeScript helpers for the invoice data passed to the PDF component
@@ -277,7 +282,7 @@ const styles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 
 function formatCents(cents: number, currency: Currency | null): string {
-	return formatPrice(cents, currency as any)
+	return formatPrice(cents, currency)
 }
 
 function formatRate(rate: number): string {
@@ -289,16 +294,27 @@ function formatRate(rate: number): string {
 // ---------------------------------------------------------------------------
 
 export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
+	const isCreditNote = data.kind === 'CREDIT_NOTE'
+
+	const titleLabel = isCreditNote ? 'AVOIR' : 'INVOICE'
+	const titleStyle = isCreditNote
+		? { ...styles.invoiceTitle, color: '#9b2c2c' }
+		: styles.invoiceTitle
+
 	const statusStyle =
 		data.invoiceStatus === 'FINAL'
-			? styles.statusFinal
+			? isCreditNote
+				? { ...styles.statusFinal, backgroundColor: '#fed7d7', color: '#9b2c2c' }
+				: styles.statusFinal
 			: data.invoiceStatus === 'DRAFT'
 				? styles.statusDraft
 				: styles.statusCancelled
 
 	const statusLabel =
 		data.invoiceStatus === 'FINAL'
-			? 'FINAL'
+			? isCreditNote
+				? 'ISSUED'
+				: 'FINAL'
 			: data.invoiceStatus === 'DRAFT'
 				? 'DRAFT'
 				: 'CANCELLED'
@@ -319,10 +335,21 @@ export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
 						</View>
 					</View>
 					<View style={styles.invoiceBadge}>
-						<Text style={styles.invoiceTitle}>INVOICE</Text>
+						<Text style={titleStyle}>{titleLabel}</Text>
 						<Text style={styles.invoiceNumber}>
 							{data.invoiceNumber}
 						</Text>
+						{isCreditNote && data.parentInvoiceNumber && (
+							<Text
+								style={{
+									...styles.invoiceNumber,
+									fontSize: 9,
+									marginTop: 2,
+								}}
+							>
+								Ref: {data.parentInvoiceNumber}
+							</Text>
+						)}
 						<View
 							style={[styles.statusBadge, statusStyle]}
 						>
