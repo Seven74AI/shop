@@ -1,6 +1,6 @@
 import { Link, redirectDocument, useLoaderData } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
-import { getCheckoutData } from '#app/utils/checkout.server.ts'
+import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { type Route } from './+types/review.ts'
@@ -20,6 +20,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function CheckoutReview() {
+	const { locale } = useTranslation()
 	const loaderData = useLoaderData<typeof loader>()
 	const { t } = useTranslation()
 
@@ -63,7 +64,7 @@ export default function CheckoutReview() {
 								</div>
 								<div className="text-right">
 									<p className="font-medium">
-										{formatPrice((price ?? 0) * item.quantity, currency)}
+										{formatPrice((price ?? 0) * item.quantity, currency, locale)}
 									</p>
 								</div>
 							</div>
@@ -71,11 +72,33 @@ export default function CheckoutReview() {
 					})}
 				</div>
 
-				<div className="mt-6 border-t pt-4">
 					<div className="flex justify-between text-lg font-semibold">
 						<span>{t('checkout.review.subtotal')}</span>
-						<span>{formatPrice(subtotal, currency)}</span>
+						<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
+					{vatEstimate && vatEstimate.totalVatCents > 0 && (
+						<>
+							{vatEstimate.breakdown.map((line) => (
+								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
+									<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
+									<span>{formatPrice(line.vatCents, currency, locale)}</span>
+								</div>
+							))}
+							<div className="flex justify-between text-sm text-muted-foreground">
+								<span>Estimated VAT Total</span>
+								<span>{formatPrice(vatEstimate.totalVatCents, currency, locale)}</span>
+							</div>
+							<div className="border-t pt-2 flex justify-between text-lg font-bold">
+								<span>Estimated Total</span>
+								<span>{formatPrice(subtotal + vatEstimate.totalVatCents, currency, locale)}</span>
+							</div>
+						</>
+					)}
+					{(!vatEstimate || vatEstimate.totalVatCents === 0) && (
+						<p className="text-sm text-muted-foreground italic">
+							VAT will be calculated at checkout based on your shipping destination.
+						</p>
+					)}
 				</div>
 			</div>
 

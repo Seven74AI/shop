@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
+import { formatDate } from '#app/utils/date.ts'
+import { formatAddress } from '#app/utils/address.ts'
 import { formatPrice } from '#app/utils/price.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/$orderNumber.ts'
 
 export async function loader({ params, request }: Route.LoaderArgs) {
@@ -48,6 +51,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 	const { order } = loaderData
+	const { locale } = useTranslation()
 	const [showTracking, setShowTracking] = useState(false)
 
 	const trackingFetcher = useFetcher<{
@@ -63,6 +67,15 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 		error?: string
 		message?: string
 	}>()
+
+	const shippingAddress = formatAddress({
+		name: order.shippingName ?? '',
+		street: order.shippingStreet ?? '',
+		city: order.shippingCity ?? '',
+		state: order.shippingState,
+		postal: order.shippingPostal ?? '',
+		country: order.shippingCountry ?? '',
+	})
 
 	// Fetch tracking info when button is clicked
 	const handleLoadTracking = () => {
@@ -118,7 +131,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 										</p>
 									</div>
 									<div className="text-right">
-										<p className="font-semibold">{formatPrice(item.price)}</p>
+										<p className="font-semibold">{formatPrice(item.price, null, locale)}</p>
 									</div>
 								</div>
 							))}
@@ -135,7 +148,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 						<CardContent className="space-y-4">
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">Subtotal</span>
-								<span>{formatPrice(order.subtotal)}</span>
+								<span>{formatPrice(order.subtotal, null, locale)}</span>
 							</div>
 							{order.shippingCost !== null && order.shippingCost !== undefined && (
 								<div className="flex justify-between">
@@ -144,7 +157,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 										{order.shippingCost === 0 ? (
 											<span className="text-green-600 font-semibold">Free</span>
 										) : (
-											formatPrice(order.shippingCost)
+											formatPrice(order.shippingCost, null, locale)
 										)}
 									</span>
 								</div>
@@ -195,7 +208,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							)}
 							<div className="border-t pt-4 flex justify-between text-lg font-bold">
 								<span>Total</span>
-								<span>{formatPrice(order.total)}</span>
+								<span>{formatPrice(order.total, null, locale)}</span>
 							</div>
 						</CardContent>
 					</Card>
@@ -205,13 +218,11 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							<h2>Shipping Address</h2>
 						</CardHeader>
 						<CardContent>
-							<p className="font-semibold">{order.shippingName}</p>
-							<p className="text-muted-foreground">{order.shippingStreet}</p>
-							<p className="text-muted-foreground">
-								{order.shippingCity}
-								{order.shippingState && `, ${order.shippingState}`} {order.shippingPostal}
-							</p>
-							<p className="text-muted-foreground">{order.shippingCountry}</p>
+							{shippingAddress.lines.map((line, i) => (
+								<p key={i} className={i === 0 ? 'font-semibold' : 'text-muted-foreground'}>
+									{line}
+								</p>
+							))}
 						</CardContent>
 					</Card>
 
@@ -223,13 +234,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							<div>
 								<p className="text-sm text-muted-foreground">Order Date</p>
 								<p>
-									{new Date(order.createdAt).toLocaleDateString('en-US', {
-										year: 'numeric',
-										month: 'long',
-										day: 'numeric',
-										hour: '2-digit',
-										minute: '2-digit',
-									})}
+									{formatDate(order.createdAt, locale, { dateStyle: 'full', timeStyle: 'short' })}
 								</p>
 							</div>
 							<div>
@@ -293,13 +298,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 																	</p>
 																)}
 																<p className="text-xs text-muted-foreground">
-																	{new Date(event.date).toLocaleString('en-US', {
-																		year: 'numeric',
-																		month: 'short',
-																		day: 'numeric',
-																		hour: '2-digit',
-																		minute: '2-digit',
-																	})}
+																	{formatDate(event.date, locale, { dateStyle: 'medium', timeStyle: 'short' })}
 																</p>
 															</div>
 														</div>
@@ -332,4 +331,3 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 		</div>
 	)
 }
-

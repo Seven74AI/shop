@@ -6,6 +6,7 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { getUserOrders } from '#app/utils/order.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/orders.index.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -27,6 +28,7 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function OrderHistory({ loaderData }: Route.ComponentProps) {
+	const { locale } = useTranslation()
 	const { orders } = loaderData
 
 	return (
@@ -92,7 +94,7 @@ export default function OrderHistory({ loaderData }: Route.ComponentProps) {
 									</div>
 									<div className="text-right">
 										<p className="text-xl font-bold text-gray-900">
-											{formatPrice(order.total)}
+											{formatPrice(order.total, null, locale)}
 										</p>
 										<Button variant="outline" size="sm" asChild className="mt-2">
 											<Link to={`/account/orders/${order.orderNumber}`}>
