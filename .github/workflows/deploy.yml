@@ -17,7 +17,6 @@ permissions:
 
 jobs:
   lint:
-    name: ⬣ ESLint
     runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
@@ -43,7 +42,6 @@ jobs:
         run: pnpm lint
 
   typecheck:
-    name: ʦ TypeScript
     runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
@@ -72,7 +70,6 @@ jobs:
         run: pnpm typecheck
 
   vitest:
-    name: ⚡ Vitest
     runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
@@ -98,7 +95,6 @@ jobs:
         run: pnpm test -- --coverage
 
   playwright:
-    name: 🎭 Playwright
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -153,7 +149,6 @@ jobs:
           retention-days: 30
 
   container:
-    name: 📦 Prepare Container
     runs-on: ubuntu-24.04
     # Disabled — container build not needed for PR CI
     if: false
@@ -199,7 +194,6 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   deploy:
-    name: 🚀 Deploy
     runs-on: ubuntu-24.04
     needs: [lint, typecheck, vitest, playwright]
     # Disabled — container build not needed for PR CI
