@@ -198,11 +198,11 @@ describe('metrics.server', () => {
 			expect(topProducts).toHaveLength(3)
 			// productA: 8 total, productB: 10, productC: 1
 			// Sorted by quantity desc: B (10), A (8), C (1)
-			expect(topProducts[0].product?.id).toBe(productB.id)
-			expect(topProducts[0].quantity).toBe(10)
-			expect(topProducts[1].product?.id).toBe(productA.id)
-			expect(topProducts[1].quantity).toBe(8)
-			expect(topProducts[2].product?.id).toBe(productC.id)
+		expect(topProducts[0].product!.id).toBe(productB.id)
+		expect(topProducts[0].quantity).toBe(10)
+		expect(topProducts[1].product!.id).toBe(productA.id)
+		expect(topProducts[1].quantity).toBe(8)
+		expect(topProducts[2].product!.id).toBe(productC.id)
 			expect(topProducts[2].quantity).toBe(1)
 		})
 
