@@ -1,6 +1,12 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import fsExtra from 'fs-extra'
 import { prisma } from '#app/utils/db.server.ts'
 import { readEmail } from '#tests/mocks/utils.ts'
 import { test, expect } from '#tests/playwright-utils.ts'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const emailFixturesDir = path.join(__dirname, '..', 'fixtures', 'email')
 
 const TEST_EMAILS = [
 	'newsletter-e2e-1@example.com',
@@ -15,6 +21,9 @@ async function cleanup() {
 		await prisma.newsletterSubscription
 			.deleteMany({ where: { email } })
 			.catch(() => {})
+		// Remove stale email fixtures from previous runs
+		const fixturePath = path.join(emailFixturesDir, `${email}.json`)
+		await fsExtra.remove(fixturePath).catch(() => {})
 	}
 }
 
