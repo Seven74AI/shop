@@ -10,6 +10,8 @@ import { formatDate } from '#app/utils/date.ts'
 import { formatAddress } from '#app/utils/address.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
+import { formatInvoiceNumber } from '#app/utils/invoice.server.ts'
+import { prisma } from '#app/utils/db.server.ts'
 import { type BreadcrumbHandle } from '../account.tsx'
 import { type Route } from './+types/orders.$orderNumber.ts'
 
@@ -43,7 +45,23 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		)
 	}
 
-	return { order }
+	// Fetch invoices for this order
+	const invoices = await prisma.invoice.findMany({
+		where: { orderId: order.id },
+		orderBy: { createdAt: 'desc' },
+		select: {
+			id: true,
+			fiscalYear: true,
+			sequence: true,
+			kind: true,
+			status: true,
+			totalCents: true,
+			issuedAt: true,
+			createdAt: true,
+		},
+	})
+
+	return { order, invoices }
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
@@ -55,7 +73,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 	const { locale } = useTranslation()
-	const { order } = loaderData
+	const { order, invoices } = loaderData
 
 	return (
 		<div className="space-y-8">
@@ -228,6 +246,59 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							)}
 						</CardContent>
 					</Card>
+
+					{invoices.length > 0 && (
+						<Card>
+							<CardHeader>
+								<h2>Invoices</h2>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								{invoices.map((inv) => {
+									const invNumber = formatInvoiceNumber(inv.fiscalYear, inv.sequence)
+									return (
+										<div
+											key={inv.id}
+											className="flex items-center justify-between py-2 border-b last:border-0"
+										>
+											<div className="flex items-center gap-3">
+												<Icon name="file-text" className="h-5 w-5 text-gray-500" />
+												<div>
+													<Link
+														to={`/account/invoices/${inv.id}.pdf`}
+														reloadDocument
+														className="font-medium hover:text-primary hover:underline"
+													>
+														{invNumber}
+													</Link>
+													<p className="text-xs text-gray-500">
+														{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}
+														{inv.status === 'DRAFT' && ' · Draft'}
+														{inv.status === 'CANCELLED' && ' · Cancelled'}
+														{inv.issuedAt &&
+															` · ${new Date(inv.issuedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
+													</p>
+												</div>
+											</div>
+											<div className="flex items-center gap-3">
+												<span className="text-sm font-medium text-gray-900">
+													{formatPrice(inv.totalCents, null, locale)}
+												</span>
+												<Button variant="outline" size="sm" asChild>
+													<Link
+														to={`/account/invoices/${inv.id}.pdf`}
+														reloadDocument
+													>
+														<Icon name="download" className="h-4 w-4 mr-2" />
+														Download
+													</Link>
+												</Button>
+											</div>
+										</div>
+									)
+								})}
+							</CardContent>
+						</Card>
+					)}
 				</div>
 			</div>
 

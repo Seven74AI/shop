@@ -80,6 +80,7 @@ export default function AccountLayout() {
 	const pathname = location.pathname
 	const isProfile = pathname === '/account'
 	const isOrders = pathname.startsWith('/account/orders')
+	const isInvoices = pathname.startsWith('/account/invoices')
 	const isAddresses = pathname.startsWith('/account/addresses')
 	const isSecurity = pathname.startsWith('/account/security')
 	const isPrivacy = pathname.startsWith('/account/privacy') || pathname.includes('/download-user-data')
@@ -130,18 +131,24 @@ export default function AccountLayout() {
 							to="/account"
 							active={isProfile}
 						/>
-						<SidebarButton
-							icon={<Icon name="package" className="w-5 h-5" />}
-							label={t('account.layout.orders')}
-							to="/account/orders"
-							active={isOrders}
-						/>
-						<SidebarButton
-							icon={<Icon name="map-pin" className="w-5 h-5" />}
-							label={t('account.layout.addresses')}
-							to="/account/addresses"
-							active={isAddresses}
-						/>
+					<SidebarButton
+						icon={<Icon name="package" className="w-5 h-5" />}
+						label={t('account.layout.orders')}
+						to="/account/orders"
+						active={isOrders}
+					/>
+					<SidebarButton
+						icon={<Icon name="file-text" className="w-5 h-5" />}
+						label={t('account.layout.invoices')}
+						to="/account/invoices"
+						active={isInvoices}
+					/>
+					<SidebarButton
+						icon={<Icon name="map-pin" className="w-5 h-5" />}
+						label={t('account.layout.addresses')}
+						to="/account/addresses"
+						active={isAddresses}
+					/>
 						<SidebarButton
 							icon={<Icon name="shield" className="w-5 h-5" />}
 							label={t('account.layout.security')}
