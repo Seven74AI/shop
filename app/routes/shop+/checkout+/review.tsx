@@ -1,13 +1,20 @@
-import { Link, redirectDocument, useLoaderData } from 'react-router'
+import { getFormProps, getInputProps, useForm } from '@conform-to/react'
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4'
+import { data, Link, redirect, redirectDocument, useActionData, useLoaderData } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
+import { Field, ErrorList } from '#app/components/forms.tsx'
+import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
+import { useIsPending } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
+import { CouponCodeSchema, couponErrorMessages } from '#app/schemas/coupon.ts'
+import { validateCoupon } from '#app/utils/coupon.server.ts'
 import { type Route } from './+types/review.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const checkoutData = await getCheckoutData(request)
-	
+
 	if (!checkoutData) {
 		return redirectDocument('/shop/cart')
 	}
@@ -24,34 +31,91 @@ export async function loader({ request }: Route.LoaderArgs) {
 		// VAT calculation failure shouldn't block checkout
 	}
 
+	// Read coupon code from URL params (when returning from a later step)
+	const url = new URL(request.url)
+	const couponCode = url.searchParams.get('couponCode') || undefined
+
 	return {
 		cart: checkoutData.cart,
 		currency: checkoutData.currency,
 		subtotal: checkoutData.subtotal,
 		vatEstimate,
+		couponCode,
 	}
+}
+
+export async function action({ request }: Route.ActionArgs) {
+	const formData = await request.formData()
+	const submission = parseWithZod(formData, {
+		schema: CouponCodeSchema,
+	})
+
+	if (submission.status !== 'success') {
+		// No coupon code entered — just continue to shipping
+		return redirect('/shop/checkout/shipping')
+	}
+
+	const { couponCode } = submission.value
+
+	// Get checkout data to validate against
+	const checkoutData = await getCheckoutData(request)
+	if (!checkoutData) {
+		return redirectDocument('/shop/cart')
+	}
+
+	// Validate the coupon against the order
+	const result = await validateCoupon(couponCode, checkoutData.subtotal)
+
+	if (!result.valid) {
+		return data(
+			{
+				result: submission.reply({
+					formErrors: [couponErrorMessages[result.reason]],
+				}),
+				couponCode,
+			},
+			{ status: 400 },
+		)
+	}
+
+	// Coupon is valid — redirect to shipping with coupon code in URL
+	return redirect(`/shop/checkout/shipping?couponCode=${encodeURIComponent(couponCode)}`)
 }
 
 export default function CheckoutReview() {
 	const loaderData = useLoaderData<typeof loader>()
+	const actionData = useActionData<typeof action>()
 	const { t, locale } = useTranslation()
-	
+	const isPending = useIsPending()
+
+	const [form, fields] = useForm({
+		id: 'coupon-form',
+		constraint: getZodConstraint(CouponCodeSchema),
+		lastResult: actionData && 'result' in actionData ? actionData.result : undefined,
+		onValidate({ formData }) {
+			return parseWithZod(formData, { schema: CouponCodeSchema })
+		},
+		defaultValue: {
+			couponCode: loaderData?.couponCode || '',
+		},
+	})
+
 	if (!loaderData) {
 		return <div>{t('shop.checkout.review.loading')}</div>
 	}
-	
+
 	const { cart, currency, subtotal, vatEstimate } = loaderData
 
 	return (
 		<div className="space-y-6">
 			<div className="rounded-lg border bg-card p-6">
 				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.review.title')}</h2>
-				
+
 				<div className="space-y-4">
 					{cart.items.map((item) => {
 						const price = item.variant?.price ?? item.product.price
 						const image = item.product.images[0]
-						
+
 						return (
 							<div key={item.id} className="flex items-center gap-4">
 								{image && (
@@ -68,9 +132,9 @@ export default function CheckoutReview() {
 											SKU: {item.variant.sku}
 										</p>
 									)}
-						<p className="text-sm text-muted-foreground">
-							{t('shop.checkout.review.quantity', { count: item.quantity })}
-						</p>
+									<p className="text-sm text-muted-foreground">
+										{t('shop.checkout.review.quantity', { count: item.quantity })}
+									</p>
 								</div>
 								<div className="text-right">
 									<p className="font-medium">
@@ -83,8 +147,8 @@ export default function CheckoutReview() {
 				</div>
 
 				<div className="mt-6 border-t pt-4 space-y-2">
-				<div className="flex justify-between text-lg font-semibold">
-					<span>{t('shop.checkout.review.subtotal')}</span>
+					<div className="flex justify-between text-lg font-semibold">
+						<span>{t('shop.checkout.review.subtotal')}</span>
 						<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
 					{vatEstimate && vatEstimate.totalVatCents > 0 && (
@@ -106,11 +170,39 @@ export default function CheckoutReview() {
 						</>
 					)}
 					{(!vatEstimate || vatEstimate.totalVatCents === 0) && (
-					<p className="text-sm text-muted-foreground italic">
-						{t('shop.checkout.review.vatPending')}
-					</p>
+						<p className="text-sm text-muted-foreground italic">
+							{t('shop.checkout.review.vatPending')}
+						</p>
 					)}
 				</div>
+			</div>
+
+			{/* Coupon Code Section */}
+			<div className="rounded-lg border bg-card p-6">
+				<form method="POST" {...getFormProps(form)} noValidate>
+					<Field
+						labelProps={{
+							htmlFor: fields.couponCode.id,
+							children: t('shop.checkout.review.couponCode') as string || 'Coupon Code',
+						}}
+						inputProps={{
+							...getInputProps(fields.couponCode, { type: 'text' }),
+							placeholder: t('shop.checkout.review.couponPlaceholder') as string || 'Enter coupon code',
+							autoComplete: 'off',
+						}}
+						errors={fields.couponCode.errors}
+					/>
+					<ErrorList errors={form.errors} id={form.errorId} />
+					<div className="flex justify-end mt-4">
+						<StatusButton
+							type="submit"
+							status={isPending ? 'pending' : 'idle'}
+							disabled={isPending}
+						>
+							{t('shop.checkout.review.applyCoupon') as string || 'Apply'}
+						</StatusButton>
+					</div>
+				</form>
 			</div>
 
 			<div className="flex justify-between">
@@ -118,10 +210,11 @@ export default function CheckoutReview() {
 					<Link to="/shop/cart">{t('shop.checkout.review.backToCart')}</Link>
 				</Button>
 				<Button asChild>
-					<Link to="/shop/checkout/shipping">{t('shop.checkout.review.continueToShipping')}</Link>
+					<Link to={`/shop/checkout/shipping${loaderData.couponCode ? `?couponCode=${encodeURIComponent(loaderData.couponCode)}` : ''}`}>
+						{t('shop.checkout.review.continueToShipping')}
+					</Link>
 				</Button>
 			</div>
 		</div>
 	)
 }
-
