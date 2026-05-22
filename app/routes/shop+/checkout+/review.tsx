@@ -205,15 +205,20 @@ export default function CheckoutReview() {
 				</form>
 			</div>
 
-			<div className="flex justify-between">
-				<Button variant="outline" asChild>
-					<Link to="/shop/cart">{t('shop.checkout.review.backToCart')}</Link>
-				</Button>
-				<Button asChild>
-					<Link to={`/shop/checkout/shipping${loaderData.couponCode ? `?couponCode=${encodeURIComponent(loaderData.couponCode)}` : ''}`}>
-						{t('shop.checkout.review.continueToShipping')}
-					</Link>
-				</Button>
+			<div className="flex flex-col gap-4">
+				<div className="flex justify-between">
+					<Button variant="outline" asChild>
+						<Link to="/shop/cart">{t('shop.checkout.review.backToCart')}</Link>
+					</Button>
+					<Button asChild>
+						<Link to={`/shop/checkout/shipping${loaderData.couponCode ? `?couponCode=${encodeURIComponent(loaderData.couponCode)}` : ''}`}>
+							{t('shop.checkout.review.continueToShipping')}
+						</Link>
+					</Button>
+				</div>
+				<p className="text-center text-xs text-muted-foreground">
+					{t('shop.checkout.review.cgvNotice')}
+				</p>
 			</div>
 		</div>
 	)
