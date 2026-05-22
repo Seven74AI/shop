@@ -2,63 +2,106 @@ import * as Sentry from '@sentry/react-router'
 import { type ServerBuild } from 'react-router'
 import { prisma } from './db.server.ts'
 
+interface RouteMetadata {
+	path: string
+	changefreq: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never'
+	priority: number // 0.0 – 1.0
+	lastmod?: string // ISO 8601 date
+}
+
 /**
  * Fetches dynamic routes from database (products and categories)
+ * with lastmod (updatedAt) dates.
  */
-async function getDynamicRoutes(): Promise<string[]> {
-	const dynamicRoutes: string[] = []
+async function getDynamicRouteMetadata(): Promise<RouteMetadata[]> {
+	const items: RouteMetadata[] = []
 
 	try {
 		// Get all active products
 		const products = await prisma.product.findMany({
-			where: {
-				status: 'ACTIVE',
-			},
-			select: {
-				slug: true,
-			},
+			where: { status: 'ACTIVE' },
+			select: { slug: true, updatedAt: true },
 		})
 
-		// Add product URLs
 		for (const product of products) {
-			dynamicRoutes.push(`/shop/products/${product.slug}`)
+			items.push({
+				path: `/shop/products/${product.slug}`,
+				changefreq: 'weekly',
+				priority: 0.8,
+				lastmod: product.updatedAt.toISOString(),
+			})
 		}
 
 		// Get all categories
 		const categories = await prisma.category.findMany({
-			select: {
-				slug: true,
-			},
+			select: { slug: true, updatedAt: true },
 		})
 
-		// Add category URLs
 		for (const category of categories) {
-			dynamicRoutes.push(`/shop/categories/${category.slug}`)
+			items.push({
+				path: `/shop/categories/${category.slug}`,
+				changefreq: 'weekly',
+				priority: 0.7,
+				lastmod: category.updatedAt.toISOString(),
+			})
 		}
 	} catch (error) {
-		// If database query fails, log but don't break the sitemap generation
-		// This ensures sitemap still works even if database is unavailable
 		Sentry.captureException(error, {
 			tags: { context: 'sitemap-dynamic-routes' },
 		})
 	}
 
-	return dynamicRoutes
+	return items
 }
 
 /**
- * Extracts public routes from React Router build that should be included in sitemap
+ * Route-specific changefreq and priority rules.
+ * Returns defaults for routes without explicit rules.
+ */
+function getRouteDefaults(
+	routePath: string,
+): Pick<RouteMetadata, 'changefreq' | 'priority'> {
+	// Root
+	if (routePath === '/') return { changefreq: 'daily', priority: 1.0 }
+
+	// Product listing
+	if (routePath === '/shop/products')
+		return { changefreq: 'daily', priority: 0.9 }
+
+	// Products/dynamic — handled by dynamic metadata, fallback
+	if (routePath.startsWith('/shop/products/'))
+		return { changefreq: 'weekly', priority: 0.8 }
+
+	// Category listing (static route if it exists)
+	if (routePath.startsWith('/shop/categories'))
+		return { changefreq: 'weekly', priority: 0.7 }
+
+	// Cart — low priority, changes frequently but not index-worthy
+	if (routePath === '/shop/cart')
+		return { changefreq: 'weekly', priority: 0.3 }
+
+	// Shop index
+	if (routePath === '/shop')
+		return { changefreq: 'daily', priority: 0.9 }
+
+	// Public user pages
+	if (routePath.startsWith('/users'))
+		return { changefreq: 'weekly', priority: 0.4 }
+
+	// Everything else (static marketing pages etc.)
+	return { changefreq: 'monthly', priority: 0.5 }
+}
+
+/**
+ * Extracts public routes from React Router build that should be included in sitemap.
  */
 function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 	const publicRoutes: string[] = []
 	const routesToIgnore = [
-		// Resource routes
 		'/resources',
 		'/sitemap.xml',
 		'/robots.txt',
-		// Admin routes
 		'/admin',
-		// Auth routes
 		'/login',
 		'/signup',
 		'/logout',
@@ -67,41 +110,43 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 		'/verify',
 		'/onboarding',
 		'/auth',
-		// User settings
 		'/settings',
 		'/me',
-		// API/webhooks
 		'/webhooks',
-		// Checkout (not indexed)
 		'/shop/checkout',
-		// 404 catch-all
 		'$',
 	]
 
 	function shouldIncludeRoute(path: string | undefined): boolean {
 		if (!path) return false
-		
-		// Ignore routes that match any ignore pattern
+
 		for (const ignorePattern of routesToIgnore) {
 			if (path.startsWith(ignorePattern) || path === ignorePattern) {
 				return false
 			}
 		}
-		
-		// Include public shop routes
+
 		if (path.startsWith('/shop')) return true
-		
-		// Include marketing routes
+
 		if (path.startsWith('/')) {
 			const segments = path.split('/').filter(Boolean)
-			// Exclude auth, admin, settings, etc.
-			if (segments.length === 0) return true // root
+			if (segments.length === 0) return true
 			const firstSegment = segments[0]
-			if (firstSegment && !['admin', 'auth', 'settings', 'me', 'resources', 'webhooks'].includes(firstSegment)) {
+			if (
+				firstSegment &&
+				![
+					'admin',
+					'auth',
+					'settings',
+					'me',
+					'resources',
+					'webhooks',
+				].includes(firstSegment)
+			) {
 				return true
 			}
 		}
-		
+
 		return false
 	}
 
@@ -113,12 +158,10 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 			if (!route) continue
 
 			let routePath = route.path || ''
-			
-			// Handle index routes
+
 			if (route.index) {
 				routePath = parentPath || '/'
 			} else if (routePath) {
-				// Handle relative paths
 				if (routePath.startsWith('/')) {
 					routePath = routePath
 				} else {
@@ -128,22 +171,19 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 				routePath = parentPath
 			}
 
-			// Normalize path
 			routePath = routePath || '/'
 
-			// Check if this route should be included
 			if (shouldIncludeRoute(routePath)) {
-				// Normalize: remove trailing slashes except for root
-				const normalizedPath = routePath === '/' ? '/' : routePath.replace(/\/$/, '')
+				const normalizedPath =
+					routePath === '/' ? '/' : routePath.replace(/\/$/, '')
 				if (!publicRoutes.includes(normalizedPath)) {
 					publicRoutes.push(normalizedPath)
 				}
 			}
 
-			// Recursively process children if they exist
-			// Note: React Router 7 routes may have children in a different structure
-			// We'll handle nested routes by checking if route has any child-related properties
-			const routeWithChildren = route as ServerBuild['routes'][string] & { children?: ServerBuild['routes'] }
+			const routeWithChildren = route as ServerBuild['routes'][string] & {
+				children?: ServerBuild['routes']
+			}
 			if (routeWithChildren.children) {
 				traverseRoutes(routeWithChildren.children, routePath)
 			}
@@ -155,31 +195,32 @@ function extractPublicRoutes(routes: ServerBuild['routes']): string[] {
 }
 
 /**
- * Generates XML sitemap from routes
+ * Generates XML sitemap from route metadata.
  */
 function generateSitemapXML(
-	routes: string[],
+	items: RouteMetadata[],
 	siteUrl: string,
 ): string {
-	const urls = routes
-		.map((route) => {
-			const url = `${siteUrl}${route === '/' ? '' : route}`
-			return `	<url>
-		<loc>${escapeXml(url)}</loc>
-		<changefreq>weekly</changefreq>
-		<priority>${route === '/' ? '1.0' : '0.8'}</priority>
-	</url>`
+	const urls = items
+		.map((item) => {
+			const loc = `${siteUrl}${item.path === '/' ? '' : item.path}`
+			let xml = `\t<url>\n\t\t<loc>${escapeXml(loc)}</loc>`
+
+			if (item.lastmod) {
+				xml += `\n\t\t<lastmod>${escapeXml(item.lastmod)}</lastmod>`
+			}
+			xml += `\n\t\t<changefreq>${item.changefreq}</changefreq>`
+			xml += `\n\t\t<priority>${item.priority.toFixed(1)}</priority>`
+			xml += `\n\t</url>`
+			return xml
 		})
 		.join('\n')
 
-	return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>`
+	return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`
 }
 
 /**
- * Escapes XML special characters
+ * Escapes XML special characters.
  */
 function escapeXml(unsafe: string): string {
 	return unsafe
@@ -191,8 +232,9 @@ function escapeXml(unsafe: string): string {
 }
 
 /**
- * Generates sitemap for React Router 7 application
- * Includes both static routes from the build and dynamic routes from the database
+ * Generates sitemap for React Router 7 application.
+ * Includes both static routes from the build and dynamic routes from the database.
+ * Each entry gets lastmod (when available), changefreq, and priority.
  */
 export async function generateSitemap(
 	build: ServerBuild,
@@ -200,14 +242,36 @@ export async function generateSitemap(
 ): Promise<string> {
 	// Get static routes from React Router build
 	const staticRoutes = extractPublicRoutes(build.routes)
-	
-	// Get dynamic routes from database (products and categories)
-	const dynamicRoutes = await getDynamicRoutes()
-	
-	// Combine and deduplicate routes
-	const allRoutes = [...staticRoutes, ...dynamicRoutes]
-	const uniqueRoutes = Array.from(new Set(allRoutes)).sort()
-	
-	return generateSitemapXML(uniqueRoutes, siteUrl)
-}
 
+	// Get dynamic route metadata from database (products and categories)
+	const dynamicMetadata = await getDynamicRouteMetadata()
+	const dynamicPaths = new Set(dynamicMetadata.map((m) => m.path))
+
+	// Build metadata for static routes (skip those covered by dynamic)
+	const allMetadata: RouteMetadata[] = []
+
+	for (const routePath of staticRoutes) {
+		// Skip dynamic routes already covered
+		if (dynamicPaths.has(routePath)) continue
+
+		// Skip parametric routes that are covered by dynamic
+		const isParametric = routePath.includes(':') || routePath.includes('*')
+		if (isParametric) {
+			// Check if any dynamic route matches this pattern
+			const pattern = routePath.replace(/:\w+/g, '[^/]+').replace(/\*/g, '.*')
+			const regex = new RegExp(`^${pattern}$`)
+			if ([...dynamicPaths].some((dp) => regex.test(dp))) continue
+		}
+
+		const { changefreq, priority } = getRouteDefaults(routePath)
+		allMetadata.push({ path: routePath, changefreq, priority })
+	}
+
+	// Add dynamic metadata (already has lastmod)
+	allMetadata.push(...dynamicMetadata)
+
+	// Sort by path for consistent output
+	allMetadata.sort((a, b) => a.path.localeCompare(b.path))
+
+	return generateSitemapXML(allMetadata, siteUrl)
+}
