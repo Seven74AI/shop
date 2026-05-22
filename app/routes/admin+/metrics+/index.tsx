@@ -118,12 +118,12 @@ export default function MetricsDashboard({ loaderData }: Route.ComponentProps) {
 					title="Errors"
 					value={metrics.errorCount.toLocaleString()}
 					description="Tracked errors"
-					icon="alert"
-					trend={null}
-				/>
-			</div>
+				icon={"alert" as any}
+				trend={null}
+			/>
+		</div>
 
-			{/* Top Products */}
+		{/* Top Products */}
 			<Card className="rounded-[14px]">
 				<CardHeader className="pb-3">
 					<CardTitle className="text-base font-normal">
@@ -217,7 +217,7 @@ function MetricCard({
 				{trend && (
 					<div className="flex items-center gap-1 mt-2 text-xs">
 						<Icon
-							name={trend.direction === 'up' ? 'arrow-up' : 'arrow-down'}
+							name={(trend.direction === 'up' ? 'arrow-up' : 'arrow-down') as any}
 							className={`h-3 w-3 ${trend.direction === 'up' ? 'text-green-500' : 'text-red-500'}`}
 						/>
 						<span
@@ -238,7 +238,7 @@ export function ErrorBoundary() {
 	// Simple fallback
 	return (
 		<div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-			<Icon name="alert" className="h-12 w-12 text-muted-foreground" />
+			<Icon name={"alert" as any} className="h-12 w-12 text-muted-foreground" />
 			<h2 className="text-xl font-semibold">Error loading metrics</h2>
 			<p className="text-muted-foreground text-center">
 				An error occurred while loading the metrics dashboard.
