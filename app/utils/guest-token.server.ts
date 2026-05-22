@@ -63,35 +63,30 @@ export function verifyGuestToken(token: string): GuestTokenPayload | null {
 	if (sigB64 !== expectedSigB64) return null
 
 	// Parse payload
-	let payload: unknown
+	let rawPayload: unknown
 	try {
 		const raw = Buffer.from(payloadB64, 'base64url').toString('utf-8')
-		payload = JSON.parse(raw)
+		rawPayload = JSON.parse(raw)
 	} catch {
 		return null
 	}
 
-	// Validate structure
-	if (
-		typeof payload !== 'object' ||
-		payload === null ||
-		typeof payload.orderId !== 'string' ||
-		typeof payload.email !== 'string' ||
-		typeof payload.exp !== 'number'
-	) {
-		return null
-	}
+	// Validate structure with type guard
+	const payload = asGuestTokenPayload(rawPayload)
+	if (!payload) return null
 
 	// Verify not expired (allow 60s clock skew)
 	const now = Math.floor(Date.now() / 1000)
 	if (payload.exp < now - 60) return null
 
-	// TypeScript: payload is still `object` after typeof check.
-	// Construct an explicitly typed result from the validated fields.
-	const result: GuestTokenPayload = {
-		orderId: payload.orderId,
-		email: payload.email,
-		exp: payload.exp,
-	}
-	return result
+	return payload
+}
+
+function asGuestTokenPayload(obj: unknown): GuestTokenPayload | null {
+	if (typeof obj !== 'object' || obj === null) return null
+	const rec = obj as Record<string, unknown>
+	if (typeof rec.orderId !== 'string') return null
+	if (typeof rec.email !== 'string') return null
+	if (typeof rec.exp !== 'number') return null
+	return { orderId: rec.orderId, email: rec.email, exp: rec.exp }
 }
