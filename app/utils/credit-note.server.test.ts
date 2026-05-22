@@ -24,15 +24,26 @@ async function seedTestData() {
 		},
 	})
 
+	// Create a category (required FK for Product)
+	const category = await prisma.category.create({
+		data: {
+			name: `Test Category ${Date.now()}`,
+			slug: `test-category-${Date.now()}`,
+		},
+	})
+
 	// Create a product
 	const product = await prisma.product.create({
 		data: {
 			name: 'Test Product',
 			slug: `test-product-${Date.now()}`,
+			sku: `SKU-${Date.now()}`,
 			description: 'A test product',
-			basePrice: 5000,
-			stock: 100,
-		},
+			price: 5000,
+			status: 'ACTIVE',
+			stockQuantity: 100,
+			categoryId: category.id,
+		} as any,
 	})
 
 	// Create an order with items
@@ -41,27 +52,25 @@ async function seedTestData() {
 			orderNumber: `CN-TEST-${Date.now()}`,
 			userId: user.id,
 			email: user.email,
-			status: 'PAID',
+			status: 'CONFIRMED',
 			total: 15000,
 			subtotal: 12000,
 			shippingCost: 3000,
-			currency: 'EUR',
 			shippingName: 'Test User',
 			shippingStreet: '123 Test St',
 			shippingCity: 'Paris',
 			shippingPostal: '75001',
 			shippingCountry: 'FR',
+			stripeCheckoutSessionId: `cs_test_CN_${Date.now()}`,
 			items: {
 				create: [
 					{
 						productId: product.id,
-						name: product.name,
 						price: 5000,
 						quantity: 2,
 					},
 					{
 						productId: product.id,
-						name: product.name,
 						price: 5000,
 						quantity: 1,
 					},
@@ -165,19 +174,47 @@ describe('generateCreditNoteNumber', () => {
 		expect(number).toMatch(/^CN-2025-\d{5}$/)
 	})
 
-	test('generates unique sequential numbers', async () => {
+	test('generates unique sequential numbers when credit notes are committed', async () => {
+		const testOrder = await prisma.order.create({
+			data: {
+				orderNumber: `SEQ-TEST-${Date.now()}`,
+				email: 'seq-test@example.com',
+				status: 'CONFIRMED',
+				total: 1000,
+				subtotal: 1000,
+				shippingName: 'Test',
+				shippingStreet: '123 Test',
+				shippingCity: 'Paris',
+				shippingPostal: '75001',
+				shippingCountry: 'FR',
+				stripeCheckoutSessionId: `cs_seq_${Date.now()}`,
+			},
+		})
+
 		const num1 = await generateCreditNoteNumber(2025)
+		// Commit a credit note to advance the sequence
+		await prisma.invoice.create({
+			data: {
+				fiscalYear: 2025,
+				sequence: parseInt(num1.split('-')[2]!, 10),
+				kind: 'CREDIT_NOTE',
+				orderId: testOrder.id,
+				subtotalCents: -1000,
+				totalCents: -1000,
+				status: 'FINAL',
+				issuedAt: new Date(),
+			},
+		})
 		const num2 = await generateCreditNoteNumber(2025)
 		expect(num1).not.toBe(num2)
-		const seq1 = parseInt(num1.split('-')[2]!, 10)
 		const seq2 = parseInt(num2.split('-')[2]!, 10)
-		expect(seq2).toBeGreaterThan(seq1)
+		expect(seq2).toBeGreaterThan(parseInt(num1.split('-')[2]!, 10))
 	})
 })
 
 describe('createCreditNote', () => {
-	let invoice: Awaited<ReturnType<typeof seedTestData>>['invoice']
-	let order: Awaited<ReturnType<typeof seedTestData>>['order']
+	let invoice: any
+	let order: any
 
 	beforeEach(async () => {
 		const data = await seedTestData()
@@ -186,7 +223,7 @@ describe('createCreditNote', () => {
 	})
 
 	test('full refund creates credit note with REFUNDED status', async () => {
-		const items: CreateCreditNoteItem[] = order.items.map((oi) => ({
+		const items: CreateCreditNoteItem[] = order.items.map((oi: any) => ({
 			description: oi.product.name,
 			quantity: oi.quantity,
 			unitPriceCents: oi.price,
@@ -317,8 +354,8 @@ describe('createCreditNote', () => {
 })
 
 describe('generateCreditNotePdf', () => {
-	let invoice: Awaited<ReturnType<typeof seedTestData>>['invoice']
-	let order: Awaited<ReturnType<typeof seedTestData>>['order']
+	let invoice: any
+	let order: any
 
 	beforeEach(async () => {
 		const data = await seedTestData()
@@ -328,7 +365,7 @@ describe('generateCreditNotePdf', () => {
 
 	test('generates a PDF buffer for a credit note', async () => {
 		// First create a credit note
-		const items: CreateCreditNoteItem[] = order.items.map((oi) => ({
+		const items: CreateCreditNoteItem[] = order.items.map((oi: any) => ({
 			description: oi.product.name,
 			quantity: oi.quantity,
 			unitPriceCents: oi.price,
