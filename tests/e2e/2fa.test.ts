@@ -7,10 +7,19 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	navigate,
 	login,
 }) => {
+	// Increase timeout — first page load can be slow (server cold start)
+	test.setTimeout(60000)
 	const password = faker.internet.password()
 	const user = await login({ password })
+
+	// Warm up the server with a fast page first
+	await page.goto('/')
+	await expect(page.getByRole('link', { name: 'User menu' })).toBeVisible({ timeout: 10000 })
+
 	await navigate('/account/security/two-factor')
 
+	// Wait for the page to fully load before interacting
+	await expect(page.getByRole('heading', { name: /two-factor/i })).toBeVisible({ timeout: 30000 })
 	await page.getByRole('button', { name: /enable 2fa/i }).click()
 
 	// After clicking enable, should redirect to verify page

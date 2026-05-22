@@ -183,6 +183,11 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
+			// Wait for the data table to render (React Router .data loader may be async)
+			await expect(
+				page.getByRole('heading', { name: /feature flags/i }),
+			).toBeVisible({ timeout: 15000 })
+
 			// Find the toggle button for our flag
 			const toggleButton = page
 				.getByRole('row', {
@@ -190,6 +195,7 @@ test.describe('Feature Flags Admin Panel', () => {
 				})
 				.getByRole('button', { name: /enable/i })
 
+			await expect(toggleButton).toBeVisible({ timeout: 10000 })
 			await toggleButton.click()
 
 		// Wait for toggle to complete and page to reload
@@ -301,10 +307,18 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
+			// Wait for the data table to render
+			await expect(
+				page.getByRole('heading', { name: /feature flags/i }),
+			).toBeVisible({ timeout: 15000 })
+
 			// Search by description keyword
 			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
 			await page.getByPlaceholder(/search flags/i).fill('production')
-			await page.waitForTimeout(300)
+			// Wait for search results to update — expect the target row to appear
+			await expect(
+				page.getByText(`${FEATURE_FLAG_E2E_PREFIX}gamma-feature`),
+			).toBeVisible({ timeout: 10000 })
 
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}gamma-feature`)).toBeVisible()
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}alpha-feature`)).not.toBeVisible()
@@ -428,9 +442,14 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
+			// Wait for the data table to render
+			await expect(
+				page.getByRole('heading', { name: /feature flags/i }),
+			).toBeVisible({ timeout: 15000 })
+
 			// Should show "N flags" in the header area
 			// The count includes the seeded e2e flags; verify at least ours are visible
-			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible()
+			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 10000 })
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible()
 		})
 	})
