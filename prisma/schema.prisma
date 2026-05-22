@@ -720,7 +720,6 @@ model IdempotencyRecord {
   createdAt      DateTime @default(now())
   expiresAt      DateTime // TTL for cleanup (createdAt + 24h window)
 
-  @@index([idempotencyKey])
   @@index([expiresAt])
   @@index([status])
 }
