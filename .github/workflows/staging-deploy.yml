@@ -27,9 +27,12 @@ jobs:
 
       - name: 👀 Verify CI checks
         run: |
-          # Wait up to 5 minutes for CI checks to report
-          for i in $(seq 1 30); do
-            CHECKS=$(gh api "repos/${{ github.repository }}/commits/${{ github.event.pull_request.head.sha || github.sha }}/check-runs" \
+          # Wait up to 15 minutes for CI checks to report.
+          # CI (lint + typecheck + vitest + playwright) normally takes ~8-12 min.
+          SHA="${{ github.sha }}"
+          MAX_ATTEMPTS=90
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            CHECKS=$(gh api "repos/${{ github.repository }}/commits/$SHA/check-runs" \
               --jq '.check_runs[] | select(.name == "lint" or .name == "typecheck" or .name == "vitest" or .name == "playwright-gate") | {name: .name, conclusion: .conclusion}')
             FAILED=$(echo "$CHECKS" | grep -c '"conclusion": "failure"' || true)
             PENDING=$(echo "$CHECKS" | grep -c '"conclusion": null' || true)
@@ -41,7 +44,7 @@ jobs:
               echo "✅ All CI checks passed"
               exit 0
             fi
-            echo "⏳ Waiting for CI checks... (attempt $i/30)"
+            echo "⏳ Waiting for CI checks... (attempt $i/$MAX_ATTEMPTS)"
             sleep 10
           done
           echo "⚠️ Timed out waiting for CI checks — proceeding anyway"
@@ -127,6 +130,22 @@ jobs:
           STAGING_URL="https://${{ steps.app_name.outputs.value }}.fly.dev"
 
           echo "🔍 Running smoke tests against $STAGING_URL"
+
+          # Wait for app to be ready (up to 60s warm-up after deploy)
+          echo "--- Waiting for app to be ready ---"
+          for i in $(seq 1 12); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/resources/healthcheck" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ App is ready (attempt $i)"
+              break
+            fi
+            if [ "$i" -eq 12 ]; then
+              echo "❌ App failed to become ready after 60s"
+              exit 1
+            fi
+            echo "⏳ App not ready yet (HTTP $STATUS, attempt $i/12)"
+            sleep 5
+          done
 
           # 1. Health check
           echo "--- Health Check ---"
