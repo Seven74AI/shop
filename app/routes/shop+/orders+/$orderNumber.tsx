@@ -223,6 +223,34 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 						</CardContent>
 					</Card>
 
+					{'invoices' in order && Array.isArray(order.invoices) && order.invoices.length > 0 && (
+						<Card>
+							<CardHeader>
+								<h2>Invoices</h2>
+							</CardHeader>
+							<CardContent>
+								<div className="flex flex-col gap-2">
+									{order.invoices.map((inv) => (
+										<div key={inv.id} className="flex items-center justify-between">
+											<span className="text-sm text-muted-foreground">
+												{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}{' '}
+												<span className="font-mono">
+													F{inv.fiscalYear}-{String(inv.sequence).padStart(5, '0')}
+												</span>
+											</span>
+											<Button asChild variant="outline" size="sm">
+												<a href={`/account/invoices/${inv.id}.pdf`}>
+													<Icon name="download" className="h-4 w-4 mr-2" />
+													Download
+												</a>
+											</Button>
+										</div>
+									))}
+								</div>
+							</CardContent>
+						</Card>
+					)}
+
 					<Card>
 						<CardHeader>
 							<h2>{t('shop.order.detail.shippingAddress')}</h2>
