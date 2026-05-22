@@ -164,6 +164,7 @@
 	"account.layout.account": "Account",
 	"account.layout.profile": "Profile",
 	"account.layout.orders": "Orders",
+	"account.layout.invoices": "Invoices",
 	"account.layout.addresses": "Addresses",
 	"account.layout.security": "Security",
 	"account.layout.privacy": "Privacy & Data",
