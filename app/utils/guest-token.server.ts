@@ -63,7 +63,7 @@ export function verifyGuestToken(token: string): GuestTokenPayload | null {
 	if (sigB64 !== expectedSigB64) return null
 
 	// Parse payload
-	let payload: GuestTokenPayload
+	let payload: unknown
 	try {
 		const raw = Buffer.from(payloadB64, 'base64url').toString('utf-8')
 		payload = JSON.parse(raw)
