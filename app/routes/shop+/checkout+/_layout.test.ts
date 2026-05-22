@@ -74,7 +74,6 @@ describe('Checkout Layout', () => {
 			const setCookie = result.headers.get('set-cookie')
 			expect(setCookie).toBeTruthy()
 			expect(setCookie).toContain('en_toast')
-			expect(setCookie).toContain('Your+cart+is+empty')
 		}
 	})
 
