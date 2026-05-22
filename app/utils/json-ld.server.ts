@@ -209,6 +209,6 @@ export function buildProductLd(opts: {
  * Render a JSON-LD object to a <script> tag string.
  * Safe for server-rendered HTML.
  */
-export function renderJsonLd(data: Record<string, unknown>): string {
+export function renderJsonLd(data: object): string {
 	return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`
 }
