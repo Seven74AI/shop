@@ -1,6 +1,10 @@
 import { PrismaInstrumentation } from '@prisma/instrumentation'
 import { nodeProfilingIntegration } from '@sentry/profiling-node'
 import * as Sentry from '@sentry/react-router'
+import {
+	createBeforeSendHook,
+	createBeforeSendTransactionHook,
+} from '../../app/utils/sentry-pii.server.ts'
 
 export function init() {
 	Sentry.init({
@@ -37,7 +41,14 @@ export function init() {
 				return null
 			}
 
-			return event
+			// Strip PII from transaction data
+			const piiHook = createBeforeSendTransactionHook()
+			return piiHook(event)
+		},
+		beforeSend(event) {
+			// Strip PII from error events
+			const piiHook = createBeforeSendHook()
+			return piiHook(event)
 		},
 	})
 }
