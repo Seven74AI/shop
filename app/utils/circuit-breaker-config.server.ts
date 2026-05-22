@@ -15,6 +15,7 @@
  *   CIRCUIT_BREAKER_<NAME>_HALF_OPEN_MAX_REQUESTS
  */
 
+import { log } from '#app/utils/logging.server.ts'
 import type { CircuitBreakerConfig } from './circuit-breaker.server.ts'
 
 const DEFAULT_FAILURE_THRESHOLD = 5
@@ -37,7 +38,8 @@ function readEnvInt(name: string, defaultVal: number): number {
   if (raw === undefined || raw === '') return defaultVal
   const parsed = Number(raw)
   if (Number.isNaN(parsed) || parsed < 0) {
-    console.warn(
+    log.warn(
+      { envVar: name, raw, defaultVal },
       `Invalid ${name}=${raw}, expected non-negative integer. Using default ${defaultVal}.`,
     )
     return defaultVal

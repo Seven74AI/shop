@@ -316,6 +316,11 @@ function App() {
 
 			<footer className="container flex justify-between pb-5">
 				<Logo />
+				<nav aria-label="Legal links" className="flex items-center gap-4 text-sm text-muted-foreground">
+					<Link to="/mentions-legales">{t('marketing.mentionsLegales.title')}</Link>
+					<Link to="/privacy">{t('marketing.privacy')}</Link>
+					<Link to="/tos">{t('marketing.tos')}</Link>
+				</nav>
 				<div className="flex items-center gap-6">
 					<LocaleSwitch />
 					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
@@ -345,7 +350,7 @@ function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<HoneypotProvider {...data.honeyProps}>
-			<TranslationProvider>
+			<TranslationProvider locale={data.locale} translations={data.translations}>
 				<App />
 			</TranslationProvider>
 		</HoneypotProvider>

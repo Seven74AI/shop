@@ -17,6 +17,7 @@
 
 import { invariant } from '@epic-web/invariant'
 import { XMLParser } from 'fast-xml-parser'
+import { log } from '#app/utils/logging.server.ts'
 import {
   CircuitBreaker,
   CircuitOpenError,
@@ -311,7 +312,7 @@ export async function createShipment(request: ShipmentRequest): Promise<Shipment
 			const responseText = await response.text()
 
 			if (!response.ok) {
-				console.error('[Mondial Relay API2] Error response:', responseText)
+				log.error({ status: response.status, statusText: response.statusText, body: responseText.slice(0, 500) }, '[Mondial Relay API2] Error response')
 				throw new Error(`Mondial Relay API2 error: ${response.status} ${response.statusText} - ${responseText}`)
 			}
 
@@ -342,13 +343,13 @@ export async function createShipment(request: ShipmentRequest): Promise<Shipment
 				
 				if (errors.length > 0) {
 					const errorMessages = errors.map((e: any) => `${e['@_Code']}: ${e['@_Message']}`).join('; ')
-					console.error('[Mondial Relay API2] API returned errors:', errorMessages)
+					log.error({ errors: errorMessages }, '[Mondial Relay API2] API returned errors')
 					throw new Error(`Mondial Relay API2 error: ${errorMessages}`)
 				}
 				
 				if (warnings.length > 0) {
 					const warningMessages = warnings.map((w: any) => `${w['@_Code']}: ${w['@_Message']}`).join('; ')
-					console.warn('[Mondial Relay API2] API returned warnings:', warningMessages)
+					log.warn({ warnings: warningMessages }, '[Mondial Relay API2] API returned warnings')
 				}
 			}
 			
@@ -392,10 +393,10 @@ export async function createShipment(request: ShipmentRequest): Promise<Shipment
 		return result as ShipmentResponse
 	} catch (error) {
 		if (error instanceof CircuitOpenError) {
-			console.warn(`Mondial Relay API2 circuit breaker OPEN: ${error.message}`)
+			log.warn({ err: error.message }, 'Mondial Relay API2 shipment circuit breaker OPEN')
 			throw error
 		}
-		console.error('Mondial Relay API2 createShipment error:', error)
+		log.error({ err: error }, 'Mondial Relay API2 createShipment error')
 		throw new Error(`Failed to create shipment: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
 }
@@ -426,10 +427,10 @@ export async function getLabel(shipmentNumber: string): Promise<LabelResponse> {
 		return result as LabelResponse
 	} catch (error) {
 		if (error instanceof CircuitOpenError) {
-			console.warn(`Mondial Relay API2 circuit breaker OPEN: ${error.message}`)
+			log.warn({ err: error.message }, 'Mondial Relay API2 label circuit breaker OPEN')
 			throw error
 		}
-		console.error('Mondial Relay API2 getLabel error:', error)
+		log.error({ err: error }, 'Mondial Relay API2 getLabel error')
 		throw new Error(`Failed to get label: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
 }

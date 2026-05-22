@@ -4,6 +4,7 @@ import { type Prisma } from '@prisma/client'
 import { data } from 'react-router'
 import { MAX_UPLOAD_SIZE } from '#app/schemas/constants'
 import { productSchema } from '#app/schemas/product.ts'
+import { auditLog } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { handlePrismaError } from '#app/utils/prisma-error.server.ts'
@@ -33,7 +34,7 @@ export function imageHasFile(
  * @returns Redirect to product page on success, or error data on failure
  */
 export async function action({ request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request, {
 		maxFileSize: MAX_UPLOAD_SIZE,
@@ -143,6 +144,13 @@ export async function action({ request }: Route.ActionArgs) {
 			
 			return createdProduct
 		})
+
+		// Audit log
+		await auditLog(userId, 'CREATE', 'Product', result.id, {
+			name: result.name,
+			slug: result.slug,
+			sku: result.sku,
+		}, request)
 
 		return redirectWithToast(`/admin/products/${result.slug}`, {
 			description: 'Product created successfully',

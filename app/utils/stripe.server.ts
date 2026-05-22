@@ -120,6 +120,7 @@ export async function createCheckoutSession({
 	userId,
 	vatTotalCents,
 	vatBreakdown,
+	idempotencyKey,
 }: {
 	cart: {
 		id: string
@@ -145,6 +146,7 @@ export async function createCheckoutSession({
 	userId?: string | null
 	vatTotalCents?: number
 	vatBreakdown?: Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
+	idempotencyKey?: string
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -239,6 +241,7 @@ export async function createCheckoutSession({
 		const sessionPromise = stripe.checkout.sessions.create(sessionParams, {
 			timeout: 8000, // 8 seconds timeout per request (shorter than global)
 			maxNetworkRetries: 0, // Disable retries to fail fast
+			...(idempotencyKey ? { idempotencyKey } : {}),
 		})
 		
 		// Add additional timeout wrapper as a safety net

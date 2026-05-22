@@ -9,6 +9,11 @@ import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
+import {
+	generateCheckoutKey,
+	IdempotencyConflictError,
+	withIdempotency,
+} from '#app/utils/idempotency.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import {
 	StockValidationError,
@@ -185,30 +190,39 @@ export async function action({ request }: Route.ActionArgs) {
 		// Continue without VAT on calculation failure
 	}
 
-	// Create Stripe Checkout Session
+	// Create Stripe Checkout Session with idempotency protection
 	try {
 		const domainUrl = getDomainUrl(request)
-		const session = await createCheckoutSession({
-			cart: cartWithItems,
-			shippingInfo: {
-				name,
-				email,
-				street,
-				city,
-				state: state || undefined,
-				postal,
-				country,
+		const checkoutKey = generateCheckoutKey(cartWithItems.id)
+
+		const session = await withIdempotency(
+			checkoutKey,
+			'checkout_session',
+			async (stripeIdempotencyKey) => {
+				return createCheckoutSession({
+					cart: cartWithItems,
+					shippingInfo: {
+						name,
+						email,
+						street,
+						city,
+						state: state || undefined,
+						postal,
+						country,
+					},
+					shippingMethodId,
+					shippingCost,
+					mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
+					customerVatNumber,
+					currency,
+					domainUrl,
+					userId: userId || undefined,
+					vatTotalCents: vatCalculation?.totalVatCents ?? 0,
+					vatBreakdown: vatCalculation?.breakdown ?? [],
+					idempotencyKey: stripeIdempotencyKey,
+				})
 			},
-			shippingMethodId,
-			shippingCost,
-			mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
-			customerVatNumber,
-			currency,
-			domainUrl,
-			userId: userId || undefined,
-			vatTotalCents: vatCalculation?.totalVatCents ?? 0,
-			vatBreakdown: vatCalculation?.breakdown ?? [],
-		})
+		)
 
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
 			status: 500,
@@ -220,7 +234,18 @@ export async function action({ request }: Route.ActionArgs) {
 		Sentry.captureException(error, {
 			tags: { context: 'checkout-session-creation' },
 		})
-		
+
+		if (error instanceof IdempotencyConflictError) {
+			return data(
+				{
+					error: 'checkout_in_progress',
+					message:
+						'Your checkout is already being processed. Please wait a moment and try again.',
+				},
+				{ status: 409 },
+			)
+		}
+
 		const stripeError = handleStripeError(error)
 		return data(
 			{

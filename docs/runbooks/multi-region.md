@@ -1,7 +1,8 @@
 # Multi-Region Read Replica Setup — Runbook
 
-> **Status:** UNVERIFIED  
-> **Last verified:** Pending staging smoke test (P2.5)  
+> **Status:** DRAFT — needs staging validation (P2.5)  
+> **Last verified:** Not yet verified (staging environment pending)  
+> **Last updated:** 2026-05-22 (added backup, restore, failover, monitoring sections)  
 > **Trigger condition:** P5.1 (traffic threshold met)  
 > **Owner:** Platform / Infra team  
 > **Target runtime:** < 30 minutes for first region, < 10 per additional region  
@@ -394,11 +395,363 @@ pnpm playwright test --workers=1
 
 ---
 
-## Step 7 — Rollback
+## Step 7 — Database Backups
+
+LiteFS replicates data but does NOT replace backups. Replication protects against machine failure; backups protect against data corruption, operator error, and catastrophic Consul failures.
+
+### 7.1 Logical Backup (litefs export)
+
+`litefs export` creates a consistent point-in-time snapshot of the SQLite database. Run from any healthy instance (primary or replica):
+
+```bash
+# Create a logical backup of the main database
+fly ssh console -a shop-3ecf -s <machine-id> \
+  --command "litefs export -name sqlite.db /tmp/shop-backup-$(date +%Y%m%d-%H%M%S).db"
+
+# Verify the export is not corrupt
+fly ssh console -a shop-3ecf -s <machine-id> \
+  --command "sqlite3 /tmp/shop-backup-*.db 'PRAGMA integrity_check;'"
+# Expected: "ok"
+
+# Download the backup locally
+fly ssh sftp get /tmp/shop-backup-*.db ./backups/
+```
+
+### 7.2 Fly.io Volume Snapshot
+
+Fly.io volumes support snapshots for point-in-time recovery. This is the preferred method for production backups because it captures the entire volume state including WAL files:
+
+```bash
+# Create a snapshot of the data volume on the primary machine
+fly volumes snapshots create vol_<id> -a shop-3ecf
+
+# List available snapshots
+fly volumes snapshots list vol_<id> -a shop-3ecf
+
+# Snapshots are retained for 5 days by default on Fly.io
+```
+
+**Important:** Volume snapshots are region-scoped. If the primary is in `cdg`, the snapshot exists only in `cdg`. For cross-region DR, combine snapshots with logical exports to a different region or cloud provider.
+
+### 7.3 Backup Schedule
+
+| Backup type | Frequency | Retention | Automation |
+|------------|-----------|-----------|------------|
+| **Volume snapshot** | Every 6 hours | 5 days (Fly.io default, 20 snapshots) | Cron on Fly.io machine or scheduled `fly` CLI command |
+| **Logical export** | Daily | 30 days | Cron job: `litefs export -name sqlite.db /backups/shop-$(date +%Y%m%d).db` |
+| **Pre-migration backup** | Before every `prisma migrate deploy` | 90 days | Manual — run before every schema migration |
+
+### 7.4 Automated Backup Script
+
+Create a cron job on the primary machine to run daily logical backups:
+
+```bash
+#!/bin/sh
+# /usr/local/bin/backup-db.sh — daily LiteFS logical backup
+set -e
+
+BACKUP_DIR="/backups"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/shop-$TIMESTAMP.db"
+MAX_BACKUPS=30  # retain 30 daily backups
+
+mkdir -p "$BACKUP_DIR"
+
+# Create the backup
+litefs export -name sqlite.db "$BACKUP_FILE"
+
+# Verify integrity
+INTEGRITY=$(sqlite3 "$BACKUP_FILE" "PRAGMA integrity_check;")
+if [ "$INTEGRITY" != "ok" ]; then
+  echo "BACKUP CORRUPT: $BACKUP_FILE — integrity check: $INTEGRITY"
+  rm "$BACKUP_FILE"
+  exit 1
+fi
+
+# Compress
+gzip "$BACKUP_FILE"
+
+# Rotate old backups (keep last $MAX_BACKUPS)
+ls -1t "$BACKUP_DIR"/shop-*.db.gz | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm
+
+echo "Backup complete: ${BACKUP_FILE}.gz ($(wc -c < ${BACKUP_FILE}.gz) bytes)"
+```
+
+To deploy: add this script to your Docker image or mount it at deploy time.
+
+---
+
+## Step 8 — Database Restore
+
+### 8.1 Restore from Logical Export
+
+Use when you need to recover from a specific point-in-time backup:
+
+```bash
+# 1. Put the app in maintenance mode (optional but recommended)
+#    Set MAINTENANCE_MODE=true via fly secrets
+
+# 2. Stop the app to prevent writes during restore
+fly machines stop <primary-machine-id> -a shop-3ecf
+
+# 3. Upload the backup to the machine
+fly ssh sftp put ./backups/shop-20260522-120000.db.gz /tmp/restore.db.gz -a shop-3ecf -s <primary-machine-id>
+
+# 4. Decompress and verify
+fly ssh console -a shop-3ecf -s <primary-machine-id> \
+  --command "gunzip /tmp/restore.db.gz && sqlite3 /tmp/restore.db 'PRAGMA integrity_check;'"
+# Expected: "ok"
+
+# 5. Replace the LiteFS database
+#    CAUTION: This stops LiteFS replication. The replica will re-sync from scratch.
+fly ssh console -a shop-3ecf -s <primary-machine-id> \
+  --command "cp /tmp/restore.db \$LITEFS_DIR/sqlite.db"
+
+# 6. Start the machine
+fly machines start <primary-machine-id> -a shop-3ecf
+
+# 7. Replicas will auto-sync from the restored primary
+#    Wait for sync to complete (check replication lag — see Step 5)
+
+# 8. Verify the app responds
+curl -sI https://shop-3ecf.fly.dev/
+# Expect: HTTP 200
+
+# 9. Disable maintenance mode
+#    Remove MAINTENANCE_MODE from fly secrets
+```
+
+### 8.2 Restore from Volume Snapshot
+
+Use when you need the fastest possible restore with zero data loss up to the snapshot point:
+
+```bash
+# 1. Stop all machines
+fly machines stop <primary-machine-id> -a shop-3ecf
+fly machines stop <replica-machine-id> -a shop-3ecf
+
+# 2. Restore the volume from snapshot
+fly volumes snapshots restore <snapshot-id> -a shop-3ecf
+
+# 3. Start the primary first
+fly machines start <primary-machine-id> -a shop-3ecf
+
+# 4. Wait for LiteFS health check to pass
+fly checks list -a shop-3ecf
+
+# 5. Start replicas
+fly machines start <replica-machine-id> -a shop-3ecf
+
+# 6. Verify replication (Step 5)
+```
+
+### 8.3 Post-Restore Verification Checklist
+
+After any restore, verify these before declaring recovery complete:
+
+- [ ] `/litefs/health` returns 200 on all machines
+- [ ] `/resources/healthcheck` returns 200 on all machines
+- [ ] Primary reports `isPrimary: true` from `/debug/vars`
+- [ ] All replicas report `isPrimary: false` with matching `dbSize`
+- [ ] Replication lag < 500ms (p99) — see Step 5
+- [ ] Product listing page loads (read path)
+- [ ] Login flow works (write path via `ensurePrimary()`)
+- [ ] Admin dashboard loads
+- [ ] No ERROR or FATAL in application logs (`fly logs -a shop-3ecf`)
+
+---
+
+## Step 9 — Manual Failover
+
+LiteFS handles automatic failover when the primary crashes (Consul lease expires, replica promotes). Manual failover is for planned maintenance or when the primary is degraded but not dead.
+
+### 9.1 When to Manually Failover
+
+- **Planned primary maintenance** (OS updates, volume resize)
+- **Primary degraded but alive** (high CPU, slow writes — not triggering Consul lease expiry)
+- **Region evacuation** (Fly.io maintenance on the primary region)
+- **Testing failover procedures** (quarterly DR drill)
+
+### 9.2 Pre-Failover Checklist
+
+- [ ] All replicas are healthy: `fly checks list -a shop-3ecf`
+- [ ] Replication lag < 100ms on all replicas (Step 5)
+- [ ] Target replica is in the desired region
+- [ ] Stakeholders notified of planned failover window (5-15 second service interruption)
+- [ ] Current backup is recent (< 6 hours old)
+
+### 9.3 Failover Procedure
+
+```bash
+# 1. Identify the current primary and the target replica
+PRIMARY_ID=$(fly machines list -a shop-3ecf --json | jq -r '.[] | select(.region=="cdg") | .id')
+REPLICA_ID=$(fly machines list -a shop-3ecf --json | jq -r '.[] | select(.region=="lhr") | .id')
+echo "Primary: $PRIMARY_ID (cdg), Target replica: $REPLICA_ID (lhr)"
+
+# 2. Verify the replica has caught up
+fly ssh console -a shop-3ecf -s "$REPLICA_ID" \
+  --command "curl -s http://localhost:20202/debug/vars" | jq '{isPrimary: .IsPrimary, pos: .DBs[0].Pos}'
+
+# 3. Stop the current primary — LiteFS Consul lease will expire
+fly machines stop "$PRIMARY_ID" -a shop-3ecf
+
+# 4. Wait for the replica to detect primary loss and promote
+#    Consul lease timeout is ~10 seconds by default
+sleep 15
+
+# 5. Verify the replica promoted
+fly ssh console -a shop-3ecf -s "$REPLICA_ID" \
+  --command "curl -s http://localhost:20202/debug/vars" | jq '{isPrimary: .IsPrimary}'
+# Expected: isPrimary: true
+
+# 6. Verify the app works from the new primary
+curl -sI https://shop-3ecf.fly.dev/ | grep fly-primary-instance
+# Should show the new primary instance ID
+
+# 7. Start the old primary — it will rejoin as a replica
+fly machines start "$PRIMARY_ID" -a shop-3ecf
+
+# 8. Verify the old primary is now a replica
+sleep 10
+fly ssh console -a shop-3ecf -s "$PRIMARY_ID" \
+  --command "curl -s http://localhost:20202/debug/vars" | jq '{isPrimary: .IsPrimary}'
+# Expected: isPrimary: false
+```
+
+### 9.4 Post-Failover Verification
+
+Same checklist as post-restore (Section 8.3), plus:
+
+- [ ] `fly checks list -a shop-3ecf` — all checks passing on new primary
+- [ ] New primary region is correct (`fly-region` response header)
+- [ ] Old primary is running as replica and syncing
+- [ ] No data loss: spot-check recent orders/products
+
+### 9.5 Failover Back to Original Primary
+
+After maintenance, fail back to the original region:
+
+1. Wait for old primary (now replica) to fully sync (check replication lag)
+2. Repeat the failover procedure swapping the machine IDs
+3. This avoids running indefinitely in a non-primary region
+
+---
+
+## Step 10 — Monitoring & Alerting
+
+### 10.1 Key Metrics from LiteFS `/debug/vars`
+
+LiteFS exposes Prometheus-compatible metrics at `http://localhost:20202/debug/vars`. Key metrics to monitor:
+
+| Metric | JSON path | Description |
+|--------|----------|-------------|
+| **IsPrimary** | `.IsPrimary` | Whether this instance holds the lease (1=primary, 0=replica) |
+| **WAL position** | `.DBs[0].Pos` | Write-ahead log position (monotonic counter) |
+| **DB size** | `.DBs[0].DBSize` | Database file size in bytes |
+| **Replication lag** | `primary.Pos - replica.Pos` | WAL position difference between primary and replica |
+| **FUSE reads** | `.FUSEPosReads` | Number of FUSE position reads (high = replica activity) |
+
+### 10.2 Alert Thresholds
+
+| Alert | Condition | Severity | Action |
+|-------|----------|----------|--------|
+| **Replication lag > 1s** | `primary.Pos - replica.Pos > threshold` sustained 5+ min | WARNING | Check primary CPU/memory, WAL size. Notify on-call. |
+| **Replication lag > 5s** | Same, sustained 2+ min | CRITICAL | Page on-call. Investigate network between regions. Consider replica restart. |
+| **No primary** | Zero instances with `IsPrimary: true` | CRITICAL | Page on-call immediately. Application is read-only. Check Consul health. |
+| **Multiple primaries** | 2+ instances with `IsPrimary: true` | CRITICAL | Page on-call immediately. Split-brain — writes may diverge. Stop all instances, restore from backup. |
+| **Disk usage > 80%** | `/data` volume > 80% full | WARNING | Notify on-call. Plan volume resize. |
+| **Disk usage > 95%** | `/data` volume > 95% full | CRITICAL | Page on-call. Volume full = LiteFS stops. Resize immediately. |
+| **WAL size > 100MB** | LiteFS WAL directory cumulative size | WARNING | Replica may be falling behind. Check network throughput. |
+| **Instance down** | Machine not reachable via Consul | CRITICAL | Page on-call. Check Fly.io status. |
+
+### 10.3 Monitoring Integration Options
+
+**Option A — Fly.io Built-in Metrics (simplest):**
+
+```bash
+# Fly.io provides basic CPU/memory/disk metrics per machine
+fly metrics -a shop-3ecf
+```
+
+These cover disk usage and instance health but NOT LiteFS-specific metrics (replication lag, primary status).
+
+**Option B — Prometheus + Grafana (recommended for production):**
+
+Deploy a small Prometheus scraper that polls `/debug/vars` from each instance:
+
+```yaml
+# prometheus.yml — scrape LiteFS metrics from Fly.io internal network
+scrape_configs:
+  - job_name: 'litefs'
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+        - '<primary-id>.vm.shop-3ecf.internal:20202'
+        - '<replica-id>.vm.shop-3ecf.internal:20202'
+    metric_relabel_configs:
+      # LiteFS /debug/vars is JSON; use a JSON exporter or write a simple sidecar
+```
+
+For a lightweight approach without Prometheus, write a health-check sidecar that polls `/debug/vars` and pushes to your existing monitoring (Datadog, Sentry, etc.):
+
+```typescript
+// Example: health-check sidecar polling LiteFS metrics
+import { execSync } from 'node:child_process'
+
+const METRICS_URL = 'http://localhost:20202/debug/vars'
+const LAG_THRESHOLD_MS = 1_000
+
+async function checkLiteFS() {
+  const res = await fetch(METRICS_URL)
+  const data = await res.json()
+
+  // Alert if we can't determine replication lag
+  if (!data.IsPrimary && data.DBs?.[0]?.Pos === undefined) {
+    console.error('LITEFS_CRITICAL: Cannot read WAL position — replica may be disconnected')
+    process.exit(1)
+  }
+
+  // Replicas: report their position for lag calculation (done externally)
+  console.log(`litefs.pos=${data.DBs?.[0]?.Pos ?? 0} isPrimary=${data.IsPrimary ? 1 : 0}`)
+}
+
+setInterval(checkLiteFS, 30_000)
+```
+
+### 10.4 Application-Level Health Check
+
+The app already exposes `/resources/healthcheck` (checked by Fly.io). For multi-region, add a `/resources/healthcheck` variant that reports LiteFS status:
+
+```typescript
+// app/routes/resources+/healthcheck.litefs.ts
+import { getInstanceInfo } from '#app/utils/litefs.server.ts'
+
+export async function loader() {
+  const { currentIsPrimary, primaryInstance, currentInstance } = await getInstanceInfo()
+
+  return Response.json({
+    status: 'ok',
+    litefs: {
+      currentIsPrimary,
+      primaryInstance,
+      currentInstance,
+      region: process.env.FLY_REGION ?? 'unknown',
+    },
+  }, {
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+```
+
+This endpoint can be used by external monitoring to verify LiteFS health without SSH access.
+
+---
+
+## Step 11 — Rollback
 
 If the new region causes issues (increased latency, replication failures, cost concerns), rollback is simple:
 
-### 7.1 Remove the region
+### 11.1 Remove the region
 
 ```bash
 # Remove London from the region pool
@@ -414,7 +767,7 @@ fly status -a shop-3ecf
 # Expected: 1 machine, region cdg
 ```
 
-### 7.2 What happens during rollback
+### 11.2 What happens during rollback
 
 1. Fly.io terminates the VM in `lhr`
 2. LiteFS on the primary detects the replica is gone (Consul health check fails)
@@ -422,7 +775,7 @@ fly status -a shop-3ecf
 4. The primary's `fly.toml` comment is updated to remove the region entry
 5. No application restart needed on the primary
 
-### 7.3 Rollback smoke test
+### 11.3 Rollback smoke test
 
 After rollback, verify normal operation:
 
@@ -474,6 +827,41 @@ Plus ~$0.15/GB for the persistent volume in each region. A typical e-commerce SQ
 
 ---
 
+## Known Issues
+
+### pnpm vs npm mismatch in LiteFS exec commands
+
+**Status:** OPEN — needs fix before multi-region deployment
+
+The `other/Dockerfile` uses **npm** for package management (`npm ci`, `npm prune`, `npm run build`), but `other/litefs.yml` uses **pnpm** in its exec commands:
+
+```yaml
+# litefs.yml line 32 — runs on primary promotion
+exec:
+  - cmd: pnpm exec prisma migrate deploy
+    if-candidate: true
+```
+
+The Docker container does NOT include `pnpm` — it installs with `npm ci`. When LiteFS promotes a candidate and runs `pnpm exec prisma migrate deploy`, this will fail with `pnpm: command not found`. The migration will not run, and the app may start with a stale or missing schema.
+
+**Fix options:**
+1. Switch the Dockerfile to pnpm (preferred — matches the project's actual package manager)
+2. Change `litefs.yml` to use `npx prisma migrate deploy` instead of `pnpm exec`
+
+**Verification:** After fixing, the following should succeed inside the Docker container:
+```bash
+docker run --rm shop-3ecf:latest sh -c "which pnpm || npx --yes prisma --version"
+```
+
+---
+
+### Consul Key Namespace
+
+The `litefs.yml` Consul key is `epic-stack-litefs_20250222/${FLY_APP_NAME}` — a leftover from the Epic Stack template. For a production Shop deployment, consider renaming to `shop-litefs/${FLY_APP_NAME}` to avoid collisions with other Epic Stack apps that may share the same Fly.io organization. The key is only used internally by LiteFS for lease coordination; renaming it requires stopping all instances and restarting them with the new key (a cold restart).
+
+---
+
+
 ## Open Questions (for future operators)
 
 These questions were identified during the architecture research and should be answered as you gain production experience:
@@ -485,7 +873,7 @@ These questions were identified during the architecture research and should be a
 5. **Does LiteFS handle schema migrations safely?** The current `litefs.yml` runs `prisma migrate deploy` on candidate promotion. What happens if migration fails on the primary but replicas are mid-sync?
 6. **What is the blast radius of a bad deploy?** If a buggy deploy goes to all regions simultaneously, can we roll back region-by-region?
 7. **How does the LiteFS proxy handle websockets?** If the app adds websocket support (e.g., real-time cart updates), does the LiteFS proxy pass them through correctly?
-8. **What monitoring is actionable?** Which LiteFS metrics at `/debug/vars` should trigger alerts, and at what thresholds?
+8. **What monitoring is actionable?** RESOLVED — See Step 10 (Monitoring & Alerting) for defined alert thresholds and integration options. These thresholds need production validation to tune p50/p99 values based on actual traffic patterns.
 9. **Can we warm up a replica before routing traffic to it?** When adding a region, the initial sync takes ~30s/GB. Can we defer traffic until sync is complete?
 10. **What is the failure mode when a replica's disk fills up?** The `/data` volume has a fixed size. What happens to LiteFS replication when the volume is full?
 
