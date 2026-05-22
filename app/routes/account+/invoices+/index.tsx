@@ -4,7 +4,8 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { formatInvoiceNumber } from '#app/utils/invoice.server.ts'
+import { formatDate } from '#app/utils/date.ts'
+import { formatInvoiceNumber } from '#app/utils/invoice.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/invoices+/_index.ts'
@@ -126,20 +127,12 @@ export default function InvoicesPage({ loaderData }: Route.ComponentProps) {
 														{' · '}
 													</>
 												)}
-												{new Date(invoice.createdAt).toLocaleDateString('en-US', {
-													year: 'numeric',
-													month: 'long',
-													day: 'numeric',
-												})}
+{formatDate(invoice.createdAt, locale, { dateStyle: 'long' })}
 											</p>
 											{invoice.issuedAt && (
 												<p className="text-sm text-gray-500 mt-1">
 													Issued:{' '}
-													{new Date(invoice.issuedAt).toLocaleDateString('en-US', {
-														year: 'numeric',
-														month: 'long',
-														day: 'numeric',
-													})}
+{formatDate(invoice.issuedAt, locale, { dateStyle: 'long' })}
 												</p>
 											)}
 										</div>
