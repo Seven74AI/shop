@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { log } from '#app/utils/logging.server.ts'
 
 const schema = z.object({
 	NODE_ENV: z.enum(['production', 'development', 'test'] as const),
@@ -38,9 +39,9 @@ export function init() {
 	const parsed = schema.safeParse(process.env)
 
 	if (parsed.success === false) {
-		console.error(
-			'❌ Invalid environment variables:',
-			parsed.error.flatten().fieldErrors,
+		log.error(
+			{ fieldErrors: parsed.error.flatten().fieldErrors },
+			'❌ Invalid environment variables',
 		)
 
 		throw new Error('Invalid environment variables')

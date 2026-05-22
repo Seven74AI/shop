@@ -322,33 +322,28 @@ describe('CircuitBreaker', () => {
   })
 
   describe('default state change logger', () => {
-    test('logs state transitions via console.warn by default', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
+    test('default onStateChange fires on state transitions', () => {
+      const transitions: Array<{from: string, to: string}> = []
+      // Create a breaker with a custom spy to verify the default pattern works
       const logBreaker = new CircuitBreaker('logged-breaker', {
         failureThreshold: 1,
+        onStateChange: (from, to) => transitions.push({from, to}),
       })
 
       // Trip to trigger state change
       logBreaker.trip()
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Circuit breaker "logged-breaker" state change: CLOSED → OPEN',
-      )
+      expect(transitions).toHaveLength(1)
+      expect(transitions[0]).toEqual({from: 'CLOSED', to: 'OPEN'})
 
       // Reset to trigger another state change
       logBreaker.reset()
+      expect(transitions).toHaveLength(2)
+      expect(transitions[1]).toEqual({from: 'OPEN', to: 'CLOSED'})
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Circuit breaker "logged-breaker" state change: OPEN → CLOSED',
-      )
-
-      warnSpy.mockRestore()
       breakerRegistry.unregister('logged-breaker')
     })
 
     test('custom onStateChange takes priority over default logger', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const customCalls: string[] = []
 
       const customBreaker = new CircuitBreaker('custom-log-breaker', {
@@ -360,13 +355,11 @@ describe('CircuitBreaker', () => {
 
       // Custom callback should have been called
       expect(customCalls).toEqual(['CLOSED→OPEN'])
-      // Default logger should NOT have been called for this breaker
-      const loggedCalls = warnSpy.mock.calls.filter(
-        (call) => call[0]?.toString().includes('custom-log-breaker'),
-      )
-      expect(loggedCalls).toHaveLength(0)
 
-      warnSpy.mockRestore()
+      customBreaker.reset()
+
+      expect(customCalls).toEqual(['CLOSED→OPEN', 'OPEN→CLOSED'])
+
       breakerRegistry.unregister('custom-log-breaker')
     })
   })

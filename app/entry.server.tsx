@@ -14,6 +14,7 @@ import {
 } from 'react-router'
 import { getEnv, init } from './utils/env.server.ts'
 import { getInstanceInfo } from './utils/litefs.server.ts'
+import { log } from './utils/logging.server.ts'
 import { NonceProvider } from './utils/nonce-provider.ts'
 import { makeTimings } from './utils/timing.server.ts'
 
@@ -146,9 +147,9 @@ export function handleError(
 	// Also log to console in development for local debugging
 	if (process.env.NODE_ENV === 'development') {
 		if (error instanceof Error) {
-			console.error(styleText('red', String(error.stack)))
+			log.error({ err: error, stack: error.stack }, 'Server error')
 		} else {
-			console.error(error)
+			log.error({ err: error }, 'Server error')
 		}
 	}
 }
