@@ -198,12 +198,12 @@ describe('metrics.server', () => {
 			expect(topProducts).toHaveLength(3)
 			// productA: 8 total, productB: 10, productC: 1
 			// Sorted by quantity desc: B (10), A (8), C (1)
-		expect(topProducts[0].product!.id).toBe(productB.id)
-		expect(topProducts[0].quantity).toBe(10)
-		expect(topProducts[1].product!.id).toBe(productA.id)
-		expect(topProducts[1].quantity).toBe(8)
-		expect(topProducts[2].product!.id).toBe(productC.id)
-			expect(topProducts[2].quantity).toBe(1)
+		expect(topProducts[0]!.product!.id).toBe(productB.id)
+		expect(topProducts[0]!.quantity).toBe(10)
+		expect(topProducts[1]!.product!.id).toBe(productA.id)
+		expect(topProducts[1]!.quantity).toBe(8)
+		expect(topProducts[2]!.product!.id).toBe(productC.id)
+		expect(topProducts[2]!.quantity).toBe(1)
 		})
 
 		test('excludes cancelled orders from top products', async () => {
@@ -220,7 +220,7 @@ describe('metrics.server', () => {
 			})
 
 			const topProducts = await getTopProducts('7d', 1)
-			expect(topProducts[0].quantity).toBe(3) // cancelled order excluded
+			expect(topProducts[0]!.quantity).toBe(3) // cancelled order excluded
 		})
 
 		test('respects limit parameter', async () => {
@@ -260,7 +260,7 @@ describe('metrics.server', () => {
 			})
 
 			const topProducts = await getTopProducts('7d', 1)
-			expect(topProducts[0].revenue).toBe(15000) // 5000 × 3
+			expect(topProducts[0]!.revenue).toBe(15000) // 5000 × 3
 		})
 
 	test('returns null product for deleted products', async () => {
@@ -283,8 +283,8 @@ describe('metrics.server', () => {
 		await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON')
 
 		const topProducts = await getTopProducts('7d', 1)
-		expect(topProducts[0].product).toBeNull()
-		expect(topProducts[0].quantity).toBe(1)
+		expect(topProducts[0]!.product).toBeNull()
+		expect(topProducts[0]!.quantity).toBe(1)
 	})
 	})
 
