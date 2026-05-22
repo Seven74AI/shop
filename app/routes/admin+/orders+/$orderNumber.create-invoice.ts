@@ -8,6 +8,7 @@
 
 import { invariantResponse } from '@epic-web/invariant'
 import { data } from 'react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	generateInvoiceNumber,
@@ -142,7 +143,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 			},
 		})
 	} catch (error) {
-		console.error('Failed to create invoice:', error)
+		log.error({ err: error }, 'Failed to create invoice')
 		return data(
 			{
 				error: 'Failed to create invoice',

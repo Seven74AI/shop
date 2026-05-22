@@ -1,4 +1,3 @@
-import { styleText } from 'node:util'
 import { helmet } from '@nichtsam/helmet/node-http'
 import { createRequestHandler } from '@react-router/express'
 import * as Sentry from '@sentry/react-router'
@@ -10,6 +9,8 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
 import morgan from 'morgan'
 import { type ServerBuild } from 'react-router'
+import { requestIdMiddleware } from '#app/middleware/request-id.server.ts'
+import { log } from '#app/utils/logging.server.ts'
 
 const MODE = process.env.NODE_ENV ?? 'development'
 const IS_PROD = MODE === 'production'
@@ -35,6 +36,9 @@ const viteDevServer = IS_PROD
 		)
 
 const app = express()
+
+// Attach a unique request ID to every incoming request for log traceability.
+app.use(requestIdMiddleware)
 
 const getHost = (req: { get: (key: string) => string | undefined }) =>
 	req.get('X-Forwarded-Host') ?? req.get('host') ?? ''
@@ -191,7 +195,7 @@ async function getBuild() {
 		return { build: build as unknown as ServerBuild, error: null }
 	} catch (error) {
 		// Catch error and return null to make express happy and avoid an unrecoverable crash
-		console.error('Error creating build:', error)
+		log.error({ err: error }, 'Error creating build')
 		return { error: error, build: null as unknown as ServerBuild }
 	}
 }
@@ -225,20 +229,17 @@ const portToUse = await getPort({
 })
 const portAvailable = desiredPort === portToUse
 if (!portAvailable && !IS_DEV) {
-	console.log(`⚠️ Port ${desiredPort} is not available.`)
+	log.warn(`⚠️ Port ${desiredPort} is not available.`)
 	process.exit(1)
 }
 
 const server = app.listen(portToUse, () => {
 	if (!portAvailable) {
-		console.warn(
-			styleText(
-				'yellow',
-				`⚠️  Port ${desiredPort} is not available, using ${portToUse} instead.`,
-			),
+		log.warn(
+			`⚠️  Port ${desiredPort} is not available, using ${portToUse} instead.`,
 		)
 	}
-	console.log(`🚀  We have liftoff!`)
+	log.info('🚀  We have liftoff!')
 	const localUrl = `http://localhost:${portToUse}`
 	let lanUrl: string | null = null
 	const localIp = ipAddress() ?? 'Unknown'
@@ -249,12 +250,12 @@ const server = app.listen(portToUse, () => {
 		lanUrl = `http://${localIp}:${portToUse}`
 	}
 
-	console.log(
-		`
-${styleText('bold', 'Local:')}            ${styleText('cyan', localUrl)}
-${lanUrl ? `${styleText('bold', 'On Your Network:')}  ${styleText('cyan', lanUrl)}` : ''}
-${styleText('bold', 'Press Ctrl+C to stop')}
-		`.trim(),
+	log.info(
+		{
+			localUrl,
+			...(lanUrl ? { lanUrl } : {}),
+		},
+		'Server started',
 	)
 })
 
@@ -263,8 +264,7 @@ closeWithGrace(async ({ err }) => {
 		server.close((e) => (e ? reject(e) : resolve('ok')))
 	})
 	if (err) {
-		console.error(styleText('red', String(err)))
-		console.error(styleText('red', String(err.stack)))
+		log.error({ err: String(err), stack: err.stack }, 'Server shutdown with error')
 		if (SENTRY_ENABLED) {
 			Sentry.captureException(err)
 			await Sentry.flush(500)
