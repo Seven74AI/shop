@@ -17,6 +17,8 @@ export type ProcessWebhookResult = {
 	processed: boolean
 	/** Error message if processing failed */
 	error?: string
+	/** Error constructor name (e.g. 'StockUnavailableError') — allows callers to distinguish permanent vs transient failures */
+	errorType?: string
 }
 
 /**
@@ -68,14 +70,29 @@ export async function processWebhook(
 		update: {}, // No-op if the record already exists
 	})
 
-	// Mark as PROCESSING and increment attempts atomically
-	const event = await prisma.webhookEvent.update({
-		where: { eventId },
-		data: {
-			status: 'PROCESSING',
-			attempts: { increment: 1 },
-		},
-	})
+	// Mark as PROCESSING and increment attempts atomically.
+	// Conditional update: only transition from RECEIVED or FAILED statuses
+	// to prevent concurrent handler execution on the same eventId.
+	let event
+	try {
+		event = await prisma.webhookEvent.update({
+			where: { eventId, status: { in: ['RECEIVED', 'FAILED'] } },
+			data: {
+				status: 'PROCESSING',
+				attempts: { increment: 1 },
+			},
+		})
+	} catch {
+		// Record already PROCESSING or PROCESSED by a concurrent handler —
+		// re-read and return the current state
+		const current = await prisma.webhookEvent.findUniqueOrThrow({
+			where: { eventId },
+		})
+		return {
+			status: current.status,
+			processed: false,
+		}
+	}
 
 	// Execute the handler
 	try {
@@ -93,6 +110,8 @@ export async function processWebhook(
 	} catch (error) {
 		const errorMessage =
 			error instanceof Error ? error.message : 'Unknown error'
+		const errorType =
+			error instanceof Error ? (error.name || error.constructor.name) : undefined
 
 		await prisma.webhookEvent.update({
 			where: { eventId },
@@ -111,6 +130,7 @@ export async function processWebhook(
 			status: 'FAILED',
 			processed: false,
 			error: errorMessage,
+			errorType,
 		}
 	}
 }
