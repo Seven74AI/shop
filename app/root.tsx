@@ -16,6 +16,7 @@ import { type Route } from './+types/root.ts'
 import appleTouchIconAssetUrl from './assets/favicons/apple-touch-icon.png'
 import faviconAssetUrl from './assets/favicons/favicon.svg'
 import { CartBadge } from './components/cart-badge.tsx'
+import { CookieConsentBanner } from './components/CookieConsentBanner.tsx'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import { EpicProgress } from './components/progress-bar.tsx'
 import { SearchBar } from './components/search-bar.tsx'
@@ -276,6 +277,7 @@ function App() {
 				</div>
 				<EpicToaster closeButton position="bottom-center" theme={theme} />
 				<EpicProgress />
+				<CookieConsentBanner />
 			</OpenImgContextProvider>
 		)
 	}
@@ -324,6 +326,7 @@ function App() {
 			</div>
 			<EpicToaster closeButton position="bottom-center" theme={theme} />
 			<EpicProgress />
+			<CookieConsentBanner />
 		</OpenImgContextProvider>
 	)
 }

@@ -277,5 +277,20 @@
 	"email.shippingConfirmation.viewDetails": "View Order Details",
 	"email.shippingConfirmation.viewDetailsText": "You can view your order details and track your shipment at any time:",
 	"email.shippingConfirmation.questions": "If you have any questions about your shipment, please don't hesitate to contact us.",
-	"email.shippingConfirmation.thanks": "Thank you for your order!"
+	"email.shippingConfirmation.thanks": "Thank you for your order!",
+	"cookie.consent.title": "Cookie Preferences",
+	"cookie.consent.description": "We use cookies to improve your experience and analyze site traffic. Choose which cookies you'd like to allow.",
+	"cookie.consent.acceptAll": "Accept All",
+	"cookie.consent.declineAll": "Decline All",
+	"cookie.consent.customize": "Customize",
+	"cookie.consent.customizeTitle": "Customize Cookie Preferences",
+	"cookie.consent.customizeDescription": "Choose which types of cookies you allow. Necessary cookies are always enabled for the website to function properly.",
+	"cookie.consent.necessary": "Necessary",
+	"cookie.consent.necessaryDesc": "Required for the website to function properly. Cannot be disabled.",
+	"cookie.consent.analytics": "Analytics",
+	"cookie.consent.analyticsDesc": "Help us understand how visitors interact with the website to improve your experience.",
+	"cookie.consent.marketing": "Marketing",
+	"cookie.consent.marketingDesc": "Used to deliver personalized ads and measure campaign effectiveness.",
+	"cookie.consent.save": "Save Preferences",
+	"cookie.consent.back": "Back"
 }

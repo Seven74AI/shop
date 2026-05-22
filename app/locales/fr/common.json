@@ -277,5 +277,20 @@
 	"email.shippingConfirmation.viewDetails": "Voir les détails de la commande",
 	"email.shippingConfirmation.viewDetailsText": "Vous pouvez consulter les détails de votre commande et suivre votre colis à tout moment :",
 	"email.shippingConfirmation.questions": "Si vous avez des questions concernant votre expédition, n'hésitez pas à nous contacter.",
-	"email.shippingConfirmation.thanks": "Merci pour votre commande !"
+	"email.shippingConfirmation.thanks": "Merci pour votre commande !",
+	"cookie.consent.title": "Préférences de Cookies",
+	"cookie.consent.description": "Nous utilisons des cookies pour améliorer votre expérience et analyser le trafic du site. Choisissez les cookies que vous souhaitez autoriser.",
+	"cookie.consent.acceptAll": "Tout Accepter",
+	"cookie.consent.declineAll": "Tout Refuser",
+	"cookie.consent.customize": "Personnaliser",
+	"cookie.consent.customizeTitle": "Personnaliser les Préférences",
+	"cookie.consent.customizeDescription": "Choisissez les types de cookies que vous autorisez. Les cookies nécessaires sont toujours activés pour le bon fonctionnement du site.",
+	"cookie.consent.necessary": "Nécessaires",
+	"cookie.consent.necessaryDesc": "Requis pour le fonctionnement du site. Ne peut pas être désactivé.",
+	"cookie.consent.analytics": "Analytiques",
+	"cookie.consent.analyticsDesc": "Nous aident à comprendre comment les visiteurs interagissent avec le site pour améliorer votre expérience.",
+	"cookie.consent.marketing": "Marketing",
+	"cookie.consent.marketingDesc": "Utilisés pour diffuser des publicités personnalisées et mesurer l'efficacité des campagnes.",
+	"cookie.consent.save": "Enregistrer",
+	"cookie.consent.back": "Retour"
 }
