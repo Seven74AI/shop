@@ -88,11 +88,16 @@ const navData = {
 		{
 			title: 'System',
 			items: [
-				{
-					title: 'View Store',
-					url: '/',
-					icon: 'store' as IconName,
-				},
+		{
+			title: 'Audit Log',
+			url: '/admin/audit',
+			icon: 'book-open' as IconName,
+		},
+		{
+			title: 'View Store',
+			url: '/',
+			icon: 'store' as IconName,
+		},
 			],
 		},
 	],
