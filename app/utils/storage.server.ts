@@ -10,33 +10,6 @@ const STORAGE_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID
 const STORAGE_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const STORAGE_REGION = process.env.AWS_REGION
 
-async function _uploadToStorage(file: File | FileUpload, key: string) {
-	// In mocks mode, skip actual upload
-	if (process.env.MOCKS === 'true') {
-		console.info('🔶 Mocking storage upload:', key)
-		return key
-	}
-
-	const { url, headers } = getSignedPutRequestInfo(file, key)
-
-	const uploadResponse = await fetch(url, {
-		method: 'PUT',
-		headers,
-		body: file instanceof File ? file : (file as FileUpload).stream(),
-	})
-
-	if (!uploadResponse.ok) {
-		const errorMessage = `Failed to upload file to storage. Server responded with ${uploadResponse.status}: ${uploadResponse.statusText}`
-		Sentry.captureException(new Error(errorMessage), {
-			tags: { context: 'storage-upload' },
-			extra: { key, status: uploadResponse.status, statusText: uploadResponse.statusText },
-		})
-		throw new Error(`Failed to upload object: ${key}`)
-	}
-
-	return key
-}
-
 /**
  * Upload a verified, sanitized buffer to storage.
  * Used by upload functions after verifyUpload has passed.
