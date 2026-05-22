@@ -2,8 +2,8 @@
  * @vitest-environment node
  */
 import { describe, expect, test, beforeEach } from 'vitest'
-import { prisma } from './db.server.ts'
 import { auditLog, buildChangesDiff, type AuditAction } from './audit.server.ts'
+import { prisma } from './db.server.ts'
 
 describe('auditLog', () => {
 	let userId: string
