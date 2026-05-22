@@ -8,7 +8,14 @@ import {
 
 // ─── Test Helpers ─────────────────────────────────────────────────────────
 
+async function createTestCategory(name: string, slug: string) {
+	return await prisma.category.create({
+		data: { name, slug },
+	})
+}
+
 async function createTestProduct(name: string, slug: string) {
+	const category = await createTestCategory(name, slug)
 	return await prisma.product.create({
 		data: {
 			name,
@@ -16,6 +23,7 @@ async function createTestProduct(name: string, slug: string) {
 			sku: `SKU-${slug}`,
 			price: 1999,
 			status: 'ACTIVE',
+			categoryId: category.id,
 		},
 	})
 }
@@ -40,6 +48,7 @@ async function cleanupTestData() {
 	await prisma.productToTag.deleteMany()
 	await prisma.productVariant.deleteMany()
 	await prisma.product.deleteMany()
+	await prisma.category.deleteMany()
 }
 
 // ─── Expected Distribution Shape ──────────────────────────────────────────
