@@ -35,6 +35,7 @@ model User {
   orders      Order[]
   addresses   Address[]
   reviews     Review[]
+  auditLogs   AuditLog[]
 }
 
 model Note {
@@ -864,4 +865,31 @@ model Flag {
   description       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// Audit Log System
+// Records security-relevant actions for compliance and debugging.
+// Audit logs persist after user deletion (userId → null) for the duration
+// of the data retention policy (6 years per French tax law CGI art. L. 102 B).
+// See: docs/data-retention.md
+
+model AuditLog {
+  id         String @id @default(cuid())
+  userId     String?
+  action     String // e.g., "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT"
+  entityType String // e.g., "User", "Product", "Order", "Invoice"
+  entityId   String // The ID of the affected entity
+  changes    Json? // JSON diff of changes made (null for read-only actions)
+  ipAddress  String? // IP address of the requester (GDPR: pseudonymised after retention)
+  userAgent  String? // User-Agent header
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
