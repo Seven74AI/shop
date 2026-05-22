@@ -1,5 +1,6 @@
 import { type Prisma } from '@prisma/client'
 import { prisma } from './db.server.ts'
+import { formatInvoiceNumber, parseInvoiceNumber } from './invoice.ts'
 
 /**
  * Promise-chain lock for serializing invoice creation operations.
