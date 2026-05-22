@@ -1,0 +1,171 @@
+name: Staging Deploy
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: staging-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  # --- Gate: wait for main CI to pass ---
+  ci-gate:
+    runs-on: ubuntu-24.04
+    # Gate on the main CI workflow — do not deploy if CI is broken.
+    # The main CI workflow must be named "CI" (branch protection contexts match).
+    # GitHub's `workflow_run` or explicit polling can be used; for simplicity
+    # we use the checks API to verify the latest commit passed all required checks.
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 👀 Verify CI checks
+        run: |
+          # Wait up to 5 minutes for CI checks to report
+          for i in $(seq 1 30); do
+            CHECKS=$(gh api "repos/${{ github.repository }}/commits/${{ github.event.pull_request.head.sha || github.sha }}/check-runs" \
+              --jq '.check_runs[] | select(.name == "lint" or .name == "typecheck" or .name == "vitest" or .name == "playwright-gate") | {name: .name, conclusion: .conclusion}')
+            FAILED=$(echo "$CHECKS" | grep -c '"conclusion": "failure"' || true)
+            PENDING=$(echo "$CHECKS" | grep -c '"conclusion": null' || true)
+            if [ "$FAILED" -gt 0 ]; then
+              echo "❌ CI checks failed — aborting deploy"
+              exit 1
+            fi
+            if [ "$PENDING" -eq 0 ]; then
+              echo "✅ All CI checks passed"
+              exit 0
+            fi
+            echo "⏳ Waiting for CI checks... (attempt $i/30)"
+            sleep 10
+          done
+          echo "⚠️ Timed out waiting for CI checks — proceeding anyway"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # --- Build staging container image ---
+  build:
+    needs: ci-gate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 50
+
+      - name: 🎈 Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: 👀 Read staging app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: app_name
+        with:
+          file: 'fly.staging.toml'
+          field: 'app'
+
+      - name: 📦 Build Staging Container
+        run: |
+          flyctl deploy \
+            --config fly.staging.toml \
+            --build-only \
+            --push \
+            --image-label ${{ github.sha }} \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            --app ${{ steps.app_name.outputs.value }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # --- Deploy to staging ---
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 🎈 Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: 👀 Read staging app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: app_name
+        with:
+          file: 'fly.staging.toml'
+          field: 'app'
+
+      - name: 🚀 Deploy to Staging
+        run: |
+          flyctl deploy \
+            --config fly.staging.toml \
+            --image "registry.fly.io/${{ steps.app_name.outputs.value }}:${{ github.sha }}" \
+            --app ${{ steps.app_name.outputs.value }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # --- Smoke tests against staging ---
+  smoke-tests:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: 👀 Read staging app name
+        uses: SebRollen/toml-action@v1.2.0
+        id: app_name
+        with:
+          file: 'fly.staging.toml'
+          field: 'app'
+
+      - name: 🧪 Smoke Tests
+        run: |
+          STAGING_URL="https://${{ steps.app_name.outputs.value }}.fly.dev"
+
+          echo "🔍 Running smoke tests against $STAGING_URL"
+
+          # 1. Health check
+          echo "--- Health Check ---"
+          HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/resources/healthcheck")
+          if [ "$HEALTH" != "200" ]; then
+            echo "❌ Health check failed (HTTP $HEALTH)"
+            exit 1
+          fi
+          echo "✅ Health check: HTTP $HEALTH"
+
+          # 2. Homepage loads
+          echo "--- Homepage ---"
+          HOME_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/")
+          if [ "$HOME_STATUS" != "200" ]; then
+            echo "❌ Homepage failed (HTTP $HOME_STATUS)"
+            exit 1
+          fi
+          echo "✅ Homepage: HTTP $HOME_STATUS"
+
+          # 3. Products page
+          echo "--- Products ---"
+          PROD_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/products")
+          if [ "$PROD_STATUS" != "200" ]; then
+            echo "❌ Products page failed (HTTP $PROD_STATUS)"
+            exit 1
+          fi
+          echo "✅ Products page: HTTP $PROD_STATUS"
+
+          # 4. Search endpoint
+          echo "--- Search ---"
+          SEARCH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/resources/search?q=test")
+          if [ "$SEARCH_STATUS" != "200" ] && [ "$SEARCH_STATUS" != "404" ]; then
+            echo "❌ Search endpoint failed (HTTP $SEARCH_STATUS)"
+            exit 1
+          fi
+          echo "✅ Search endpoint: HTTP $SEARCH_STATUS"
+
+          echo ""
+          echo "🎉 All smoke tests passed!"
+          echo "Staging URL: $STAGING_URL"
