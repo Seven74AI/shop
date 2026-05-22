@@ -473,7 +473,7 @@ export default function CheckoutDelivery() {
 				</div>
 			</div>
 
-			<div className="rounded-lg border bg-card p-6">
+			<div className="rounded-lg border bg-card p-6" data-sentry-block="">
 				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.delivery.shippingDetails')}</h2>
 				<p>
 					{shippingInfo.name}
