@@ -10,6 +10,9 @@ vi.mock('./db.server.ts', () => ({
 		category: {
 			findMany: vi.fn(),
 		},
+		settings: {
+			findUnique: vi.fn().mockResolvedValue({ id: 'settings' }),
+		},
 		$disconnect: vi.fn(),
 	},
 }))
