@@ -121,6 +121,8 @@ export async function createCheckoutSession({
 	vatTotalCents,
 	vatBreakdown,
 	idempotencyKey,
+	couponDiscountCents,
+	couponCode,
 }: {
 	cart: {
 		id: string

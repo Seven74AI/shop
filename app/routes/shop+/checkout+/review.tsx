@@ -88,12 +88,6 @@ export default function CheckoutReview() {
 	const { t, locale } = useTranslation()
 	const isPending = useIsPending()
 
-	if (!loaderData) {
-		return <div>{t('shop.checkout.review.loading')}</div>
-	}
-
-	const { cart, currency, subtotal, vatEstimate } = loaderData
-
 	const [form, fields] = useForm({
 		id: 'coupon-form',
 		constraint: getZodConstraint(CouponCodeSchema),
@@ -102,9 +96,15 @@ export default function CheckoutReview() {
 			return parseWithZod(formData, { schema: CouponCodeSchema })
 		},
 		defaultValue: {
-			couponCode: loaderData.couponCode || '',
+			couponCode: loaderData?.couponCode || '',
 		},
 	})
+
+	if (!loaderData) {
+		return <div>{t('shop.checkout.review.loading')}</div>
+	}
+
+	const { cart, currency, subtotal, vatEstimate } = loaderData
 
 	return (
 		<div className="space-y-6">
