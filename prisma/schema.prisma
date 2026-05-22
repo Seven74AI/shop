@@ -34,6 +34,7 @@ model User {
   cart        Cart?
   orders      Order[]
   addresses   Address[]
+  auditLogs   AuditLog[]
 }
 
 model Note {
