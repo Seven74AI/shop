@@ -113,13 +113,26 @@ export default function CheckoutReview() {
 				</div>
 			</div>
 
-			<div className="flex justify-between">
-				<Button variant="outline" asChild>
-					<Link to="/shop/cart">{t('shop.checkout.review.backToCart')}</Link>
-				</Button>
-				<Button asChild>
-					<Link to="/shop/checkout/shipping">{t('shop.checkout.review.continueToShipping')}</Link>
-				</Button>
+			<div className="flex flex-col gap-4">
+				<div className="flex justify-between">
+					<Button variant="outline" asChild>
+						<Link to="/shop/cart">{t('shop.checkout.review.backToCart')}</Link>
+					</Button>
+					<Button asChild>
+						<Link to="/shop/checkout/shipping">{t('shop.checkout.review.continueToShipping')}</Link>
+					</Button>
+				</div>
+				<p className="text-center text-xs text-muted-foreground">
+					En validant votre commande, vous acceptez nos{' '}
+					<Link to="/cgv" className="underline hover:text-foreground">
+						Conditions Générales de Vente
+					</Link>{' '}
+					et notre{' '}
+					<Link to="/privacy" className="underline hover:text-foreground">
+						Politique de confidentialité
+					</Link>
+					.
+				</p>
 			</div>
 		</div>
 	)
