@@ -210,5 +210,5 @@ export function buildProductLd(opts: {
  * Safe for server-rendered HTML.
  */
 export function renderJsonLd(data: Record<string, unknown>): string {
-	return `<script type="application/ld+json">${JSON.stringify(data)}</script>`
+	return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`
 }

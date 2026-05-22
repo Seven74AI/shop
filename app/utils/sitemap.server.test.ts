@@ -10,6 +10,7 @@ vi.mock('./db.server.ts', () => ({
 		category: {
 			findMany: vi.fn(),
 		},
+		$disconnect: vi.fn(),
 	},
 }))
 
