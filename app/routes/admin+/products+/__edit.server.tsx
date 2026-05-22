@@ -4,6 +4,7 @@ import { parseFormData } from '@mjackson/form-data-parser'
 import { data } from 'react-router'
 import { MAX_UPLOAD_SIZE } from '#app/schemas/constants'
 import { productSchema } from '#app/schemas/product.ts'
+import { auditLog } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { handlePrismaError } from '#app/utils/prisma-error.server.ts'
@@ -21,7 +22,7 @@ import { imageHasFile } from './__new.server.tsx'
  * @throws {invariantResponse} If product is not found (404)
  */
 export async function action({ request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request, {
 		maxFileSize: MAX_UPLOAD_SIZE,
@@ -89,6 +90,7 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const { existingImages, newImages, ...productData } = submission.value
+	const { variants = [], tags, ...productDataWithoutVariants } = productData
 
 	// Load existing product to compare changes
 	const existingProduct = await prisma.product.findUnique({
@@ -113,8 +115,6 @@ export async function action({ request }: Route.ActionArgs) {
 	try {
 		await prisma.$transaction(async (tx) => {
 			// Update product basic info
-			const { variants = [], tags, ...productDataWithoutVariants } = productData
-			
 			const newTagNames = tags || []
 
 			// Update the product
@@ -202,6 +202,15 @@ export async function action({ request }: Route.ActionArgs) {
 				})
 			}
 		})
+
+		// Audit log
+		const changes: Record<string, unknown> = {
+			name: { before: existingProduct.name, after: productDataWithoutVariants.name },
+		}
+		if (existingProduct.slug !== productDataWithoutVariants.slug) {
+			changes.slug = { before: existingProduct.slug, after: productDataWithoutVariants.slug }
+		}
+		await auditLog(userId, 'UPDATE', 'Product', productData.id, changes, request)
 
 		return redirectWithToast(`/admin/products/${productData.slug}`, {
 			description: 'Product updated successfully',

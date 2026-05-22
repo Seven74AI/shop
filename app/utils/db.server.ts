@@ -2,6 +2,7 @@ import { styleText } from 'node:util'
 import { remember } from '@epic-web/remember'
 import { PrismaClient } from '@prisma/client'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { log } from '#app/utils/logging.server.ts'
 
 export const prisma = remember('prisma', () => {
 	const logThreshold = 20
@@ -31,7 +32,7 @@ export const prisma = remember('prisma', () => {
 							? 'redBright'
 							: 'red'
 		const dur = styleText(color, `${e.duration}ms`)
-		console.info(`prisma:query - ${dur} - ${e.query}`)
+		log.info({ duration: e.duration, query: e.query }, `prisma:query - ${dur} - ${e.query}`)
 	})
 	void client.$connect()
 	return client

@@ -59,18 +59,13 @@ describe('newsletter-email.server', () => {
 		})
 
 		test('handles email sending errors gracefully', async () => {
-			// Suppress console.error in test env (setup throws on console.error)
-			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-
+			// Errors are logged via Pino logger (silent in test mode)
 			vi.mocked(sendEmail).mockRejectedValueOnce(new Error('Email service error'))
 
 			// Should not throw — errors are caught and logged
 			await sendNewsletterConfirmationEmail(testEmail, testConfirmUrl)
 
 			expect(sendEmail).toHaveBeenCalledTimes(1)
-			expect(consoleError).toHaveBeenCalled()
-
-			consoleError.mockRestore()
 		})
 
 		test('sends email for different email addresses', async () => {

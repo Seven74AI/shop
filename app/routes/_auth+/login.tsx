@@ -46,8 +46,18 @@ export async function action({ request }: Route.ActionArgs) {
 			LoginFormSchema.transform(async (data, ctx) => {
 				if (intent !== null) return { ...data, session: null }
 
-				const session = await login(data)
-				if (!session) {
+				const result = await login({ ...data, request })
+				
+				if (result.status === 'locked') {
+					const minutes = Math.ceil(result.retryAfterMs / 60000)
+					ctx.addIssue({
+						code: 'custom',
+						message: `Account locked after ${result.attempts} failed attempts. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`,
+					})
+					return z.NEVER
+				}
+
+				if (result.status === 'invalid-credentials') {
 					ctx.addIssue({
 						code: 'custom',
 						message: 'Invalid username or password',
@@ -55,7 +65,7 @@ export async function action({ request }: Route.ActionArgs) {
 					return z.NEVER
 				}
 
-				return { ...data, session }
+				return { ...data, session: result.session }
 			}),
 		async: true,
 	})
