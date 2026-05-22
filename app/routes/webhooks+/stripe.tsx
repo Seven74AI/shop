@@ -120,43 +120,63 @@ export async function action({ request }: Route.ActionArgs) {
 			return data({ received: true, idempotent: !result.processed })
 		}
 
-		// Handle FAILED status — for stock errors, trigger refund
+		// Handle FAILED status — only refund for permanent errors (stock unavailable).
+		// Transient errors (DB timeout, network) return 500 without refund so Stripe
+		// retries; processWebhook re-processes FAILED events automatically.
 		if (result.status === 'FAILED' && result.error) {
-			// Check if this is a stock-related failure by examining the error
-			// StockUnavailableError may have been thrown, trigger refund
-			const paymentIntentId =
-				typeof fullSession.payment_intent === 'string'
-					? fullSession.payment_intent
-					: fullSession.payment_intent?.id
+			const isStockError = result.errorType === 'StockUnavailableError'
 
-			if (paymentIntentId && fullSession.amount_total) {
-				try {
-					await stripe.refunds.create({
-						payment_intent: paymentIntentId,
-						amount: fullSession.amount_total,
-						reason: 'requested_by_customer',
-						metadata: {
-							reason: 'webhook_processing_failed',
-							checkout_session_id: fullSession.id,
-							error: result.error,
-						},
-					})
-					Sentry.captureMessage(
-						`Refund created for payment ${paymentIntentId} due to webhook processing failure`,
-						{
-							level: 'info',
-							tags: { context: 'webhook-refund' },
-							extra: { paymentIntentId, sessionId: fullSession.id, error: result.error },
-						},
-					)
-				} catch (refundError) {
-					Sentry.captureException(refundError, {
-						tags: { context: 'webhook-refund-error' },
-						extra: { paymentIntentId, sessionId: fullSession.id },
-					})
+			if (isStockError) {
+				// Stock unavailable after payment — permanent failure, must refund
+				const paymentIntentId =
+					typeof fullSession.payment_intent === 'string'
+						? fullSession.payment_intent
+						: fullSession.payment_intent?.id
+
+				if (paymentIntentId && fullSession.amount_total) {
+					// Extract product name from error message for metadata
+					const productNameMatch = result.error?.match(/Insufficient stock for (.+)$/)
+					const productName = productNameMatch ? productNameMatch[1] : undefined
+
+					try {
+						await stripe.refunds.create({
+							payment_intent: paymentIntentId,
+							amount: fullSession.amount_total,
+							reason: 'requested_by_customer',
+							metadata: {
+								reason: 'stock_unavailable',
+								checkout_session_id: fullSession.id,
+								product_name: productName ?? null,
+							},
+						})
+						Sentry.captureMessage(
+							`Refund created for payment ${paymentIntentId} due to stock unavailability`,
+							{
+								level: 'info',
+								tags: { context: 'webhook-refund' },
+								extra: { paymentIntentId, sessionId: fullSession.id },
+							},
+						)
+					} catch (refundError) {
+						Sentry.captureException(refundError, {
+							tags: { context: 'webhook-refund-error' },
+							extra: { paymentIntentId, sessionId: fullSession.id },
+						})
+					}
 				}
+
+				return data(
+					{
+						received: true,
+						error: 'Stock unavailable',
+						message: result.error,
+					},
+					{ status: 500 },
+				)
 			}
 
+			// Transient error (DB timeout, network, etc.) — return 500 without refunding.
+			// Stripe will retry; processWebhook re-processes the FAILED event on retry.
 			return data(
 				{
 					received: true,
