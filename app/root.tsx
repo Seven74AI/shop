@@ -72,8 +72,8 @@ export const links: Route.LinksFunction = () => {
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
 	return [
-		{ title: loaderData ? 'Epic Notes' : 'Error | Epic Notes' },
-		{ name: 'description', content: "Your own captain's log" },
+		{ title: loaderData ? 'Epic Shop' : 'Error | Epic Shop' },
+		{ name: 'description', content: 'Your go-to online shop for epic products' },
 	]
 }
 

@@ -1,9 +1,11 @@
 import { Link } from 'react-router'
-import { useTranslation } from '#app/utils/i18n.tsx'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
+import { getDomainUrl } from '#app/utils/misc.tsx'
+import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.server.ts'
 import { type Route } from './+types/index.ts'
 
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
 	const categories = await prisma.category.findMany({
 		where: {
 			parentId: null, // Only get root categories
@@ -20,13 +22,25 @@ export async function loader() {
 		},
 	})
 
-	return { categories }
+	const origin = getDomainUrl(request)
+
+	return { categories, origin }
 }
 
-export const meta: Route.MetaFunction = () => [
-	{ title: 'Boutique | Epic Shop' },
-	{ name: 'description', content: 'Parcourir notre catalogue de produits' },
-]
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const origin = loaderData?.origin ?? 'http://localhost'
+	return [
+		{ title: 'Boutique | Epic Shop' },
+		{ name: 'description', content: 'Parcourir notre catalogue de produits' },
+		...generateOgTags({
+			siteName: 'Epic Shop',
+			siteUrl: origin,
+			tagline: 'Your one-stop shop for epic products.',
+			homepageUrl: `${origin}/shop`,
+		}),
+		...generateTwitterCard({ site: '@epicshop' }),
+	]
+}
 
 export default function ShopIndex({ loaderData }: Route.ComponentProps) {
 	const { t } = useTranslation()
