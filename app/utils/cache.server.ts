@@ -29,7 +29,13 @@ function createDatabase(tryAgain = true): DatabaseSync {
 	fs.mkdirSync(parentDir, { recursive: true })
 
 	const db = new DatabaseSync(CACHE_DATABASE_PATH)
-	const { currentIsPrimary } = getInstanceInfoSync()
+	let currentIsPrimary = true
+	try {
+		currentIsPrimary = getInstanceInfoSync().currentIsPrimary
+	} catch {
+		// LITEFS_DIR not set — running outside of LiteFS (dev/test/production without LiteFS).
+		// Default to primary so the cache DB is initialized.
+	}
 	if (!currentIsPrimary) return db
 
 	try {
