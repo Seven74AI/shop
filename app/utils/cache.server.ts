@@ -20,7 +20,7 @@ import { z } from 'zod'
 import { getInstanceInfo, getInstanceInfoSync } from './litefs.server.ts'
 import { cachifiedTimingReporter, type Timings } from './timing.server.ts'
 
-const CACHE_DATABASE_PATH = process.env.CACHE_DATABASE_PATH
+const CACHE_DATABASE_PATH = process.env.CACHE_DATABASE_PATH || './other/cache.db'
 
 const cacheDb = remember('cacheDb', createDatabase)
 
