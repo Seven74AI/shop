@@ -120,6 +120,7 @@ export default function ReturnsList({ loaderData }: Route.ComponentProps) {
 							<SelectItem value="all">All Status</SelectItem>
 							<SelectItem value="REQUESTED">Requested</SelectItem>
 							<SelectItem value="APPROVED">Approved</SelectItem>
+							<SelectItem value="SHIPPED">Shipped</SelectItem>
 							<SelectItem value="RECEIVED">Received</SelectItem>
 							<SelectItem value="REFUNDED">Refunded</SelectItem>
 							<SelectItem value="REJECTED">Rejected</SelectItem>
