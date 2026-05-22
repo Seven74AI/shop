@@ -1,5 +1,6 @@
 import { invariantResponse } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
+import { auditLog } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { deleteProductImages } from '#app/utils/storage.server.ts'
@@ -15,7 +16,7 @@ import { type Route } from './+types/$productSlug.delete.ts'
  * @throws {invariantResponse} If product is not found (404)
  */
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	// Get product with images for cleanup
 	const product = await prisma.product.findUnique({
@@ -36,6 +37,12 @@ export async function action({ params, request }: Route.ActionArgs) {
 	await prisma.product.delete({
 		where: { id: product.id },
 	})
+
+	// Audit log
+	await auditLog(userId, 'DELETE', 'Product', product.id, {
+		name: product.name,
+		slug: product.slug,
+	}, request)
 
 	// Clean up images from Tigris storage
 	if (imageKeys.length > 0) {

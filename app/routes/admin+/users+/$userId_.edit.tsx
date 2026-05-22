@@ -11,6 +11,7 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { Input } from '#app/components/ui/input.tsx'
 import { Label } from '#app/components/ui/label.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
+import { auditLog } from '#app/utils/audit.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
@@ -86,7 +87,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params: _params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const adminUserId = await requireUserWithRole(request, 'admin')
 
 	const formData = await parseFormData(request)
 	
@@ -135,6 +136,13 @@ export async function action({ params: _params, request }: Route.ActionArgs) {
 	const { id, name, email, username, roleIds } = submission.value
 
 	try {
+		// Load current roles for diff
+		const currentUser = await prisma.user.findUnique({
+			where: { id },
+			include: { roles: { select: { id: true, name: true } } },
+		})
+		const oldRoleNames = currentUser?.roles.map(r => r.name) ?? []
+
 		await prisma.$transaction(async (tx) => {
 			// Update user fields and roles
 			await tx.user.update({
@@ -150,6 +158,18 @@ export async function action({ params: _params, request }: Route.ActionArgs) {
 				},
 			})
 		})
+
+		// Audit log for role changes
+		const newRoles = await prisma.role.findMany({
+			where: { id: { in: roleIds } },
+			select: { name: true },
+		})
+		const newRoleNames = newRoles.map(r => r.name)
+		await auditLog(adminUserId, 'UPDATE', 'User', id, {
+			name: { before: currentUser?.name, after: name },
+			email: { before: currentUser?.email, after: email },
+			roles: { before: oldRoleNames, after: newRoleNames },
+		}, request)
 
 		return redirectWithToast(`/admin/users/${id}`, {
 			type: 'success',
