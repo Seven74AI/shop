@@ -32,9 +32,10 @@ describe('cookie-consent resource route', () => {
 				marketing: 'true',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			expect(response.status).toBe(200)
+			// data() returns DataWithResponseInit — use .init.status and .init.headers
+			expect(response.init?.status ?? 200).toBe(200)
 
-			const setCookie = response.headers.get('Set-Cookie')
+			const setCookie = response.init?.headers?.get('Set-Cookie')
 			expect(setCookie).toBeDefined()
 			expect(setCookie).toContain('cookieConsent=')
 			expect(setCookie).toContain('Path=/')
@@ -46,9 +47,9 @@ describe('cookie-consent resource route', () => {
 				marketing: 'false',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			expect(response.status).toBe(200)
+			expect(response.init?.status ?? 200).toBe(200)
 
-			const setCookie = response.headers.get('Set-Cookie')
+			const setCookie = response.init?.headers?.get('Set-Cookie')
 			expect(setCookie).toBeDefined()
 			expect(setCookie).toContain('cookieConsent=')
 		})
@@ -59,9 +60,9 @@ describe('cookie-consent resource route', () => {
 				marketing: 'false',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			expect(response.status).toBe(200)
+			expect(response.init?.status ?? 200).toBe(200)
 
-			const setCookie = response.headers.get('Set-Cookie')
+			const setCookie = response.init?.headers?.get('Set-Cookie')
 			expect(setCookie).toBeDefined()
 			expect(setCookie).toContain('cookieConsent=')
 		})
@@ -72,9 +73,9 @@ describe('cookie-consent resource route', () => {
 				marketing: 'false',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			expect(response.status).toBe(200)
+			expect(response.init?.status ?? 200).toBe(200)
 
-			const setCookie = response.headers.get('Set-Cookie')
+			const setCookie = response.init?.headers?.get('Set-Cookie')
 			expect(setCookie).toBeDefined()
 		})
 
@@ -102,8 +103,8 @@ describe('cookie-consent resource route', () => {
 				marketing: 'false',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			expect(response.status).toBe(200)
-			expect(response.headers.get('Location')).toBeNull()
+			expect(response.init?.status ?? 200).toBe(200)
+			expect(response.init?.headers?.get('Location') ?? null).toBeNull()
 		})
 
 		test('cookie value encodes consent preferences correctly', async () => {
@@ -112,7 +113,7 @@ describe('cookie-consent resource route', () => {
 				marketing: 'false',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			const setCookie = response.headers.get('Set-Cookie')
+			const setCookie = response.init?.headers?.get('Set-Cookie')
 			expect(setCookie).toBeDefined()
 
 			// Extract the cookie value
@@ -132,7 +133,7 @@ describe('cookie-consent resource route', () => {
 				marketing: 'false',
 			})
 			const response = await action({ request, params: {}, context: {} })
-			const setCookie = response.headers.get('Set-Cookie')
+			const setCookie = response.init?.headers?.get('Set-Cookie')
 			expect(setCookie).toBeDefined()
 
 			const match = setCookie!.match(/cookieConsent=([^;]+)/)
