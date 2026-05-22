@@ -34,6 +34,7 @@ model User {
   cart        Cart?
   orders      Order[]
   addresses   Address[]
+  reviews     Review[]
 }
 
 model Note {
@@ -288,6 +289,7 @@ model Product {
   tags       ProductToTag[]
   cartItems  CartItem[]
   orderItems OrderItem[]
+  reviews    Review[]
 
   @@index([categoryId])
   @@index([status])
@@ -522,6 +524,7 @@ model Order {
   items          OrderItem[]
   invoices       Invoice[]
   returnRequests ReturnRequest[]
+  reviews        Review[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -554,6 +557,33 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+// Review model — P4 Competitive phase
+// Users can rate/review products they've purchased (verified purchase) or
+// any product (unverified). Admin moderation via isApproved flag.
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  userId     String?
+  orderId    String?
+  rating     Int // 1-5 star rating
+  title      String?
+  body       String?
+  isVerifiedPurchase Boolean @default(false)
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([userId])
+  @@index([orderId])
+  @@index([productId, isApproved])
+  @@index([productId, rating])
 }
 
 enum ReturnStatus {
