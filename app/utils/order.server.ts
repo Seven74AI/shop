@@ -15,6 +15,12 @@ import {
 	generateInvoicePdf,
 	type InvoicePdfData,
 } from './invoice-pdf.server.tsx'
+import {
+	createCreditNote,
+	generateCreditNotePdf,
+	formatCreditNoteNumber,
+	type CreateCreditNoteItem,
+} from './credit-note.server.ts'
 import { getReturnRequestById } from './return-queries.server.ts'
 import { updateReturnStatus } from './return.server.ts'
 
@@ -484,69 +490,46 @@ export async function cancelOrder(
 		if (parentInvoice && order.items.length > 0) {
 			try {
 				// Build refunded line items from order items
-				const refundedItems: RefundedLineItem[] = order.items.map((oi) => ({
-					description:
-						oi.variant?.sku ?? oi.product.name,
-					quantity: oi.quantity,
-					unitPriceCents: oi.price,
-					totalCents: oi.price * oi.quantity,
-				}))
+				const refundedItems: CreateCreditNoteItem[] = order.items.map(
+					(oi) => ({
+						description:
+							oi.variant?.sku ?? oi.product.name,
+						quantity: oi.quantity,
+						unitPriceCents: oi.price,
+						totalCents: oi.price * oi.quantity,
+					}),
+				)
 
 				const refundedShippingCents = order.shippingCost ?? 0
+				const refundAmount = refundAmountCents ?? order.total
 
-				// Issue credit note (shared gapless sequence)
-				const creditNote = await issueCreditNote(
+				// Create credit note via the centralized flow — handles
+				// partial/full detection, parent invoice status update,
+				// and reason recording automatically.
+				const creditNote = await createCreditNote(
 					parentInvoice.id,
+					refundAmount,
+					'Cancellation',
 					refundedItems,
 					refundedShippingCents,
 				)
 
 				creditNoteNumber = creditNote.number
 
-				// Format parent invoice number
-				const parentInvoiceNumber = `F${parentInvoice.fiscalYear}-${String(parentInvoice.sequence).padStart(5, '0')}`
-
-				// Generate PDF for the credit note
-				const pdfData: InvoicePdfData = {
-					kind: 'CREDIT_NOTE',
-					invoiceNumber: creditNote.number,
-					parentInvoiceNumber,
-					invoiceDate: new Date().toLocaleDateString('fr-FR'),
-					invoiceStatus: 'FINAL',
-					orderNumber: order.orderNumber,
-					orderDate: order.createdAt.toLocaleDateString('fr-FR'),
-					customer: {
+				// Generate PDF via the centralized credit note PDF pipeline
+				creditNotePdfBuffer = await generateCreditNotePdf(
+					creditNote.id,
+					order.orderNumber,
+					order.createdAt,
+					{
 						name: order.shippingName,
 						email: order.email,
-						company: null,
-						vatNumber: null,
-					},
-					shipping: {
-						name: order.shippingName,
 						street: order.shippingStreet,
 						city: order.shippingCity,
 						postal: order.shippingPostal,
 						country: order.shippingCountry,
 					},
-					items: refundedItems.map((item) => ({
-						description: item.description,
-						quantity: -item.quantity,
-						unitPriceCents: item.unitPriceCents,
-						totalCents: -item.totalCents,
-					})),
-					subtotalCents: -order.subtotal,
-					vatBreakdown: [],
-					vatTotalCents: 0,
-					shippingCostCents: -(order.shippingCost ?? 0),
-					totalCents: -order.total,
-					currency: { symbol: '€', code: 'EUR', decimals: 2 },
-					storeName: 'Epic Shop',
-					storeAddress: '123 Epic Street, 75001 Paris, France',
-					storeVatNumber: 'FR12345678901',
-					storeEmail: 'support@epicstack.dev',
-				}
-
-				creditNotePdfBuffer = await generateInvoicePdf(pdfData)
+				)
 			} catch (creditNoteError) {
 				// Log credit note error but don't fail cancellation
 				Sentry.captureException(creditNoteError, {
