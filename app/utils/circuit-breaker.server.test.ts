@@ -303,6 +303,85 @@ describe('CircuitBreaker', () => {
     })
   })
 
+  describe('event tracking', () => {
+    test('records events on state transitions', () => {
+      const eventBreaker = new CircuitBreaker('event-test', {
+        failureThreshold: 1,
+        onStateChange: undefined,
+      })
+
+      // Trip → should record OPEN event
+      eventBreaker.trip()
+      const eventsAfterOpen = eventBreaker.getEvents()
+      expect(eventsAfterOpen).toHaveLength(1)
+      expect(eventsAfterOpen[0]!.type).toBe('OPEN')
+      expect(eventsAfterOpen[0]!.breakerName).toBe('event-test')
+      expect(eventsAfterOpen[0]!.timestamp).toBeGreaterThan(0)
+
+      // Reset → CLOSED transition + RESET event
+      eventBreaker.reset()
+      const eventsAfterReset = eventBreaker.getEvents()
+      expect(eventsAfterReset).toHaveLength(3)
+      expect(eventsAfterReset[0]!.type).toBe('RESET')
+      expect(eventsAfterReset[1]!.type).toBe('CLOSED')
+      expect(eventsAfterReset[2]!.type).toBe('OPEN')
+    })
+
+    test('records HALF_OPEN transitions', async () => {
+      const halfOpenBreaker = new CircuitBreaker('half-open-events', {
+        failureThreshold: 1,
+        resetTimeoutMs: 1000,
+        onStateChange: undefined,
+      })
+
+      // Trip to OPEN via failure
+      await halfOpenBreaker.fire(async () => {
+        throw new Error('fail')
+      }).catch(() => {})
+
+      vi.advanceTimersByTime(2000)
+
+      // Fire to trigger HALF_OPEN transition and succeed
+      await halfOpenBreaker.fire(async () => 'ok')
+
+      const events = halfOpenBreaker.getEvents()
+      const eventTypes = events.map((e) => e.type)
+      // Should have: OPEN (from trip), HALF_OPEN (on fire), CLOSED (success in half-open)
+      expect(eventTypes).toContain('HALF_OPEN')
+      expect(eventTypes).toContain('CLOSED')
+    })
+
+    test('lastEvents appears in getStats output', () => {
+      const statBreaker = new CircuitBreaker('stats-events', {
+        onStateChange: undefined,
+      })
+      statBreaker.trip()
+      statBreaker.reset()
+
+      const stats = statBreaker.getStats()
+      expect(stats.lastEvents).toHaveLength(3)
+      expect(stats.lastEvents[0]!.type).toBe('RESET')
+      expect(stats.lastEvents[1]!.type).toBe('CLOSED')
+      expect(stats.lastEvents[2]!.type).toBe('OPEN')
+    })
+
+    test('caps events at MAX_EVENTS (50)', () => {
+      const maxBreaker = new CircuitBreaker('max-events', {
+        failureThreshold: 1,
+        onStateChange: undefined,
+      })
+
+      // Generate 60 events (30 trip/reset cycles)
+      for (let i = 0; i < 30; i++) {
+        maxBreaker.trip()
+        maxBreaker.reset()
+      }
+
+      const events = maxBreaker.getEvents()
+      expect(events.length).toBeLessThanOrEqual(50)
+    })
+  })
+
   describe('auto-registration with registry', () => {
     test('registers with breakerRegistry on construction', () => {
       const registeredBreaker = breakerRegistry.get('test-service')
