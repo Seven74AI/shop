@@ -77,7 +77,7 @@ function ResetButton({ name, state }: { name: string; state: string }) {
 				className="h-8"
 			>
 				<Icon
-					name="arrow-path"
+					name="update"
 					className={`mr-1 h-3.5 w-3.5 ${isResetting ? 'animate-spin' : ''}`}
 					aria-hidden="true"
 				/>
@@ -198,7 +198,7 @@ export default function CircuitBreakersDashboard({
 			{summary.breakers.length === 0 ? (
 				<div className="flex flex-col items-center justify-center py-16 text-center">
 					<Icon
-						name="shield-check"
+						name="shield"
 						className="h-12 w-12 text-muted-foreground mb-4"
 					/>
 					<h2 className="text-lg font-medium text-foreground">
