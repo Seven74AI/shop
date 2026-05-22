@@ -14,12 +14,7 @@ import {
 	renderToBuffer,
 	renderToStream,
 } from '@react-pdf/renderer'
-import { formatPrice } from './price.ts'
-type Currency = {
-	code: string
-	symbol: string
-	decimals: number
-}
+import { formatPrice, type Currency } from './price.ts'
 
 // ---------------------------------------------------------------------------
 // TypeScript helpers for the invoice data passed to the PDF component
