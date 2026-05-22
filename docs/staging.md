@@ -1,7 +1,7 @@
 # Staging Environment
 
 The Shop project has a staging environment on Fly.io for pre-production testing.
-Every PR to `main` or `dev` triggers a deploy to staging with automated smoke tests.
+Push to `dev` branch triggers a deploy to staging with automated smoke tests.
 
 ## Architecture
 
@@ -73,7 +73,7 @@ fly deploy -c fly.staging.toml
 ## Automated Deploy (CI)
 
 The `.github/workflows/staging-deploy.yml` workflow triggers automatically on:
-- Pull requests to `main` or `dev` (opened, synchronized, reopened)
+- Push to `dev` branch
 - Manual trigger via `workflow_dispatch`
 
 ### Pipeline steps
