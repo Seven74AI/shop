@@ -98,7 +98,7 @@ describe('GET /api/invoices', () => {
 		expect(response).toHaveProperty('pagination')
 		const { data, pagination } = response as any
 		expect(Array.isArray(data)).toBe(true)
-		expect(data.length).toBe(1)
+		expect(data).toHaveLength(1)
 		expect(pagination.page).toBe(1)
 		expect(pagination.limit).toBe(20)
 		expect(pagination.total).toBe(1)
@@ -172,7 +172,7 @@ describe('GET /api/invoices', () => {
 		const response = await loader({ request } as any)
 
 		const { data, pagination } = response as any
-		expect(data.length).toBe(1)
+		expect(data).toHaveLength(1)
 		expect(data[0].status).toBe('DRAFT')
 		expect(pagination.total).toBe(1)
 	})
@@ -228,7 +228,7 @@ describe('GET /api/invoices', () => {
 		const response = await loader({ request } as any)
 
 		const { data } = response as any
-		expect(data.length).toBe(1)
+		expect(data).toHaveLength(1)
 		expect(data[0].kind).toBe('CREDIT_NOTE')
 	})
 
@@ -283,7 +283,7 @@ describe('GET /api/invoices', () => {
 		const response = await loader({ request } as any)
 
 		const { data } = response as any
-		expect(data.length).toBe(1)
+		expect(data).toHaveLength(1)
 		expect(data[0].fiscalYear).toBe(2025)
 	})
 
@@ -354,7 +354,7 @@ describe('GET /api/invoices', () => {
 		const response = await loader({ request } as any)
 
 		const { data } = response as any
-		expect(data.length).toBe(1)
+		expect(data).toHaveLength(1)
 		expect(data[0].order.id).toBe(order2.id)
 	})
 
@@ -402,7 +402,7 @@ describe('GET /api/invoices', () => {
 		const response = await loader({ request } as any)
 
 		const { data, pagination } = response as any
-		expect(data.length).toBe(2)
+		expect(data).toHaveLength(2)
 		expect(pagination.page).toBe(1)
 		expect(pagination.limit).toBe(2)
 		expect(pagination.total).toBe(5)
@@ -419,7 +419,7 @@ describe('GET /api/invoices', () => {
 
 		const { data, pagination } = response as any
 		expect(Array.isArray(data)).toBe(true)
-		expect(data.length).toBe(0)
+		expect(data).toHaveLength(0)
 		expect(pagination.total).toBe(0)
 		expect(pagination.totalPages).toBe(0)
 	})
