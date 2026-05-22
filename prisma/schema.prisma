@@ -909,3 +909,24 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
 }
+
+// Webhook Idempotency System — P3 Security phase
+// Stores incoming webhook events for idempotent processing.
+// The eventId field (provider-side event ID) acts as the idempotency key —
+// duplicate events with the same eventId are skipped.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique // Provider-side event ID (idempotency key)
+  eventType   String    // e.g., "checkout.session.completed"
+  provider    String    // e.g., "stripe"
+  payload     Json      // Full webhook payload from provider
+  processedAt DateTime? // When the event was successfully processed
+  status      String    @default("RECEIVED") // RECEIVED | PROCESSING | PROCESSED | FAILED
+  attempts    Int       @default(0) // Number of processing attempts
+  lastError   String?   // Last error message if processing failed
+  createdAt   DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([status])
+  @@index([createdAt])
+}
