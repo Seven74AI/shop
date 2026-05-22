@@ -29,6 +29,7 @@ import {
 import { getOrderStatusLabel } from '#app/utils/order-status.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { getOrderByOrderNumber, updateOrderStatus, cancelOrder } from '#app/utils/order.server.ts'
+import { auditLog } from '#app/utils/audit.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
@@ -69,7 +70,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await request.formData()
 	const intent = formData.get('intent')
@@ -93,6 +94,11 @@ export async function action({ params, request }: Route.ActionArgs) {
 		invariantResponse(order, 'Order not found', { status: 404 })
 
 		await cancelOrder(order.id, request)
+
+		await auditLog(userId, 'UPDATE', 'Order', order.id, {
+			status: { before: order.status, after: 'CANCELLED' },
+			orderNumber: order.orderNumber,
+		}, request)
 
 		return redirectWithToast(`/admin/orders/${orderNumber}`, {
 			type: 'success',
@@ -121,6 +127,12 @@ export async function action({ params, request }: Route.ActionArgs) {
 	const { status, trackingNumber } = submission.value
 
 	await updateOrderStatus(order.id, status, request, trackingNumber || null)
+
+	await auditLog(userId, 'UPDATE', 'Order', order.id, {
+		status: { before: order.status, after: status },
+		...(trackingNumber ? { trackingNumber: { after: trackingNumber } } : {}),
+		orderNumber: order.orderNumber,
+	}, request)
 
 	const statusLabel = getOrderStatusLabel(status)
 	const description = trackingNumber
