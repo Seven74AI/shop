@@ -107,11 +107,12 @@ describe('recordFailedAttempt', () => {
 		const attempts = await prisma.loginAttempt.findMany({
 			where: { userId, success: false },
 		})
-		expect(attempts).toHaveLength(1)
-		expect(attempts[0].success).toBe(false)
-		expect(attempts[0].ipAddress).toBe('192.168.1.1')
-		expect(attempts[0].userAgent).toBe('TestBrowser/1.0')
-		expect(attempts[0].failureReason).toBe(
+	expect(attempts).toHaveLength(1)
+	const a = attempts[0]!
+	expect(a.success).toBe(false)
+	expect(a.ipAddress).toBe('192.168.1.1')
+	expect(a.userAgent).toBe('TestBrowser/1.0')
+	expect(a.failureReason).toBe(
 			'Invalid username or password',
 		)
 	})
@@ -126,7 +127,8 @@ describe('recordFailedAttempt', () => {
 		const attempts = await prisma.loginAttempt.findMany({
 			where: { userId },
 		})
-		expect(attempts[0].ipAddress).toBe('10.0.0.1')
+		const a = attempts[0]!
+		expect(a.ipAddress).toBe('10.0.0.1')
 	})
 
 	test('handles missing IP headers gracefully', async () => {
@@ -137,8 +139,9 @@ describe('recordFailedAttempt', () => {
 		const attempts = await prisma.loginAttempt.findMany({
 			where: { userId },
 		})
-		expect(attempts[0].ipAddress).toBeNull()
-		expect(attempts[0].userAgent).toBeNull()
+		const b = attempts[0]!
+		expect(b.ipAddress).toBeNull()
+		expect(b.userAgent).toBeNull()
 	})
 })
 

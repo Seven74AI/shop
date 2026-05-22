@@ -41,7 +41,9 @@ export async function checkLockout(userId: string): Promise<LockoutStatus> {
 	const lockDurationMs = applicableTier.lockDurationMs
 
 	// Lockout is measured from the *most recent* failed attempt.
-	const lastAttempt = failedAttempts[0]
+	// Safe: we only reach this branch when count >= minAttempts (>= 5),
+	// and we fetched at most LOCKOUT_TIERS[0].minAttempts (15) records.
+	const lastAttempt = failedAttempts[0]!
 	const lockExpiresAt = new Date(
 		lastAttempt.createdAt.getTime() + lockDurationMs,
 	)
