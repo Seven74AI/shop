@@ -707,6 +707,24 @@ enum InvoiceKind {
   CREDIT_NOTE
 }
 
+// IdempotencyRecord — P2 Reliability phase
+// Tracks idempotency keys for Stripe operations to prevent duplicate
+// payment processing. Keys are unique and expire after 24h.
+// See: https://docs.stripe.com/api/idempotent_requests
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @unique
+  operationType  String // e.g., "payment_intent", "refund", "checkout_session", "webhook"
+  status         String   @default("processing") // "processing" | "completed" | "failed"
+  response       Json? // Cached Stripe response (null while processing)
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime // TTL for cleanup (createdAt + 24h window)
+
+  @@index([idempotencyKey])
+  @@index([expiresAt])
+  @@index([status])
+}
+
 model TaxRate {
   id            String    @id @default(cuid())
   country       String // ISO 2-letter country code
