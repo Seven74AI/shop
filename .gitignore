@@ -29,3 +29,5 @@ node_modules
 .react-router/
 /data.db
 /data.db-journal
+repo/
+run-ci.sh
