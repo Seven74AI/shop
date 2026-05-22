@@ -1,9 +1,11 @@
 import { Link } from 'react-router'
 import { SearchFilters } from '#app/components/search-filters.tsx'
 import { SortSelect } from '#app/components/sort-select.tsx'
+import { StarRatingCompact } from '#app/components/star-rating.tsx'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { searchProducts } from '#app/utils/product-search.server.ts'
+import { getProductReviewAggregates } from '#app/utils/review-aggregate.server.ts'
 import { parseSearchParams } from '#app/utils/search-params.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/index.ts'
@@ -19,11 +21,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const currency = await getStoreCurrency()
 
+	// Get review aggregates for all visible products
+	const productIds = result.products.map((p) => p.id)
+	const reviewAggregates = await getProductReviewAggregates(productIds)
+
 	return {
 		products: result.products,
 		totalCount: result.totalCount,
 		facets: result.facets,
 		currency,
+		reviewAggregates: Object.fromEntries(reviewAggregates),
 		// Pass active filters to the UI
 		activeQuery: filters.query ?? '',
 		activeCategoryId: filters.categoryId ?? '',
@@ -47,6 +54,7 @@ export default function ProductsIndex({
 		totalCount,
 		facets,
 		currency,
+		reviewAggregates,
 		activeQuery,
 		activeCategoryId,
 		activeMinPrice,
@@ -110,11 +118,11 @@ export default function ProductsIndex({
 							<input
 								type="search"
 								name="q"
-					placeholder={t('shop.products.searchPlaceholder')}
-					defaultValue={activeQuery}
-					className="flex-1 px-4 py-2 border rounded-md"
-					aria-label={t('shop.products.search')}
-								data-testid="product-search-input"
+							placeholder={t('shop.products.searchPlaceholder')}
+							defaultValue={activeQuery}
+							className="flex-1 px-4 py-2 border rounded-md"
+							aria-label={t('shop.products.search')}
+									data-testid="product-search-input"
 							/>
 							<button
 								type="submit"
@@ -155,31 +163,41 @@ export default function ProductsIndex({
 							</div>
 						) : (
 							<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-								{products.map((product) => (
-									<Link
-										key={product.id}
-										to={`/shop/products/${product.slug}`}
-										className="block border rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200"
-										data-testid="product-card"
-									>
-										<div className="aspect-video bg-muted flex items-center justify-center">
-											<span className="text-muted-foreground">
-												{product.name}
-											</span>
-										</div>
-										<div className="p-4">
-											<h2 className="font-semibold mb-1 text-lg">
-												{product.name}
-											</h2>
-											<p className="text-sm text-muted-foreground mb-2">
-												{product.categoryId}
-											</p>
-											<p className="text-lg font-bold">
-												{formatPrice(product.price, currency, locale)}
-											</p>
-										</div>
-									</Link>
-								))}
+								{products.map((product) => {
+									const aggregate = reviewAggregates?.[product.id]
+									return (
+										<Link
+											key={product.id}
+											to={`/shop/products/${product.slug}`}
+											className="block border rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200"
+											data-testid="product-card"
+										>
+											<div className="aspect-video bg-muted flex items-center justify-center">
+												<span className="text-muted-foreground">
+													{product.name}
+												</span>
+											</div>
+											<div className="p-4">
+												<h2 className="font-semibold mb-1 text-lg">
+													{product.name}
+												</h2>
+												<p className="text-sm text-muted-foreground mb-2">
+													{product.categoryId}
+												</p>
+												{/* Star rating */}
+												<div className="mb-2">
+													<StarRatingCompact
+														averageRating={aggregate?.averageRating ?? null}
+														totalCount={aggregate?.totalCount}
+													/>
+												</div>
+												<p className="text-lg font-bold">
+													{formatPrice(product.price, currency, locale)}
+												</p>
+											</div>
+										</Link>
+									)
+								})}
 							</div>
 						)}
 					</div>
