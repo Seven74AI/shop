@@ -22,6 +22,7 @@ import { prisma } from './db.server.ts'
 const mockedPrisma = prisma as unknown as {
 	product: { findMany: ReturnType<typeof vi.fn> }
 	category: { findMany: ReturnType<typeof vi.fn> }
+	settings: { findUnique: ReturnType<typeof vi.fn> }
 }
 
 function makeBuild(routes: Array<{ id: string; path?: string; index?: boolean; parentId?: string }>) {
@@ -44,6 +45,7 @@ describe('generateSitemap', () => {
 		vi.resetAllMocks()
 		mockedPrisma.product.findMany.mockResolvedValue([])
 		mockedPrisma.category.findMany.mockResolvedValue([])
+		mockedPrisma.settings.findUnique.mockResolvedValue({ id: 'settings' })
 	})
 
 	test('includes only public static routes', async () => {
@@ -57,7 +59,7 @@ describe('generateSitemap', () => {
 
 		const sitemap = await generateSitemap(build, 'https://epic.shop')
 
-		expect(sitemap).toContain('<loc>https://epic.shop/</loc>')
+		expect(sitemap).toContain('<loc>https://epic.shop</loc>')
 		expect(sitemap).toContain('<loc>https://epic.shop/shop</loc>')
 		expect(sitemap).toContain('<loc>https://epic.shop/shop/products</loc>')
 		expect(sitemap).not.toContain('/admin')
@@ -177,7 +179,7 @@ describe('generateSitemap', () => {
 		const sitemap = await generateSitemap(build, 'https://epic.shop')
 
 		expect(sitemap).toContain('</urlset>')
-		expect(sitemap).toContain('<loc>https://epic.shop/</loc>')
+		expect(sitemap).toContain('<loc>https://epic.shop</loc>')
 	})
 
 	test('handles database errors gracefully', async () => {
@@ -189,7 +191,7 @@ describe('generateSitemap', () => {
 
 		// Should still produce valid XML with static routes
 		expect(sitemap).toContain('</urlset>')
-		expect(sitemap).toContain('<loc>https://epic.shop/</loc>')
+		expect(sitemap).toContain('<loc>https://epic.shop</loc>')
 	})
 
 	test('escaping XML special characters in URLs', async () => {
