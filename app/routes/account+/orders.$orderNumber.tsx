@@ -10,7 +10,7 @@ import { formatDate } from '#app/utils/date.ts'
 import { formatAddress } from '#app/utils/address.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
-import { formatInvoiceNumber } from '#app/utils/invoice.server.ts'
+import { formatInvoiceNumber } from '#app/utils/invoice.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { type BreadcrumbHandle } from '../account.tsx'
 import { type Route } from './+types/orders.$orderNumber.ts'
@@ -275,7 +275,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 														{inv.status === 'DRAFT' && ' · Draft'}
 														{inv.status === 'CANCELLED' && ' · Cancelled'}
 														{inv.issuedAt &&
-															` · ${new Date(inv.issuedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
+															` · ${formatDate(inv.issuedAt, locale, { dateStyle: 'medium' })}`}
 													</p>
 												</div>
 											</div>
