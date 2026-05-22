@@ -1,4 +1,5 @@
 import { data } from 'react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { z } from 'zod'
 import { searchPickupPoints } from '#app/utils/carriers/mondial-relay-api1.server.ts'
 import { type Route } from './+types/pickup-points.ts'
@@ -53,7 +54,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			pickupPoints,
 		})
 	} catch (error) {
-		console.error('Error searching pickup points:', error)
+		log.error({ err: error }, 'Error searching pickup points')
 		return data(
 			{
 				error: 'Failed to search pickup points',

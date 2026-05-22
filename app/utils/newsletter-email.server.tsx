@@ -9,6 +9,7 @@
 import * as E from '@react-email/components'
 import { type ReactElement } from 'react'
 import { sendEmail } from './email.server.ts'
+import { log } from '#app/utils/logging.server.ts'
 
 export interface NewsletterConfirmationEmailData {
 	email: string
@@ -88,6 +89,6 @@ export async function sendNewsletterConfirmationEmail(
 	} catch (error) {
 		// Log email error but don't fail the subscription flow
 		// (called as fire-and-forget in the subscribe route)
-		console.error('Failed to send newsletter confirmation email:', error)
+		log.error({ err: error }, 'Failed to send newsletter confirmation email')
 	}
 }

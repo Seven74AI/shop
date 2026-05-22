@@ -16,6 +16,7 @@
 import { createHash } from 'crypto'
 import { invariant } from '@epic-web/invariant'
 import { XMLParser } from 'fast-xml-parser'
+import { log } from '#app/utils/logging.server.ts'
 import {
   CircuitBreaker,
   CircuitOpenError,
@@ -216,10 +217,10 @@ export async function searchPickupPoints({
 		return result as PickupPoint[]
 	} catch (error) {
 		if (error instanceof CircuitOpenError) {
-			console.warn(`Mondial Relay API1 circuit breaker OPEN: ${error.message}`)
+			log.warn({ err: error.message }, 'Mondial Relay API1 circuit breaker OPEN')
 			throw error
 		}
-		console.error('Mondial Relay API1 searchPickupPoints error:', error)
+		log.error({ err: error }, 'Mondial Relay API1 searchPickupPoints error')
 		throw new Error(`Failed to search pickup points: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
 }
@@ -279,7 +280,7 @@ function parsePickupPointsResponse(
 	// Check status code - non-zero means error
 	const status = result?.STAT
 	if (status && status !== '0' && status !== 0) {
-		console.warn(`Mondial Relay API returned error status: ${status}`)
+		log.warn({ status }, `Mondial Relay API returned error status: ${status}`)
 		return []
 	}
 
@@ -434,10 +435,10 @@ export async function getTrackingInfo(shipmentNumber: string): Promise<{
 		return result as Awaited<ReturnType<typeof parseTrackingResponse>>
 	} catch (error) {
 		if (error instanceof CircuitOpenError) {
-			console.warn(`Mondial Relay API1 circuit breaker OPEN: ${error.message}`)
+			log.warn({ err: error.message }, 'Mondial Relay API1 tracking circuit breaker OPEN')
 			throw error
 		}
-		console.error('Mondial Relay API1 getTrackingInfo error:', error)
+		log.error({ err: error }, 'Mondial Relay API1 getTrackingInfo error')
 		throw new Error(`Failed to get tracking info: ${error instanceof Error ? error.message : 'Unknown error'}`)
 	}
 }

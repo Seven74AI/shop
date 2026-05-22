@@ -45,7 +45,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Paris',
 					postalCode: '75001',
 					country: 'FR',
-					phone: '+33123456789',
+					phone: '+331****6789',
 					email: 'shipper@test.com',
 				},
 				recipient: {
@@ -54,7 +54,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Lyon',
 					postalCode: '69001',
 					country: 'FR',
-					phone: '+33987654321',
+					phone: '+339****4321',
 					email: 'recipient@test.com',
 				},
 				pickupPointId: '12345',
@@ -91,7 +91,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Paris',
 					postalCode: '75001',
 					country: 'FR',
-					phone: '+33123456789',
+					phone: '+331****6789',
 					email: 'shipper@test.com',
 				},
 				recipient: {
@@ -100,7 +100,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Lyon',
 					postalCode: '69001',
 					country: 'FR',
-					phone: '+33987654321',
+					phone: '+339****4321',
 					email: 'recipient@test.com',
 				},
 				pickupPointId: '12345',
@@ -156,7 +156,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Paris',
 					postalCode: '75001',
 					country: 'FR',
-					phone: '+33123456789',
+					phone: '+331****6789',
 					email: 'shipper@test.com',
 				},
 				recipient: {
@@ -165,7 +165,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Lyon',
 					postalCode: '69001',
 					country: 'FR',
-					phone: '+33987654321',
+					phone: '+339****4321',
 					email: 'recipient@test.com',
 				},
 				pickupPointId: '12345',
@@ -202,7 +202,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Paris',
 					postalCode: '75001',
 					country: 'FR',
-					phone: '+33123456789',
+					phone: '+331****6789',
 					email: 'shipper@test.com',
 				},
 				recipient: {
@@ -211,7 +211,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Lyon',
 					postalCode: '69001',
 					country: 'FR',
-					phone: '+33987654321',
+					phone: '+339****4321',
 					email: 'recipient@test.com',
 				},
 				pickupPointId: 'INVALID',
@@ -222,8 +222,7 @@ describe('mondial-relay-api2.server', () => {
 
 			await expect(createShipment(shipmentRequest)).rejects.toThrow(/Mondial Relay API2 error.*Invalid pickup point/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('throws error when API returns non-OK HTTP response', async () => {
@@ -241,7 +240,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Paris',
 					postalCode: '75001',
 					country: 'FR',
-					phone: '+33123456789',
+					phone: '+331****6789',
 					email: 'shipper@test.com',
 				},
 				recipient: {
@@ -250,7 +249,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Lyon',
 					postalCode: '69001',
 					country: 'FR',
-					phone: '+33987654321',
+					phone: '+339****4321',
 					email: 'recipient@test.com',
 				},
 				pickupPointId: '12345',
@@ -261,8 +260,7 @@ describe('mondial-relay-api2.server', () => {
 
 			await expect(createShipment(shipmentRequest)).rejects.toThrow(/Failed to create shipment|Mondial Relay API2 error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('throws error when fetch fails', async () => {
@@ -275,7 +273,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Paris',
 					postalCode: '75001',
 					country: 'FR',
-					phone: '+33123456789',
+					phone: '+331****6789',
 					email: 'shipper@test.com',
 				},
 				recipient: {
@@ -284,7 +282,7 @@ describe('mondial-relay-api2.server', () => {
 					city: 'Lyon',
 					postalCode: '69001',
 					country: 'FR',
-					phone: '+33987654321',
+					phone: '+339****4321',
 					email: 'recipient@test.com',
 				},
 				pickupPointId: '12345',
@@ -295,8 +293,7 @@ describe('mondial-relay-api2.server', () => {
 
 			await expect(createShipment(shipmentRequest)).rejects.toThrow(/Failed to create shipment|Network error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 	})
 
@@ -348,8 +345,7 @@ describe('mondial-relay-api2.server', () => {
 
 			await expect(getLabel('INVALID')).rejects.toThrow(/Failed to get label|Mondial Relay API2 error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('throws error when fetch fails', async () => {
@@ -357,8 +353,7 @@ describe('mondial-relay-api2.server', () => {
 
 			await expect(getLabel('123456789')).rejects.toThrow(/Failed to get label|Network error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 	})
 })
