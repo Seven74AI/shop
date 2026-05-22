@@ -130,11 +130,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument('/shop/cart')
 	}
 
-	return checkoutData
+	// Get coupon code from URL params
+	const url = new URL(request.url)
+	const couponCode = url.searchParams.get('couponCode') || undefined
+
+	return { ...checkoutData, couponCode }
 }
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
+	const url = new URL(request.url)
 	const submission = parseWithZod(formData, {
 		schema: ShippingFormSchema,
 	})
@@ -148,6 +153,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const shippingData = submission.value
 	const userId = await getUserId(request)
+
+	// Get coupon code from URL params (not in the form schema)
+	const couponCode = url.searchParams.get('couponCode') || undefined
 
 	// If addressId is provided, load the saved address
 	let finalShippingData = shippingData
@@ -215,7 +223,8 @@ export async function action({ request }: Route.ActionArgs) {
 		`city=${encodeURIComponent(finalShippingData.city)}&` +
 		`state=${encodeURIComponent(finalShippingData.state || '')}&` +
 		`postal=${encodeURIComponent(finalShippingData.postal)}&` +
-		`country=${encodeURIComponent(finalShippingData.country)}`
+		`country=${encodeURIComponent(finalShippingData.country)}` +
+		`${couponCode ? `&couponCode=${encodeURIComponent(couponCode)}` : ''}`
 	)
 }
 
@@ -513,7 +522,7 @@ export default function CheckoutShipping() {
 
 					<div className="flex justify-between pt-4">
 						<Button variant="outline" asChild>
-							<Link to="/shop/checkout/review">Back</Link>
+							<Link to={`/shop/checkout/review${loaderData?.couponCode ? `?couponCode=${encodeURIComponent(loaderData.couponCode)}` : ''}`}>{t('shop.checkout.shipping.back') as string || 'Back'}</Link>
 						</Button>
 						<StatusButton
 							status={isPending ? 'pending' : (form.status ?? 'idle')}
