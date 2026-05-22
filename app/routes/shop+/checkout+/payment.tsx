@@ -7,6 +7,8 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { getCheckoutData, calculateCartVat } from '#app/utils/checkout.server.ts'
+import { validateCoupon, incrementCouponUsedCount } from '#app/utils/coupon.server.ts'
+import { computeDiscountAmount, couponErrorMessages } from '#app/schemas/coupon.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import {
@@ -26,7 +28,7 @@ import { type Route } from './+types/payment.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
-	
+
 	// Get shipping data from URL params
 	const name = url.searchParams.get('name')
 	const email = url.searchParams.get('email')
@@ -67,6 +69,31 @@ export async function loader({ request }: Route.LoaderArgs) {
 		// VAT calculation failure shouldn't block checkout
 	}
 
+	// Get coupon code from URL params for review/display
+	const couponCode = url.searchParams.get('couponCode') || undefined
+
+	// If coupon code is present, validate and compute discount preview
+	let couponDiscount: { discountType: 'PERCENTAGE' | 'FIXED_AMOUNT'; discountValue: number; discountCents: number; couponCode: string } | null = null
+	if (couponCode) {
+		const result = await validateCoupon(couponCode, checkoutData.subtotal)
+		if (result.valid) {
+			const discountCents = computeDiscountAmount(
+				result.discountType,
+				result.discountValue,
+				checkoutData.subtotal,
+			)
+			couponDiscount = {
+				discountType: result.discountType,
+				discountValue: result.discountValue,
+				discountCents,
+				couponCode: result.couponCode,
+			}
+		}
+	}
+
+	const preDiscountTotal = checkoutData.subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0)
+	const couponDiscountCents = couponDiscount?.discountCents ?? 0
+
 	return {
 		...checkoutData,
 		shippingInfo: {
@@ -82,12 +109,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 		shippingCost,
 		mondialRelayPickupPointId: mondialRelayPickupPointId || undefined,
 		vatCalculation,
+		couponCode,
+		couponDiscount,
+		couponDiscountCents,
+		preDiscountTotal,
 	}
 }
 
 export async function action({ request }: Route.ActionArgs) {
 	const url = new URL(request.url)
-	
+
 	// Get shipping data from URL params
 	const name = url.searchParams.get('name')
 	const email = url.searchParams.get('email')
@@ -174,6 +205,43 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const userId = await getUserId(request)
 
+	// Calculate cart subtotal (before any discounts)
+	const subtotal = cartWithItems.items.reduce((sum, item) => {
+		const price = item.variant?.price ?? item.product.price
+		return sum + (price ?? 0) * item.quantity
+	}, 0)
+
+	// Validate coupon code if present
+	const couponCode = url.searchParams.get('couponCode') || undefined
+	let couponValidation: { discountType: 'PERCENTAGE' | 'FIXED_AMOUNT'; discountValue: number; discountCents: number; couponId: string; couponCode: string } | null = null
+
+	if (couponCode) {
+		const result = await validateCoupon(couponCode, subtotal, userId)
+
+		if (!result.valid) {
+			return data(
+				{
+					error: 'Invalid coupon',
+					message: couponErrorMessages[result.reason],
+				},
+				{ status: 400 },
+			)
+		}
+
+		const discountCents = computeDiscountAmount(
+			result.discountType,
+			result.discountValue,
+			subtotal,
+		)
+		couponValidation = {
+			discountType: result.discountType,
+			discountValue: result.discountValue,
+			discountCents,
+			couponId: result.couponId,
+			couponCode: result.couponCode,
+		}
+	}
+
 	// Calculate VAT for the order
 	const customerVatNumber = url.searchParams.get('customerVatNumber') || undefined
 	let vatCalculation = null
@@ -220,6 +288,8 @@ export async function action({ request }: Route.ActionArgs) {
 					vatTotalCents: vatCalculation?.totalVatCents ?? 0,
 					vatBreakdown: vatCalculation?.breakdown ?? [],
 					idempotencyKey: stripeIdempotencyKey,
+					couponDiscountCents: couponValidation?.discountCents ?? 0,
+					couponCode: couponValidation?.couponCode,
 				})
 			},
 		)
@@ -227,7 +297,20 @@ export async function action({ request }: Route.ActionArgs) {
 		invariantResponse(session.url, 'Failed to create checkout session URL', {
 			status: 500,
 		})
-		
+
+		// Increment coupon usedCount if coupon was applied
+		if (couponValidation) {
+			try {
+				await incrementCouponUsedCount(couponValidation.couponId)
+			} catch (err) {
+				Sentry.captureException(err, {
+					tags: { context: 'coupon-increment' },
+					extra: { couponId: couponValidation.couponId },
+				})
+				// Don't fail checkout if count increment fails
+			}
+		}
+
 		// Redirect to Stripe Checkout
 		return redirect(session.url)
 	} catch (error) {
@@ -276,10 +359,10 @@ export default function CheckoutPayment() {
 	if (!loaderData) {
 		return (
 			<div className="text-center">
-			<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
-		</div>
-	)
-}
+				<p className="text-muted-foreground">{t('shop.checkout.review.loading')}</p>
+			</div>
+		)
+	}
 
 	const {
 		cart,
@@ -288,6 +371,9 @@ export default function CheckoutPayment() {
 		shippingInfo,
 		shippingCost,
 		vatCalculation,
+		couponDiscount,
+		couponDiscountCents,
+		preDiscountTotal,
 	} = loaderData
 
 	if (actionData?.error) {
@@ -342,15 +428,17 @@ export default function CheckoutPayment() {
 		)
 	}
 
+	const finalTotal = preDiscountTotal - couponDiscountCents
+
 	return (
 		<div className="space-y-6">
 			<Card>
 				<CardContent className="pt-6">
 					<div className="text-center space-y-4">
-					<h2 className="text-2xl font-bold">{t('shop.checkout.payment.title')}</h2>
-					<p className="text-muted-foreground">
-						{t('shop.checkout.payment.redirecting')}
-					</p>
+						<h2 className="text-2xl font-bold">{t('shop.checkout.payment.title')}</h2>
+						<p className="text-muted-foreground">
+							{t('shop.checkout.payment.redirecting')}
+						</p>
 						<div className="flex justify-center">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 						</div>
@@ -365,6 +453,17 @@ export default function CheckoutPayment() {
 						<span>{t('shop.checkout.payment.subtotal')}</span>
 						<span>{formatPrice(subtotal, currency, locale)}</span>
 					</div>
+
+					{/* Coupon Discount */}
+					{couponDiscount && couponDiscountCents > 0 && (
+						<div className="flex justify-between text-green-600">
+							<span>
+								{t('shop.checkout.payment.couponDiscount') as string || 'Coupon'} ({couponDiscount.couponCode})
+							</span>
+							<span>-{formatPrice(couponDiscountCents, currency, locale)}</span>
+						</div>
+					)}
+
 					<div className="flex justify-between">
 						<span>{t('shop.checkout.payment.shipping')}</span>
 						<span>
@@ -393,7 +492,7 @@ export default function CheckoutPayment() {
 					)}
 					<div className="flex justify-between text-lg font-bold border-t pt-2">
 						<span>{t('shop.checkout.payment.total')}</span>
-						<span>{formatPrice(subtotal + shippingCost + (vatCalculation?.totalVatCents ?? 0), currency)}</span>
+						<span>{formatPrice(finalTotal, currency)}</span>
 					</div>
 				</div>
 			</div>
@@ -413,4 +512,3 @@ export default function CheckoutPayment() {
 		</div>
 	)
 }
-
