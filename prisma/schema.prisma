@@ -589,6 +589,7 @@ model Review {
 enum ReturnStatus {
   REQUESTED
   APPROVED
+  SHIPPED
   RECEIVED
   REFUNDED
   REJECTED
@@ -607,6 +608,7 @@ model ReturnRequest {
   restockingFeeCents Int? // Restocking fee deducted (in cents)
 
   requestedAt DateTime  @default(now()) // When the return was requested
+  shippedAt   DateTime? // When the items were shipped back (status: SHIPPED)
   receivedAt  DateTime? // When the returned items were received
   refundedAt  DateTime? // When the refund was processed
 

@@ -24,10 +24,10 @@ import { ReturnManagementCard } from './__return-management-card.tsx'
 
 const StatusUpdateSchema = z.object({
 	status: z.enum(
-		['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDED', 'REJECTED'],
+		['REQUESTED', 'APPROVED', 'SHIPPED', 'RECEIVED', 'REFUNDED', 'REJECTED'],
 		{
 			error:
-				'Status must be one of: REQUESTED, APPROVED, RECEIVED, REFUNDED, REJECTED',
+				'Status must be one of: REQUESTED, APPROVED, SHIPPED, RECEIVED, REFUNDED, REJECTED',
 		},
 	),
 	adminNotes: z
