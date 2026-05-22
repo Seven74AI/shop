@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { UNCATEGORIZED_CATEGORY_ID } from './category'
-import { CURRENCIES, PRODUCT_STATUSES, SLUG_REGEX, MAX_UPLOAD_SIZE, ACCEPTED_IMAGE_TYPES } from './constants'
+import { PRODUCT_STATUSES, SLUG_REGEX, MAX_UPLOAD_SIZE, ACCEPTED_IMAGE_TYPES } from './constants'
 // Constants for validation
 export const MAX_NAME_LENGTH = 200
 export const MAX_SLUG_LENGTH = 250
@@ -84,7 +84,6 @@ export const VariantSchema = z.object({
  *   slug: "product-name",
  *   sku: "SKU-001",
  *   price: 99.99,
- *   currency: "USD",
  *   status: "ACTIVE"
  * })
  * ```
@@ -124,9 +123,6 @@ export const productSchema = z.object({
 	}).min(0, { error: 'Price cannot be negative' }).multipleOf(0.01, {
 		error: 'Price must have at most 2 decimal places',
 	}),
-	currency: z.enum(CURRENCIES, {
-		error: `Currency must be one of: ${CURRENCIES.join(', ')}`,
-	}).default('EUR'),
 	status: z.enum(PRODUCT_STATUSES, {
 		error: `Status must be one of: ${PRODUCT_STATUSES.join(', ')}`,
 	}).default('DRAFT'),
