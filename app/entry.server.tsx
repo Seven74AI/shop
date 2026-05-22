@@ -65,31 +65,52 @@ export default async function handleRequest(...args: DocRequestArgs) {
 					responseHeaders.set('Content-Type', 'text/html')
 					responseHeaders.append('Server-Timing', timings.toString())
 
-					contentSecurity(responseHeaders, {
-						crossOriginEmbedderPolicy: false,
-						contentSecurityPolicy: {
-							// NOTE: Remove reportOnly when you're ready to enforce this CSP
-							reportOnly: true,
-							directives: {
-								fetch: {
-									'connect-src': [
-										MODE === 'development' ? 'ws:' : undefined,
-										process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
-										"'self'",
-									],
-									'font-src': ["'self'"],
-									'frame-src': ["'self'"],
-									'img-src': ["'self'", 'data:'],
-									'script-src': [
-										"'strict-dynamic'",
-										"'self'",
-										`'nonce-${nonce}'`,
-									],
-									'script-src-attr': [`'nonce-${nonce}'`],
-								},
+				contentSecurity(responseHeaders, {
+					crossOriginEmbedderPolicy: false,
+					contentSecurityPolicy: {
+						reportOnly: false,
+						directives: {
+							fetch: {
+								'default-src': ["'self'"],
+								'connect-src': [
+									MODE === 'development' ? 'ws:' : undefined,
+									process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
+									"'self'",
+									'https://api.stripe.com',
+								],
+								'font-src': ["'self'"],
+								'frame-src': [
+									"'self'",
+									'https://*.stripe.com',
+								],
+								'img-src': ["'self'", 'data:', 'https://*.stripe.com'],
+								'media-src': ["'self'"],
+								'object-src': ["'none'"],
+								'script-src': [
+									"'strict-dynamic'",
+									"'self'",
+									`'nonce-${nonce}'`,
+									'https://js.stripe.com',
+								],
+								'script-src-attr': [`'nonce-${nonce}'`],
+								'style-src': ["'self'", "'unsafe-inline'"],
+								'style-src-attr': ["'unsafe-inline'"],
+							},
+							document: {
+								'base-uri': ["'self'"],
+							},
+							navigation: {
+								'form-action': ["'self'"],
+							},
+							deprecated: {
+								'report-uri': '/resources/csp-report',
+							},
+							other: {
+								'upgrade-insecure-requests': true,
 							},
 						},
-					})
+					},
+				})
 
 					resolve(
 						new Response(createReadableStreamFromReadable(body), {
