@@ -165,7 +165,7 @@ describe('generateSitemap', () => {
 		const matches = (
 			sitemap.match(/\/shop\/products\/test-product/g) || []
 		)
-		expect(matches.length).toBe(1)
+		expect(matches).toHaveLength(1)
 	})
 
 	test('handles empty database gracefully', async () => {
