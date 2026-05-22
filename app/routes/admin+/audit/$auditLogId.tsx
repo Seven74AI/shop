@@ -1,13 +1,12 @@
-import { Link } from 'react-router'
+import { Link, type LoaderFunctionArgs, type MetaFunction } from 'react-router'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
-import { type Route } from './+types/$auditLogId.ts'
 
-export async function loader({ request, params }: Route.LoaderArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
 	await requireUserWithRole(request, 'admin')
 
 	const entry = await prisma.auditLog.findUnique({
@@ -26,7 +25,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	return { entry }
 }
 
-export const meta: Route.MetaFunction = ({ data }) => [
+export const meta: MetaFunction = ({ data }) => [
 	{
 		title: `Audit Entry | Admin | Epic Shop`,
 	},
@@ -36,7 +35,7 @@ export const meta: Route.MetaFunction = ({ data }) => [
 	},
 ]
 
-export default function AuditDetail({ loaderData }: Route.ComponentProps) {
+export default function AuditDetail({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) {
 	const { entry } = loaderData
 
 	const changes = entry.changes as Record<string, { before: unknown; after: unknown }> | null

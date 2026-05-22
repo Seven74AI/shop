@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { prisma } from '#app/utils/db.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
-import { type Route } from './+types/export.ts'
+import { type LoaderFunctionArgs } from 'react-router'
 
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'] as const
 
@@ -13,7 +13,7 @@ const ExportSearchSchema = z.object({
 	to: z.string().optional(),
 })
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	await requireUserWithRole(request, 'admin')
 
 	const url = new URL(request.url)
