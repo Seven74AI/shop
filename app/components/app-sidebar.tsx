@@ -69,6 +69,11 @@ const navData = {
 			],
 		},
 		{
+			title: 'Metrics',
+			url: '/admin/metrics',
+			icon: 'chart' as IconName,
+		},
+		{
 			title: 'Feature Flags',
 			url: '/admin/feature-flags',
 			icon: 'settings' as IconName,
