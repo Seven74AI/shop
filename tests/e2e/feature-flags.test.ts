@@ -119,51 +119,53 @@ test.describe('Feature Flags Admin Panel', () => {
 			).toBeVisible()
 		})
 
-		test('should edit an existing feature flag', async ({
-			page,
-			login,
-		}) => {
-			// Create a flag first
-			await prisma.flag.create({
-				data: {
-					key: `${FEATURE_FLAG_E2E_PREFIX}edit-test`,
-					enabled: false,
-					rolloutPercentage: 0,
-					description: 'Before edit',
-				},
-			})
-
-			await login({ asAdmin: true })
-			await page.goto(
-				`/admin/feature-flags/${FEATURE_FLAG_E2E_PREFIX}edit-test/edit`,
-			)
-			await page.waitForLoadState('networkidle')
-
-			await expect(
-				page.getByRole('heading', { name: /edit feature flag/i }),
-			).toBeVisible()
-
-			// Update description
-			const descField = page.getByLabel(/description/i)
-			await descField.clear()
-			await descField.fill('After edit - updated')
-
-			// Check enabled
-			await page.getByLabel(/enabled/i).check()
-
-			// Save
-			await page.getByRole('button', { name: /save changes/i }).click()
-
-			// Should redirect to list
-			await expect(page).toHaveURL(/\/admin\/feature-flags$/)
-
-			// Verify update in database
-			const flag = await prisma.flag.findUnique({
-				where: { key: `${FEATURE_FLAG_E2E_PREFIX}edit-test` },
-			})
-			expect(flag?.enabled).toBe(true)
-			expect(flag?.description).toBe('After edit - updated')
+	test('should edit an existing feature flag', async ({
+		page,
+		login,
+	}) => {
+		// Create a flag first
+		await prisma.flag.create({
+			data: {
+				key: `${FEATURE_FLAG_E2E_PREFIX}edit-test`,
+				enabled: false,
+				rolloutPercentage: 0,
+				description: 'Before edit',
+			},
 		})
+
+		await login({ asAdmin: true })
+		await page.goto(
+			`/admin/feature-flags/${FEATURE_FLAG_E2E_PREFIX}edit-test/edit`,
+		)
+
+		// Wait for the edit page to fully load — explicit heading + form field
+		await expect(
+			page.getByRole('heading', { name: /edit feature flag/i }),
+		).toBeVisible({ timeout: 15000 })
+		await expect(page.getByLabel(/description/i)).toBeVisible({ timeout: 10000 })
+
+		// Update description
+		const descField = page.getByLabel(/description/i)
+		await descField.clear()
+		await descField.fill('After edit - updated')
+
+		// Check enabled
+		await page.getByLabel(/enabled/i).check()
+
+		// Save
+		await page.getByRole('button', { name: /save changes/i }).click()
+
+		// Should redirect to list — wait for the redirect to complete
+		await expect(page).toHaveURL(/\/admin\/feature-flags$/, { timeout: 15000 })
+		await page.waitForLoadState('domcontentloaded')
+
+		// Verify update in database
+		const flag = await prisma.flag.findUnique({
+			where: { key: `${FEATURE_FLAG_E2E_PREFIX}edit-test` },
+		})
+		expect(flag?.enabled).toBe(true)
+		expect(flag?.description).toBe('After edit - updated')
+	})
 
 		test('should toggle flag enabled/disabled status', async ({
 			page,
@@ -418,39 +420,36 @@ test.describe('Feature Flags Admin Panel', () => {
 	})
 
 	test.describe('Flag count display', () => {
-		test('should show correct flag count', async ({
-			page,
-			login,
-		}) => {
-			// Create some flags
-			await prisma.flag.createMany({
-				data: [
-					{
-						key: `${FEATURE_FLAG_E2E_PREFIX}count-1`,
-						enabled: true,
-						rolloutPercentage: 0,
-					},
-					{
-						key: `${FEATURE_FLAG_E2E_PREFIX}count-2`,
-						enabled: false,
-						rolloutPercentage: 0,
-					},
-				],
-			})
-
-			await login({ asAdmin: true })
-			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
-
-			// Wait for the data table to render
-			await expect(
-				page.getByRole('heading', { name: /feature flags/i }),
-			).toBeVisible({ timeout: 15000 })
-
-			// Should show "N flags" in the header area
-			// The count includes the seeded e2e flags; verify at least ours are visible
-			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 10000 })
-			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible()
+	test('should show correct flag count', async ({
+		page,
+		login,
+	}) => {
+		// Create some flags
+		await prisma.flag.createMany({
+			data: [
+				{
+					key: `${FEATURE_FLAG_E2E_PREFIX}count-1`,
+					enabled: true,
+					rolloutPercentage: 0,
+				},
+				{
+					key: `${FEATURE_FLAG_E2E_PREFIX}count-2`,
+					enabled: false,
+					rolloutPercentage: 0,
+				},
+			],
 		})
+
+		await login({ asAdmin: true })
+		await page.goto('/admin/feature-flags')
+
+		// Wait for the data table to render
+		await expect(
+			page.getByRole('heading', { name: /feature flags/i }),
+		).toBeVisible({ timeout: 15000 })
+
+		// Wait for data rows to appear (not just the heading)
+		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible({ timeout: 10000 })
 	})
 })

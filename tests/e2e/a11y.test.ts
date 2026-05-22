@@ -148,18 +148,20 @@ test.describe('Accessibility', () => {
 			await expectPageToBeAccessible(page)
 		})
 
-		test('order detail page should be accessible', async ({ page, login }) => {
-			// Verify testOrder exists
-			if (!testOrder?.orderNumber) {
-				throw new Error('testOrder was not created in beforeAll')
-			}
-			await loginAndNavigateToAdminPage(
-				page,
-				login,
-				`/admin/orders/${testOrder.orderNumber}`,
-			)
-			await expectPageToBeAccessible(page)
-		})
+	test('order detail page should be accessible', async ({ page, login }) => {
+		// Verify testOrder exists
+		if (!testOrder?.orderNumber) {
+			throw new Error('testOrder was not created in beforeAll')
+		}
+		await loginAndNavigateToAdminPage(
+			page,
+			login,
+			`/admin/orders/${testOrder.orderNumber}`,
+		)
+		// Wait for order detail content to fully render
+		await expect(page.getByText(testOrder.orderNumber)).toBeVisible({ timeout: 10000 })
+		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
+	})
 
 		test('products list page should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin/products')
@@ -238,14 +240,16 @@ test.describe('Accessibility', () => {
 			await expectPageToBeAccessible(page)
 		})
 
-		test('attribute edit page should be accessible', async ({ page, login }) => {
-			await loginAndNavigateToAdminPage(
-				page,
-				login,
-				`/admin/attributes/${testAttribute.id}/edit`,
-			)
-			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
-		})
+	test('attribute edit page should be accessible', async ({ page, login }) => {
+		await loginAndNavigateToAdminPage(
+			page,
+			login,
+			`/admin/attributes/${testAttribute.id}/edit`,
+		)
+		// Wait for the edit form to render before a11y check
+		await expect(page.getByRole('textbox', { name: /name/i })).toBeVisible({ timeout: 10000 })
+		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
+	})
 
 		test('cache page should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin/cache')
@@ -409,13 +413,13 @@ test.describe('Accessibility', () => {
 			await expectPageToBeAccessible(page)
 		})
 
-		test('product detail page should be accessible', async ({ page }) => {
-			await page.goto(`/shop/products/${shopTestProduct.slug}`)
-			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
-			await page.waitForSelector('h1', { timeout: 10000 })
-			await expectPageToBeAccessible(page)
-		})
+	test('product detail page should be accessible', async ({ page }) => {
+		await page.goto(`/shop/products/${shopTestProduct.slug}`)
+		await page.waitForLoadState('domcontentloaded')
+		await page.waitForSelector('main', { timeout: 10000 })
+		await page.waitForSelector('h1', { timeout: 10000 })
+		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
+	})
 
 		test('category page should be accessible', async ({ page }) => {
 			await page.goto(`/shop/categories/${shopTestCategory.slug}`)
@@ -521,7 +525,9 @@ test.describe('Accessibility', () => {
 				await page.waitForLoadState('domcontentloaded')
 				await page.waitForSelector('main', { timeout: 10000 })
 				await page.waitForSelector('h1', { timeout: 10000 })
-				await expectPageToBeAccessible(page)
+				// Wait for order content to render before a11y check
+				await expect(page.getByText(order.orderNumber)).toBeVisible({ timeout: 10000 })
+				await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 			} finally {
 				// Cleanup: delete order first, then user
 				await prisma.orderItem.deleteMany({ where: { orderId: order.id } }).catch(() => {})

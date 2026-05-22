@@ -52,8 +52,12 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	await expect(page.getByRole('link', { name: /disable 2fa/i })).toBeVisible()
 
 	await page.getByRole('link', { name: 'User menu' }).click()
+	// Wait for the dropdown to open before clicking logout
+	await expect(
+		page.getByRole('menuitem', { name: /logout/i }),
+	).toBeVisible({ timeout: 5000 })
 	await page.getByRole('menuitem', { name: /logout/i }).click()
-	await expect(page).toHaveURL(`/`)
+	await expect(page).toHaveURL('/', { timeout: 10000 })
 
 	await navigate('/login')
 	await expect(page).toHaveURL(`/login`)
