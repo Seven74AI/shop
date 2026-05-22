@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
+import { verifyGuestToken } from '#app/utils/guest-token.server.ts'
 import { formatDate } from '#app/utils/date.ts'
 import { formatAddress } from '#app/utils/address.ts'
 import { formatPrice } from '#app/utils/price.ts'
@@ -17,7 +18,16 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const { orderNumber } = params
 	const userId = await getUserId(request)
 	const url = new URL(request.url)
-	const email = url.searchParams.get('email')
+	let email = url.searchParams.get('email')
+
+	// Try token-based authentication first (signed HMAC token from email link)
+	const token = url.searchParams.get('token')
+	if (token && !email) {
+		const payload = verifyGuestToken(token)
+		if (payload && payload.orderId === orderNumber) {
+			email = payload.email
+		}
+	}
 
 	// Try to get order by order number
 	let order = await getOrderByOrderNumber(orderNumber)
