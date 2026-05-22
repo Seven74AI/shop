@@ -69,6 +69,17 @@ const navData = {
 			],
 		},
 		{
+			title: 'Promotions',
+			url: '/admin/promotions',
+			icon: 'tags' as IconName,
+			hasSubmenu: true,
+			items: [
+				{ title: 'All Promotions', url: '/admin/promotions' },
+				{ title: 'Add Promotion', url: '/admin/promotions/new' },
+				{ title: 'Coupons', url: '/admin/promotions/coupons' },
+			],
+		},
+		{
 			title: 'Feature Flags',
 			url: '/admin/feature-flags',
 			icon: 'settings' as IconName,

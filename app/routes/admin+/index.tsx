@@ -90,30 +90,55 @@ export default function AdminDashboard() {
 					</CardContent>
 				</Card>
 
-				{/* Attributes Card */}
-				<Card className="rounded-[14px]">
-					<CardContent className="p-6">
-						<div className="flex items-center space-x-4">
-							<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-								<Icon name="settings" className="h-6 w-6 text-primary" />
-							</div>
-							<div className="flex-1">
-								<h2 className="text-base font-normal text-foreground">Attributes</h2>
-								<p className="text-sm text-muted-foreground">
-									Configure product attributes
-								</p>
-							</div>
-						</div>
-						<div className="mt-4 space-y-2">
-							<Button asChild className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/attributes">View Attributes</a>
-							</Button>
-							<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/attributes/new">Add New Attribute</a>
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
+	\t\t\t{/* Attributes Card */}
+\t\t\t\t<Card className="rounded-[14px]">
+\t\t\t\t\t<CardContent className="p-6">
+\t\t\t\t\t\t<div className="flex items-center space-x-4">
+\t\t\t\t\t\t\t<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+\t\t\t\t\t\t\t\t<Icon name="settings" className="h-6 w-6 text-primary" />
+\t\t\t\t\t\t\t</div>
+\t\t\t\t\t\t\t<div className="flex-1">
+\t\t\t\t\t\t\t\t<h2 className="text-base font-normal text-foreground">Attributes</h2>
+\t\t\t\t\t\t\t\t<p className="text-sm text-muted-foreground">
+\t\t\t\t\t\t\t\t\tConfigure product attributes
+\t\t\t\t\t\t\t\t</p>
+\t\t\t\t\t\t\t</div>
+\t\t\t\t\t\t</div>
+\t\t\t\t\t\t<div className="mt-4 space-y-2">
+\t\t\t\t\t\t\t<Button asChild className="w-full h-9 rounded-lg font-medium">
+\t\t\t\t\t\t\t\t<a href="/admin/attributes">View Attributes</a>
+\t\t\t\t\t\t\t</Button>
+\t\t\t\t\t\t\t<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
+\t\t\t\t\t\t\t\t<a href="/admin/attributes/new">Add New Attribute</a>
+\t\t\t\t\t\t\t</Button>
+\t\t\t\t\t\t</div>
+\t\t\t\t\t</CardContent>
+\t\t\t\t</Card>
+
+\t\t\t\t{/* Promotions Card */}
+\t\t\t\t<Card className="rounded-[14px]">
+\t\t\t\t\t<CardContent className="p-6">
+\t\t\t\t\t\t<div className="flex items-center space-x-4">
+\t\t\t\t\t\t\t<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+\t\t\t\t\t\t\t\t<Icon name="ticket" className="h-6 w-6 text-primary" />
+\t\t\t\t\t\t\t</div>
+\t\t\t\t\t\t\t<div className="flex-1">
+\t\t\t\t\t\t\t\t<h2 className="text-base font-normal text-foreground">Promotions</h2>
+\t\t\t\t\t\t\t\t<p className="text-sm text-muted-foreground">
+\t\t\t\t\t\t\t\t\tManage coupons and discounts
+\t\t\t\t\t\t\t\t</p>
+\t\t\t\t\t\t\t</div>
+\t\t\t\t\t\t</div>
+\t\t\t\t\t\t<div className="mt-4 space-y-2">
+\t\t\t\t\t\t\t<Button asChild className="w-full h-9 rounded-lg font-medium">
+\t\t\t\t\t\t\t\t<a href="/admin/promotions">View Promotions</a>
+\t\t\t\t\t\t\t</Button>
+\t\t\t\t\t\t\t<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
+\t\t\t\t\t\t\t\t<a href="/admin/promotions/coupons">Manage Coupons</a>
+\t\t\t\t\t\t\t</Button>
+\t\t\t\t\t\t</div>
+\t\t\t\t\t</CardContent>
+\t\t\t\t</Card>
 			</div>
 
 			{/* Quick Actions */}
