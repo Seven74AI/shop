@@ -86,5 +86,12 @@ export function verifyGuestToken(token: string): GuestTokenPayload | null {
 	const now = Math.floor(Date.now() / 1000)
 	if (payload.exp < now - 60) return null
 
-	return payload
+	// TypeScript: payload is still `object` after typeof check.
+	// Construct an explicitly typed result from the validated fields.
+	const result: GuestTokenPayload = {
+		orderId: payload.orderId,
+		email: payload.email,
+		exp: payload.exp,
+	}
+	return result
 }
