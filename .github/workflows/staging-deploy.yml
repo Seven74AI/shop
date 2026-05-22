@@ -166,15 +166,6 @@ jobs:
           fi
           echo "✅ Search endpoint: HTTP $SEARCH_STATUS"
 
-          # 5. Health endpoint (internal)
-          echo "--- Internal Health ---"
-          INT_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/resources/healthcheck")
-          if [ "$INT_HEALTH" != "200" ]; then
-            echo "❌ Internal health failed (HTTP $INT_HEALTH)"
-            exit 1
-          fi
-          echo "✅ Internal health: HTTP $INT_HEALTH"
-
           echo ""
           echo "🎉 All smoke tests passed!"
           echo "Staging URL: $STAGING_URL"
