@@ -14,6 +14,7 @@ const TEST_EMAILS = [
 	'newsletter-e2e-3@example.com',
 	'newsletter-e2e-4@example.com',
 	'newsletter-e2e-5@example.com',
+	'newsletter-e2e-6@example.com',
 ]
 
 async function cleanup() {
@@ -384,14 +385,14 @@ test.describe('Newsletter Subscription', () => {
 		test('already confirmed returns a friendly message', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-5@example.com'
+			const email = 'newsletter-e2e-6@example.com'
 
 			// Subscribe
 			await page.request.post('/resources/newsletter-subscribe', {
 				data: { email },
 			})
 
-			// Extract token
+			// Extract token from confirmation email
 			const emailFixture = await readEmail(email)
 			expect(emailFixture).not.toBeNull()
 			const urlMatch = emailFixture!.text.match(
@@ -405,29 +406,7 @@ test.describe('Newsletter Subscription', () => {
 				`/resources/newsletter-confirm?token=${encodeURIComponent(token)}`,
 			)
 
-			// Create a new subscription to get a new token, then set status back to CONFIRMED
-			// Actually, let's just test the "already confirmed" path by creating
-			// a CONFIRMED subscription with a valid token and confirming it
-			// The `confirmSubscription` function checks status === 'CONFIRMED' first
-			await prisma.newsletterSubscription.update({
-				where: { email },
-				data: {
-					status: 'CONFIRMED',
-					token: emailFixture!.text.match(/token=([^\s&]+)/)?.[1] ?? 'any',
-					tokenExpiresAt: new Date(Date.now() + 86400000),
-					confirmedAt: new Date(),
-				},
-			})
-
-			// Now try to confirm - it should say "already confirmed"
-			// But the token must be valid HMAC-signed for the lookup to succeed...
-			// Actually the check for "already confirmed" happens AFTER token verification
-			// and AFTER finding the subscription by token hash. So if we restore the
-			// original token and status=CONFIRMED, the lookup will fail because
-			// the original token was cleared during the first confirmation.
-			//
-			// Let's test this differently: just do the full flow and verify the DB
-			// reflects CONFIRMED status correctly.
+			// Verify DB reflects CONFIRMED status
 			const sub = await prisma.newsletterSubscription.findUnique({
 				where: { email },
 			})

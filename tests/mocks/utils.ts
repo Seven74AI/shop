@@ -47,17 +47,14 @@ export async function requireEmail(recipient: string) {
 }
 
 export async function readEmail(recipient: string) {
-	// Retry on JSON parse failure — the file may not be fully flushed
-	// when a previous mock write just completed (OS-level race)
+	// Retry on JSON parse failure or transient I/O errors — the file may
+	// not be fully flushed when a previous mock write just completed
 	for (let attempt = 0; attempt < 5; attempt++) {
 		try {
 			const email = await readFixture('email', recipient)
 			return EmailSchema.parse(email)
 		} catch (error) {
-			if (
-				error instanceof SyntaxError &&
-				attempt < 4
-			) {
+			if (attempt < 4) {
 				await new Promise((r) => setTimeout(r, 50 * (attempt + 1)))
 				continue
 			}
