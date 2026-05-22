@@ -11,6 +11,7 @@ import type {
   CircuitBreaker,
   CircuitBreakerStats,
 } from './circuit-breaker.server.ts'
+import { log } from '#app/utils/logging.server.ts'
 
 /**
  * Registry that tracks all circuit breaker instances.
@@ -25,7 +26,7 @@ class CircuitBreakerRegistry {
   register(breaker: CircuitBreaker<unknown[], unknown>): void {
     if (this.breakers.has(breaker.name)) {
       // Replace existing breaker with same name (hot-reload compatible)
-      console.debug(
+      log.debug(
         `Circuit breaker "${breaker.name}" re-registered (replaced previous instance).`,
       )
     }

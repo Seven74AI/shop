@@ -1,4 +1,5 @@
 import { invariantResponse } from '@epic-web/invariant'
+import { log } from '#app/utils/logging.server.ts'
 import { getMondialRelayLabel, createMondialRelayShipmentAndLabel } from '#app/utils/label.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order-queries.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
@@ -72,7 +73,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 			},
 		})
 	} catch (error) {
-		console.error('Error retrieving label:', error)
+		log.error({ err: error }, 'Error retrieving label')
 		return new Response(
 			JSON.stringify({
 				error: 'Failed to retrieve label',

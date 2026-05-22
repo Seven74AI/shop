@@ -176,8 +176,7 @@ describe('mondial-relay-api1.server', () => {
 				}),
 			).rejects.toThrow(/Failed to search pickup points|Mondial Relay API1 error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('throws error when fetch fails', async () => {
@@ -190,8 +189,7 @@ describe('mondial-relay-api1.server', () => {
 				}),
 			).rejects.toThrow(/Failed to search pickup points|Network error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('parses XML response and returns pickup points', async () => {
@@ -410,8 +408,7 @@ describe('mondial-relay-api1.server', () => {
 
 			await expect(getTrackingInfo('123456789')).rejects.toThrow(/Failed to get tracking info|Mondial Relay API1 error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('throws error when fetch fails', async () => {
@@ -419,8 +416,7 @@ describe('mondial-relay-api1.server', () => {
 
 			await expect(getTrackingInfo('123456789')).rejects.toThrow(/Failed to get tracking info|Network error/)
 
-			// Verify console.error was called
-			expect(consoleError).toHaveBeenCalled()
+			// Error is now logged via Pino logger (silent in tests)
 		})
 
 		test('parses XML response and returns tracking info', async () => {

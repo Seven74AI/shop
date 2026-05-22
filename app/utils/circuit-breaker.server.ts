@@ -13,6 +13,7 @@
  * Used by Mondial Relay API clients to handle transient failures gracefully.
  */
 
+import { log } from '#app/utils/logging.server.ts'
 import { breakerRegistry } from './circuit-breaker-registry.server.ts'
 
 export enum CircuitState {
@@ -56,7 +57,8 @@ function createDefaultStateChangeLogger(
   name: string,
 ): (from: CircuitState, to: CircuitState) => void {
   return (from: CircuitState, to: CircuitState) => {
-    console.warn(
+    log.warn(
+      { circuitName: name, from, to },
       `Circuit breaker "${name}" state change: ${from} → ${to}`,
     )
   }

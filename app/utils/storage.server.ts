@@ -2,6 +2,7 @@ import { createHash, createHmac } from 'crypto'
 import { type FileUpload } from '@mjackson/form-data-parser'
 import { createId } from '@paralleldrive/cuid2'
 import * as Sentry from '@sentry/react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { verifyUpload } from './upload-verify.server.ts'
 
 const STORAGE_ENDPOINT = process.env.AWS_ENDPOINT_URL_S3
@@ -13,7 +14,7 @@ const STORAGE_REGION = process.env.AWS_REGION
 async function _uploadToStorage(file: File | FileUpload, key: string) {
 	// In mocks mode, skip actual upload
 	if (process.env.MOCKS === 'true') {
-		console.info('🔶 Mocking storage upload:', key)
+		log.info({ key }, '🔶 Mocking storage upload')
 		return key
 	}
 
