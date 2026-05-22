@@ -1,9 +1,10 @@
-import { Outlet, redirectDocument, useLoaderData } from 'react-router'
+import { Outlet, useLoaderData } from 'react-router'
 import { CheckoutSteps, type CheckoutStep } from '#app/components/checkout/checkout-steps.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getCartSessionIdFromRequest } from '#app/utils/cart-session.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
+import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { type Route } from './+types/_layout.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -32,7 +33,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 	
 	if (!cart || cart.items.length === 0) {
-		return redirectDocument('/shop/cart')
+		return redirectWithToast('/shop/cart', {
+			description: 'Your cart is empty',
+			type: 'message',
+		})
 	}
 
 	// Determine current step from pathname
