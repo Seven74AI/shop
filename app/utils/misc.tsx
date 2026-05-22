@@ -319,3 +319,5 @@ export async function downloadFile(url: string, retries: number = 0) {
 		return downloadFile(url, retries + 1)
 	}
 }
+
+// useOptionalTranslation is exported from ./i18n.tsx — import directly from there.
