@@ -6,6 +6,8 @@ import {
 	parseInvoiceNumber,
 	withInvoiceLock,
 } from './invoice-numbering.server.ts'
+import { generateInvoicePdf, type InvoicePdfData } from './invoice-pdf.server.tsx'
+import { getStoreCurrency } from './settings.server.ts'
 
 // Re-export the numbering functions for backward compatibility
 export {
@@ -143,4 +145,124 @@ export async function issueCreditNote(
 		fiscalYear,
 		sequence: parsed.sequence,
 	}
+}
+
+// ---------------------------------------------------------------------------
+// PDF generation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches invoice data and builds the InvoicePdfData structure for PDF rendering.
+ * Does NOT perform authorization — callers must verify access rights.
+ */
+export async function getInvoicePdfData(
+	invoiceId: string,
+): Promise<InvoicePdfData> {
+	const invoice = await prisma.invoice.findUnique({
+		where: { id: invoiceId },
+		include: {
+			order: {
+				select: {
+					orderNumber: true,
+					email: true,
+					subtotal: true,
+					total: true,
+					shippingCost: true,
+					shippingName: true,
+					shippingStreet: true,
+					shippingCity: true,
+					shippingPostal: true,
+					shippingCountry: true,
+					createdAt: true,
+					taxCountry: true,
+					customerVatNumber: true,
+					user: { select: { id: true, email: true, name: true } },
+					items: {
+						include: {
+							product: { select: { name: true } },
+							variant: { select: { sku: true } },
+						},
+					},
+				},
+			},
+		},
+	})
+
+	if (!invoice) {
+		throw new Error(`Invoice ${invoiceId} not found`)
+	}
+
+	const currency = await getStoreCurrency()
+
+	const itemRows: InvoicePdfData['items'] = invoice.order.items.map((item) => {
+		const productName = item.product?.name ?? 'Product'
+		const variantSku = item.variant?.sku
+		const description = variantSku
+			? `${productName} (${variantSku})`
+			: productName
+		return {
+			description,
+			quantity: item.quantity,
+			unitPriceCents: item.price,
+			totalCents: item.price * item.quantity,
+		}
+	})
+
+	const vatBreakdown = (
+		Array.isArray(invoice.vatBreakdown) ? invoice.vatBreakdown : []
+	) as Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
+
+	const customerName =
+		invoice.order.user?.name || invoice.order.shippingName || 'Guest'
+	const customerEmail =
+		invoice.order.user?.email || invoice.order.email || ''
+
+	const invoiceDate = (invoice.issuedAt ?? invoice.createdAt).toISOString().split('T')[0]!
+	const orderDate = invoice.order.createdAt.toISOString().split('T')[0]!
+
+	return {
+		invoiceNumber: formatInvoiceNumber(invoice.fiscalYear, invoice.sequence),
+		invoiceDate,
+		invoiceStatus: invoice.status,
+		orderNumber: invoice.order.orderNumber,
+		orderDate,
+		kind: invoice.kind,
+		customer: {
+			name: customerName,
+			email: customerEmail,
+			company: null,
+			vatNumber: invoice.order.customerVatNumber ?? null,
+		},
+		shipping: {
+			name: invoice.order.shippingName,
+			street: invoice.order.shippingStreet,
+			city: invoice.order.shippingCity,
+			postal: invoice.order.shippingPostal,
+			country: invoice.order.shippingCountry,
+		},
+		items: itemRows,
+		subtotalCents: invoice.subtotalCents,
+		vatBreakdown,
+		vatTotalCents: invoice.vatTotalCents,
+		shippingCostCents: invoice.order.shippingCost,
+		totalCents: invoice.totalCents,
+		currency: currency ?? null,
+		storeName: 'Epic Shop',
+		storeAddress: '123 Epic Street, 75001 Paris, France',
+		storeVatNumber: 'FR12345678901',
+		storeEmail: 'contact@epicshop.example.com',
+	}
+}
+
+/**
+ * Generates a PDF invoice buffer for the given invoice ID.
+ * Fetches invoice data from the database and renders it as a PDF.
+ * Does NOT perform authorization — callers must verify access rights.
+ *
+ * @param invoiceId - The ID of the invoice to render.
+ * @returns A Buffer containing the rendered PDF.
+ */
+export async function getInvoicePdf(invoiceId: string): Promise<Buffer> {
+	const data = await getInvoicePdfData(invoiceId)
+	return generateInvoicePdf(data)
 }
