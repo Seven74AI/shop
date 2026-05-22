@@ -33,6 +33,15 @@ export interface CircuitBreakerConfig {
   onStateChange?: (from: CircuitState, to: CircuitState) => void
 }
 
+export interface CircuitBreakerEvent {
+  /** CLOSED, OPEN, HALF_OPEN, or RESET */
+  type: 'OPEN' | 'CLOSED' | 'HALF_OPEN' | 'RESET'
+  /** Unix timestamp in milliseconds */
+  timestamp: number
+  /** Name of the circuit breaker that emitted the event */
+  breakerName: string
+}
+
 export interface CircuitBreakerStats {
   state: CircuitState
   failureCount: number
@@ -43,11 +52,14 @@ export interface CircuitBreakerStats {
   totalFailures: number
   totalSuccesses: number
   totalRejections: number
+  /** Last N state transition events (most recent first). Max 50. */
+  lastEvents: CircuitBreakerEvent[]
 }
 
 const DEFAULT_FAILURE_THRESHOLD = 5
 const DEFAULT_RESET_TIMEOUT_MS = 30_000 // 30 seconds
 const DEFAULT_HALF_OPEN_MAX_REQUESTS = 1
+const MAX_EVENTS = 50
 
 /**
  * Creates a default state change logger that captures the breaker name.
@@ -82,6 +94,23 @@ export class CircuitBreaker<_Args extends unknown[], Result> {
   private totalSuccesses = 0
   private totalRejections = 0
   private halfOpenInFlight = 0
+  /** Ring buffer of last N state transition events (most recent first) */
+  private events: CircuitBreakerEvent[] = []
+
+  /**
+   * Push a state transition event onto the ring buffer.
+   * Most recent events first. Caps at MAX_EVENTS.
+   */
+  private pushEvent(type: CircuitBreakerEvent['type']): void {
+    this.events.unshift({
+      type,
+      timestamp: Date.now(),
+      breakerName: this.name,
+    })
+    if (this.events.length > MAX_EVENTS) {
+      this.events.length = MAX_EVENTS
+    }
+  }
 
   public readonly name: string
   private readonly failureThreshold: number
@@ -160,6 +189,7 @@ export class CircuitBreaker<_Args extends unknown[], Result> {
       this.failureCount = 0
       this.halfOpenInFlight = 0
       this.transitionTo(CircuitState.CLOSED)
+      this.pushEvent('RESET')
     }
   }
 
@@ -177,6 +207,7 @@ export class CircuitBreaker<_Args extends unknown[], Result> {
       totalFailures: this.totalFailures,
       totalSuccesses: this.totalSuccesses,
       totalRejections: this.totalRejections,
+      lastEvents: [...this.events],
     }
   }
 
@@ -185,6 +216,13 @@ export class CircuitBreaker<_Args extends unknown[], Result> {
    */
   getState(): CircuitState {
     return this.state
+  }
+
+  /**
+   * Get the last N events for this circuit breaker (most recent first).
+   */
+  getEvents(): CircuitBreakerEvent[] {
+    return [...this.events]
   }
 
   private onSuccess(): void {
@@ -228,6 +266,9 @@ export class CircuitBreaker<_Args extends unknown[], Result> {
     if (oldState === newState) return
 
     this.state = newState
+
+    // Push state transition event for monitoring
+    this.pushEvent(newState)
 
     if (newState === CircuitState.OPEN) {
       this.openedAt = Date.now()
