@@ -707,6 +707,23 @@ enum InvoiceKind {
   CREDIT_NOTE
 }
 
+// IdempotencyRecord — P2 Reliability phase
+// Tracks idempotency keys for Stripe operations to prevent duplicate
+// payment processing. Keys are unique and expire after 24h.
+// See: https://docs.stripe.com/api/idempotent_requests
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @unique
+  operationType  String // e.g., "payment_intent", "refund", "checkout_session", "webhook"
+  status         String   @default("processing") // "processing" | "completed" | "failed"
+  response       Json? // Cached Stripe response (null while processing)
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime // TTL for cleanup (createdAt + 24h window)
+
+  @@index([expiresAt])
+  @@index([status])
+}
+
 model TaxRate {
   id            String    @id @default(cuid())
   country       String // ISO 2-letter country code
@@ -907,5 +924,26 @@ model AuditLog {
   @@index([action])
   @@index([entityType])
   @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// Webhook Idempotency System — P3 Security phase
+// Stores incoming webhook events for idempotent processing.
+// The eventId field (provider-side event ID) acts as the idempotency key —
+// duplicate events with the same eventId are skipped.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique // Provider-side event ID (idempotency key)
+  eventType   String    // e.g., "checkout.session.completed"
+  provider    String    // e.g., "stripe"
+  payload     Json      // Full webhook payload from provider
+  processedAt DateTime? // When the event was successfully processed
+  status      String    @default("RECEIVED") // RECEIVED | PROCESSING | PROCESSED | FAILED
+  attempts    Int       @default(0) // Number of processing attempts
+  lastError   String?   // Last error message if processing failed
+  createdAt   DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([status])
   @@index([createdAt])
 }
