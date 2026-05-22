@@ -18,7 +18,6 @@ import {
 import {
 	createCreditNote,
 	generateCreditNotePdf,
-	formatCreditNoteNumber,
 	type CreateCreditNoteItem,
 } from './credit-note.server.ts'
 import { getReturnRequestById } from './return-queries.server.ts'

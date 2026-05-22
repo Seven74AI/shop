@@ -27,9 +27,7 @@ export async function generateCreditNoteNumber(
 	fiscalYear: number,
 	tx?: Prisma.TransactionClient,
 ): Promise<string> {
-	// eslint-disable-next-line @typescript-eslint/no-shadow
-	const { generateInvoiceNumber: genInvoiceNum } = await import('./invoice.server.ts')
-	const invoiceNumber = await genInvoiceNum(fiscalYear, tx)
+	const invoiceNumber = await generateInvoiceNumber(fiscalYear, tx)
 	const parsed = parseInvoiceNumber(invoiceNumber)
 	if (!parsed) {
 		throw new Error(
