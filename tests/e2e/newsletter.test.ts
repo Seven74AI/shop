@@ -8,6 +8,10 @@ const TEST_EMAILS = [
 	'newsletter-e2e-3@example.com',
 	'newsletter-e2e-4@example.com',
 	'newsletter-e2e-5@example.com',
+	'newsletter-e2e-6@example.com',
+	'newsletter-e2e-7@example.com',
+	'newsletter-e2e-8@example.com',
+	'newsletter-e2e-9@example.com',
 ]
 
 async function cleanup() {
@@ -336,8 +340,8 @@ test.describe('Newsletter Subscription', () => {
 			expect(body2.title).toBe('Not Found')
 		})
 
-		test('rejects expired tokens', async ({ page }) => {
-			const email = 'newsletter-e2e-5@example.com'
+	test('rejects expired tokens', async ({ page }) => {
+		const email = 'newsletter-e2e-6@example.com'
 
 			// Subscribe
 			const subRes = await page.request.post(
@@ -372,19 +376,25 @@ test.describe('Newsletter Subscription', () => {
 			expect(body.title).toBe('Link Expired')
 		})
 
-		test('already confirmed returns a friendly message', async ({
-			page,
-		}) => {
-			const email = 'newsletter-e2e-5@example.com'
+	test('already confirmed returns a friendly message', async ({
+		page,
+	}) => {
+		const email = 'newsletter-e2e-7@example.com'
 
-			// Subscribe
-			await page.request.post('/resources/newsletter-subscribe', {
-				data: { email },
-			})
+		// Subscribe
+		const subRes = await page.request.post('/resources/newsletter-subscribe', {
+			data: { email },
+		})
+		expect(subRes.status()).toBe(200)
 
-			// Extract token
-			const emailFixture = await readEmail(email)
-			expect(emailFixture).not.toBeNull()
+		// Wait for the confirmation email to be written by the MSW mock
+		// (file I/O can race on busy systems)
+		let emailFixture = await readEmail(email)
+		for (let i = 0; i < 5 && emailFixture === null; i++) {
+			await page.waitForTimeout(100)
+			emailFixture = await readEmail(email)
+		}
+		expect(emailFixture).not.toBeNull()
 			const urlMatch = emailFixture!.text.match(
 				/https?:\/\/[^\s]+\/resources\/newsletter-confirm\?token=([^\s&]+)/,
 			)
@@ -431,7 +441,7 @@ test.describe('Newsletter Subscription', () => {
 		test('completes the full subscribe → confirm lifecycle', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-1@example.com'
+			const email = 'newsletter-e2e-8@example.com'
 
 			// Step 1: Subscribe
 			const subRes = await page.request.post(
@@ -475,8 +485,8 @@ test.describe('Newsletter Subscription', () => {
 			expect(sub!.token).toBeNull()
 		})
 
-		test('handles duplicate subscription gracefully', async ({ page }) => {
-			const email = 'newsletter-e2e-1@example.com'
+	test('handles duplicate subscription gracefully', async ({ page }) => {
+		const email = 'newsletter-e2e-9@example.com'
 
 			// First subscribe
 			const res1 = await page.request.post(
