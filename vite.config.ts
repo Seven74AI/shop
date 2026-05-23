@@ -91,6 +91,9 @@ export default defineConfig((config) => ({
 		setupFiles: ['./tests/setup/setup-test-env.ts'],
 		globalSetup: ['./tests/setup/global-setup.ts'],
 		restoreMocks: true,
+		env: {
+			CACHE_DATABASE_PATH: '/tmp/shop-test/cache.db',
+		},
 		server: {
 			deps: {
 				external: [/node:.*/],

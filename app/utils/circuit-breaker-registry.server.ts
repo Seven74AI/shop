@@ -10,6 +10,7 @@
 import type {
   CircuitBreaker,
   CircuitBreakerStats,
+  CircuitBreakerEvent,
 } from './circuit-breaker.server.ts'
 import { log } from '#app/utils/logging.server.ts'
 
@@ -125,6 +126,9 @@ export function getCircuitBreakerHealthSummary(): {
     totalSuccesses: number
     totalRejections: number
     openedAt: number | null
+    lastFailureTime: number | null
+    lastSuccessTime: number | null
+    lastEvents: CircuitBreakerEvent[]
   }>
 } {
   const stats = breakerRegistry.getAllStats()
@@ -136,6 +140,9 @@ export function getCircuitBreakerHealthSummary(): {
     totalSuccesses: number
     totalRejections: number
     openedAt: number | null
+    lastFailureTime: number | null
+    lastSuccessTime: number | null
+    lastEvents: CircuitBreakerEvent[]
   }> = []
 
   let open = 0
@@ -151,6 +158,9 @@ export function getCircuitBreakerHealthSummary(): {
       totalSuccesses: s.totalSuccesses,
       totalRejections: s.totalRejections,
       openedAt: s.openedAt,
+      lastFailureTime: s.lastFailureTime,
+      lastSuccessTime: s.lastSuccessTime,
+      lastEvents: s.lastEvents,
     })
 
     if (s.state === 'OPEN') open++

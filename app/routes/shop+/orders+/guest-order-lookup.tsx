@@ -9,6 +9,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { getGuestOrder } from '#app/utils/order.server.ts'
+import { verifyGuestToken } from '#app/utils/guest-token.server.ts'
 import { type Route } from './+types/index.ts'
 
 const GuestOrderLookupSchema = z.object({
@@ -22,7 +23,23 @@ const GuestOrderLookupSchema = z.object({
 	}).min(1, { error: 'Email is required' }).email({ error: 'Invalid email address' }).trim().toLowerCase(),
 })
 
-export async function loader(_args: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
+	const url = new URL(request.url)
+	const token = url.searchParams.get('token')
+
+	// Handle signed token from email link (instant access, no form needed)
+	if (token) {
+		const payload = verifyGuestToken(token)
+		if (payload) {
+			// Pass the token through to the order detail page for auth
+			return redirect(
+				`/shop/orders/${payload.orderId}?token=${encodeURIComponent(token)}`,
+			)
+		}
+		// Invalid token — fall through to show the form with an error
+		return { tokenError: true }
+	}
+
 	return {}
 }
 

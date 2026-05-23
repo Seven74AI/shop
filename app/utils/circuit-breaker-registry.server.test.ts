@@ -124,6 +124,35 @@ describe('CircuitBreakerRegistry', () => {
       expect(entry.totalSuccesses).toBe(0)
       expect(entry.totalRejections).toBe(0)
       expect(entry.openedAt).toBeNull()
+      expect(entry.lastEvents).toBeDefined()
+      expect(Array.isArray(entry.lastEvents)).toBe(true)
+    })
+
+    test('lastEvents includes state transitions', () => {
+      const breaker = new CircuitBreaker('event-test', {
+        failureThreshold: 1,
+        onStateChange: undefined,
+      })
+
+      // Trip the breaker: CLOSED → OPEN
+      breaker.trip()
+      // Reset: OPEN → CLOSED (with a RESET event)
+      breaker.reset()
+
+      const summary = getCircuitBreakerHealthSummary()
+      const entry = summary.breakers.find((b) => b.name === 'event-test')
+      expect(entry).toBeDefined()
+
+      // Events: RESET, CLOSED, OPEN (most recent first)
+      expect(entry!.lastEvents.length).toBeGreaterThanOrEqual(2)
+
+      const eventTypes = entry!.lastEvents.map((e) => e.type)
+      expect(eventTypes).toContain('OPEN')
+      expect(eventTypes).toContain('CLOSED')
+      expect(eventTypes).toContain('RESET')
+
+      // Most recent should be RESET (pushed after transitionTo in reset())
+      expect(entry!.lastEvents[0]!.type).toBe('RESET')
     })
   })
 

@@ -69,6 +69,11 @@ const navData = {
 			],
 		},
 		{
+			title: 'Metrics',
+			url: '/admin/metrics',
+			icon: 'chart' as IconName,
+		},
+		{
 			title: 'Feature Flags',
 			url: '/admin/feature-flags',
 			icon: 'settings' as IconName,
@@ -83,11 +88,16 @@ const navData = {
 		{
 			title: 'System',
 			items: [
-				{
-					title: 'View Store',
-					url: '/',
-					icon: 'store' as IconName,
-				},
+		{
+			title: 'Audit Log',
+			url: '/admin/audit',
+			icon: 'book-open' as IconName,
+		},
+		{
+			title: 'View Store',
+			url: '/',
+			icon: 'store' as IconName,
+		},
 			],
 		},
 	],
