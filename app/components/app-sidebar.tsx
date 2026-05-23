@@ -74,6 +74,16 @@ const navData = {
 			icon: 'chart' as IconName,
 		},
 		{
+			title: 'Reviews',
+			url: '/admin/reviews',
+			icon: 'star' as IconName,
+		},
+		{
+			title: 'Returns',
+			url: '/admin/returns',
+			icon: 'arrow-left' as IconName,
+		},
+		{
 			title: 'Feature Flags',
 			url: '/admin/feature-flags',
 			icon: 'settings' as IconName,
