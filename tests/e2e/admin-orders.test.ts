@@ -241,10 +241,13 @@ test.describe('Admin Order Management', () => {
 		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
 
-		// Search by order number
+		// Search by order number — server-side via Form GET submission
 		const searchInput = page.getByPlaceholder(/search orders/i)
 		await searchInput.fill(orderNumber1)
-		await searchInput.blur() // Trigger change event
+		// Press Enter to submit the search Form (server-side filtering)
+		await searchInput.press('Enter')
+		// Wait for navigation to complete
+		await page.waitForLoadState('networkidle')
 
 		// Wait for search to complete - assert expected results
 		// Should show only matching order
@@ -281,12 +284,16 @@ test.describe('Admin Order Management', () => {
 
 		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
 
-		// Search by email
+		// Search by email — server-side via Form GET submission
 		const searchInput = page
 			.getByRole('textbox', { name: /search/i })
 			.or(page.getByPlaceholder(/search/i))
 			.first()
 		await searchInput.fill('unique-email')
+		// Press Enter to submit the search Form
+		await searchInput.press('Enter')
+		// Wait for navigation to complete
+		await page.waitForLoadState('networkidle')
 
 		// Should show matching order (header + one row)
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
@@ -320,6 +327,9 @@ test.describe('Admin Order Management', () => {
 			.or(page.getByPlaceholder(/search/i))
 			.first()
 		await searchInput.fill(`empty-state-${currentPrefix}`)
+		// Press Enter to submit the search Form (server-side filtering)
+		await searchInput.press('Enter')
+		await page.waitForLoadState('networkidle')
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
 
 		// Wait for server to finish processing the search before direct DB writes
@@ -335,6 +345,9 @@ test.describe('Admin Order Management', () => {
 			.or(page.getByPlaceholder(/search/i))
 			.first()
 		await searchInputAfterReload.fill(`empty-state-${currentPrefix}`)
+		// Press Enter to submit the search Form
+		await searchInputAfterReload.press('Enter')
+		await page.waitForLoadState('networkidle')
 		await expect(page.getByText(/no orders match your search criteria/i)).toBeVisible({ timeout: 10000 })
 	})
 
