@@ -255,8 +255,13 @@ test.describe('Newsletter Subscription', () => {
 			)
 			expect(subRes.status()).toBe(200)
 
-			// Read the confirmation email to get the token
-			const emailFixture = await readEmail(email)
+			// Read the confirmation email — retry if the fixture hasn't been written yet
+			let emailFixture = null
+			for (let attempt = 0; attempt < 5; attempt++) {
+				emailFixture = await readEmail(email)
+				if (emailFixture) break
+				await new Promise((r) => setTimeout(r, 100 * (attempt + 1)))
+			}
 			expect(emailFixture).not.toBeNull()
 			// Extract the confirmation URL from the email
 			const urlMatch = emailFixture!.text.match(

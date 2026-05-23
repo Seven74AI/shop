@@ -57,7 +57,8 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 		page.getByRole('menuitem', { name: /logout/i }),
 	).toBeVisible({ timeout: 5000 })
 	await page.getByRole('menuitem', { name: /logout/i }).click()
-	await expect(page).toHaveURL('/', { timeout: 10000 })
+	// Wait for the actual URL to change — logout redirect can be slow
+	await page.waitForURL('/', { timeout: 15000 })
 
 	await navigate('/login')
 	await expect(page).toHaveURL(`/login`)

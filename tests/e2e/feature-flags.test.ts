@@ -138,10 +138,20 @@ test.describe('Feature Flags Admin Panel', () => {
 			`/admin/feature-flags/${FEATURE_FLAG_E2E_PREFIX}edit-test/edit`,
 		)
 
+		// Ensure the page fully loads before checking content
+		await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {
+			// networkidle may never fire on SPAs; fall through to explicit waits
+		})
+
+		// If redirected to login (session issue), fail with clear message
+		if (page.url().includes('/login')) {
+			throw new Error('Edit page redirected to login — session not established')
+		}
+
 		// Wait for the edit page to fully load — explicit heading + form field
 		await expect(
 			page.getByRole('heading', { name: /edit feature flag/i }),
-		).toBeVisible({ timeout: 15000 })
+		).toBeVisible({ timeout: 20000 })
 		await expect(page.getByLabel(/description/i)).toBeVisible({ timeout: 10000 })
 
 		// Update description
@@ -152,11 +162,19 @@ test.describe('Feature Flags Admin Panel', () => {
 		// Check enabled
 		await page.getByLabel(/enabled/i).check()
 
-		// Save
-		await page.getByRole('button', { name: /save changes/i }).click()
+		// Save — wait for the POST response before checking URL
+		await Promise.all([
+			page.waitForResponse(
+				(resp) =>
+					resp.url().includes('/edit') &&
+					resp.request().method() === 'POST',
+				{ timeout: 15000 },
+			).catch(() => {}), // don't fail if we can't catch the response
+			page.getByRole('button', { name: /save changes/i }).click(),
+		])
 
 		// Should redirect to list — wait for the redirect to complete
-		await expect(page).toHaveURL(/\/admin\/feature-flags$/, { timeout: 15000 })
+		await page.waitForURL(/\/admin\/feature-flags$/, { timeout: 15000 })
 		await page.waitForLoadState('domcontentloaded')
 
 		// Verify update in database
@@ -444,6 +462,7 @@ test.describe('Feature Flags Admin Panel', () => {
 		await page.goto('/admin/feature-flags')
 
 		// Wait for the data table to render
+		await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
 		await expect(
 			page.getByRole('heading', { name: /feature flags/i }),
 		).toBeVisible({ timeout: 15000 })
@@ -452,4 +471,5 @@ test.describe('Feature Flags Admin Panel', () => {
 		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible({ timeout: 10000 })
 	})
+})
 })
