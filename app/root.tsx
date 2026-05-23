@@ -316,8 +316,15 @@ function App() {
 				<Outlet />
 			</main>
 
-			<footer className="container flex justify-between pb-5">
+			<footer className="container flex flex-col gap-4 pb-5 sm:flex-row sm:justify-between sm:items-center">
 				<Logo />
+				<nav aria-label="Legal links" className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+					<Link to="/cgv">{t('footer.cgv')}</Link>
+					<Link to="/mentions-legales">{t('marketing.mentionsLegales.title')}</Link>
+					<Link to="/privacy">{t('footer.privacy')}</Link>
+					<Link to="/tos">{t('footer.tos')}</Link>
+					<Link to="/support">{t('footer.support')}</Link>
+				</nav>
 				<div className="flex items-center gap-6">
 					<LocaleSwitch />
 					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />

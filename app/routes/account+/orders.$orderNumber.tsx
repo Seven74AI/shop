@@ -117,38 +117,66 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 				</Card>
 
 				{/* Order Summary */}
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<h2>Order Summary</h2>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="flex justify-between">
-								<span className="text-gray-500">Subtotal</span>
-								<span>{formatPrice(order.subtotal, null, locale)}</span>
-							</div>
-							{order.shippingCost > 0 && (
+					<div className="space-y-6">
+						<Card>
+							<CardHeader>
+								<h2>Order Summary</h2>
+							</CardHeader>
+							<CardContent className="space-y-4">
 								<div className="flex justify-between">
-									<span className="text-gray-500">Shipping</span>
-									<span>{formatPrice(order.shippingCost, null, locale)}</span>
+									<span className="text-gray-500">Subtotal</span>
+									<span>{formatPrice(order.subtotal, null, locale)}</span>
 								</div>
-							)}
-							{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
-								<>
-									{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
-										<div key={i} className="flex justify-between text-sm text-gray-500">
-											<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
-											<span>{formatPrice(line.vatCents, null, locale)}</span>
-										</div>
-									))}
-								</>
-							)}
-							<div className="border-t pt-4 flex justify-between text-lg font-bold">
-								<span>Total</span>
-								<span>{formatPrice(order.total, null, locale)}</span>
-							</div>
-						</CardContent>
-					</Card>
+								{order.shippingCost > 0 && (
+									<div className="flex justify-between">
+										<span className="text-gray-500">Shipping</span>
+										<span>{formatPrice(order.shippingCost, null, locale)}</span>
+									</div>
+								)}
+								{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
+									<>
+										{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
+											<div key={i} className="flex justify-between text-sm text-gray-500">
+												<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
+												<span>{formatPrice(line.vatCents, null, locale)}</span>
+											</div>
+										))}
+									</>
+								)}
+								<div className="border-t pt-4 flex justify-between text-lg font-bold">
+									<span>Total</span>
+									<span>{formatPrice(order.total, null, locale)}</span>
+								</div>
+							</CardContent>
+						</Card>
+
+						{'invoices' in order && Array.isArray(order.invoices) && order.invoices.length > 0 && (
+							<Card>
+								<CardHeader>
+									<h2>Invoices</h2>
+								</CardHeader>
+								<CardContent>
+									<div className="flex flex-col gap-2">
+										{order.invoices.map((inv) => (
+											<div key={inv.id} className="flex items-center justify-between">
+												<span className="text-sm text-gray-500">
+													{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}{' '}
+													<span className="font-mono">
+														F{inv.fiscalYear}-{String(inv.sequence).padStart(5, '0')}
+													</span>
+												</span>
+												<Button asChild variant="outline" size="sm">
+													<a href={`/account/invoices/${inv.id}.pdf`}>
+														<Icon name="download" className="h-4 w-4 mr-2" />
+														Download
+													</a>
+												</Button>
+											</div>
+										))}
+									</div>
+								</CardContent>
+							</Card>
+						)}
 
 					<Card>
 						<CardHeader>

@@ -132,6 +132,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		invoiceStatus: invoice.status,
 		orderNumber: invoice.order.orderNumber,
 		orderDate: invoice.order.createdAt.toISOString().slice(0, 10),
+		kind: invoice.kind,
 		customer: {
 			name: customerName,
 			email: customerEmail,
@@ -161,13 +162,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const pdfStream = await generateInvoicePdfStream(pdfData)
 
 	const num = pdfData.invoiceNumber
+	const prefix = invoice.kind === 'CREDIT_NOTE' ? 'credit-note' : 'invoice'
 
 	// Return the PDF as a response with appropriate headers
 	return new Response(pdfStream as unknown as BodyInit, {
 		status: 200,
 		headers: {
 			'Content-Type': 'application/pdf',
-			'Content-Disposition': `inline; filename="invoice-${num}.pdf"`,
+			'Content-Disposition': `attachment; filename="${prefix}-${num}.pdf"`,
 			'Cache-Control': 'no-cache',
 		},
 	})

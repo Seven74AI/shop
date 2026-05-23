@@ -8,6 +8,7 @@ import { safeRedirect } from 'remix-utils/safe-redirect'
 import { clearCartSessionCookieHeader } from './cart-session.server.ts'
 import { providers } from './connections.server.ts'
 import { prisma } from './db.server.ts'
+import { checkLockout, recordFailedAttempt, resetAttempts } from './lockout.server.ts'
 import { combineHeaders, downloadFile } from './misc.tsx'
 import { type ProviderUser } from './providers/provider.ts'
 import { authSessionStorage } from './session.server.ts'
@@ -78,20 +79,54 @@ export async function requireAnonymous(request: Request) {
 export async function login({
 	username,
 	password,
+	request,
 }: {
 	username: User['username']
 	password: string
+	request?: Request
 }) {
-	const user = await verifyUserPassword({ username }, password)
-	if (!user) return null
+	// Look up the user first so we can check lockout by userId.
+	const user = await prisma.user.findUnique({
+		where: { username },
+		select: { id: true },
+	})
+
+	if (user) {
+		// Check lockout BEFORE password verification (prevents timing attacks).
+		const lockout = await checkLockout(user.id)
+		if (lockout.locked) {
+			return {
+				status: 'locked' as const,
+				retryAfterMs: lockout.retryAfterMs,
+				attempts: lockout.attempts,
+			}
+		}
+	}
+
+	// Verify the password.
+	const verifiedUser = await verifyUserPassword({ username }, password)
+
+	if (!verifiedUser) {
+		// Record the failed attempt (only if we found a matching user).
+		if (user && request) {
+			await recordFailedAttempt(user.id, request)
+		}
+		return { status: 'invalid-credentials' as const }
+	}
+
+	// Successful login — reset the lockout counter.
+	if (request) {
+		await resetAttempts(verifiedUser.id)
+	}
+
 	const session = await prisma.session.create({
 		select: { id: true, expirationDate: true, userId: true },
 		data: {
 			expirationDate: getSessionExpirationDate(),
-			userId: user.id,
+			userId: verifiedUser.id,
 		},
 	})
-	return session
+	return { status: 'success' as const, session }
 }
 
 export async function resetUserPassword({

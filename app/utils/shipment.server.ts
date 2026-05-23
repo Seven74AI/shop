@@ -7,6 +7,7 @@
 
 import { invariant } from '@epic-web/invariant'
 import * as Sentry from '@sentry/react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { searchPickupPoints } from './carriers/mondial-relay-api1.server.ts'
 import { createShipment, type ShipmentRequest } from './carriers/mondial-relay-api2.server.ts'
 import { prisma } from './db.server.ts'
@@ -115,19 +116,20 @@ export async function createMondialRelayShipment(
 				pickupPointCity = selectedPickupPoint.city
 				pickupPointPostalCode = selectedPickupPoint.postalCode
 				pickupPointCountry = selectedPickupPoint.country
-				console.log('[Shipment] Found pickup point details:', {
-					id: selectedPickupPoint.id,
+				log.info({
+					pickupPointId: selectedPickupPoint.id,
 					address: selectedPickupPoint.address,
 					city: selectedPickupPoint.city,
 					postalCode: selectedPickupPoint.postalCode,
-				})
+				}, '[Shipment] Found pickup point details')
 			} else {
-				console.warn(
-					`[Shipment] Pickup point ${order.mondialRelayPickupPointId} not found in search results. Using customer address as fallback.`,
+				log.warn(
+					{ pickupPointId: order.mondialRelayPickupPointId, orderNumber: order.orderNumber },
+					'[Shipment] Pickup point not found in search results. Using customer address as fallback.',
 				)
 			}
 		} catch (error) {
-			console.error('[Shipment] Error looking up pickup point details:', error)
+			log.error({ err: error, pickupPointId: order.mondialRelayPickupPointId }, '[Shipment] Error looking up pickup point details')
 			// Fallback to customer address if lookup fails
 		}
 	}
@@ -166,23 +168,23 @@ export async function createMondialRelayShipment(
 	}
 
 	try {
-		console.log('[Shipment] Creating Mondial Relay shipment for order:', order.orderNumber)
-		console.log('[Shipment] Request details:', {
+		log.info({
+			orderNumber: order.orderNumber,
 			pickupPointId: order.mondialRelayPickupPointId,
 			weight: totalWeight,
 			shipper: { name: storeAddress.name, city: storeAddress.city, postalCode: storeAddress.postalCode },
 			recipient: { name: order.shippingName, city: order.shippingCity, postalCode: order.shippingPostal },
-		})
+		}, '[Shipment] Creating Mondial Relay shipment')
 
 		// Create shipment via API2
 		const result = await createShipment(shipmentRequest)
 
-		console.log('[Shipment] API response:', {
+		log.info({
 			shipmentNumber: result.shipmentNumber,
 			labelUrl: result.labelUrl,
 			statusCode: result.statusCode,
 			statusMessage: result.statusMessage,
-		})
+		}, '[Shipment] API response')
 
 		// Update order with shipment information
 		await prisma.order.update({
@@ -193,14 +195,14 @@ export async function createMondialRelayShipment(
 			},
 		})
 
-		console.log('[Shipment] Order updated with shipment number:', result.shipmentNumber)
+		log.info({ shipmentNumber: result.shipmentNumber, orderNumber: order.orderNumber }, '[Shipment] Order updated with shipment number')
 
 		return {
 			shipmentNumber: result.shipmentNumber,
 			labelUrl: result.labelUrl,
 		}
 	} catch (error) {
-		console.error('[Shipment] Error creating Mondial Relay shipment:', error)
+		log.error({ err: error, orderId, orderNumber: order.orderNumber }, '[Shipment] Error creating Mondial Relay shipment')
 		// Log error to Sentry
 		Sentry.captureException(error, {
 			tags: { context: 'mondial-relay-shipment-creation' },

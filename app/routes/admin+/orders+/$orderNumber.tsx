@@ -26,8 +26,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '#app/components/ui/select.tsx'
-import { getOrderStatusLabel } from '#app/utils/order-status.ts'
+import { auditLog } from '#app/utils/audit.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
+import { getOrderStatusLabel } from '#app/utils/order-status.ts'
 import { getOrderByOrderNumber, updateOrderStatus, cancelOrder } from '#app/utils/order.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
@@ -69,7 +70,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export async function action({ params, request }: Route.ActionArgs) {
-	await requireUserWithRole(request, 'admin')
+	const userId = await requireUserWithRole(request, 'admin')
 
 	const formData = await request.formData()
 	const intent = formData.get('intent')
@@ -93,6 +94,11 @@ export async function action({ params, request }: Route.ActionArgs) {
 		invariantResponse(order, 'Order not found', { status: 404 })
 
 		await cancelOrder(order.id, request)
+
+		await auditLog(userId, 'UPDATE', 'Order', order.id, {
+			status: { before: order.status, after: 'CANCELLED' },
+			orderNumber: order.orderNumber,
+		}, request)
 
 		return redirectWithToast(`/admin/orders/${orderNumber}`, {
 			type: 'success',
@@ -121,6 +127,12 @@ export async function action({ params, request }: Route.ActionArgs) {
 	const { status, trackingNumber } = submission.value
 
 	await updateOrderStatus(order.id, status, request, trackingNumber || null)
+
+	await auditLog(userId, 'UPDATE', 'Order', order.id, {
+		status: { before: order.status, after: status },
+		...(trackingNumber ? { trackingNumber: { after: trackingNumber } } : {}),
+		orderNumber: order.orderNumber,
+	}, request)
 
 	const statusLabel = getOrderStatusLabel(status)
 	const description = trackingNumber
@@ -686,6 +698,41 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 													)}
 												</div>
 											)}
+
+										{/* Invoice Management */}
+										{'invoices' in order && Array.isArray(order.invoices) && order.invoices.length > 0 && (
+											<div className="mt-4 pt-4 border-t border-border">
+												<h3 className="text-sm font-medium mb-3">Invoices</h3>
+												<div className="flex flex-col gap-2">
+													{order.invoices.map((inv) => (
+														<div key={inv.id} className="flex items-center justify-between">
+															<span className="text-sm text-muted-foreground">
+																{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}{' '}
+																<span className="font-mono">
+																	F{inv.fiscalYear}-{String(inv.sequence).padStart(5, '0')}
+																</span>
+																{' '}({inv.status})
+															</span>
+															<Button
+																asChild
+																variant="outline"
+																size="sm"
+																className="h-9"
+															>
+																<a
+																	href={`/admin/orders/${order.orderNumber}/invoice.pdf?invoiceId=${inv.id}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																>
+																	<Icon name="download" className="h-4 w-4 mr-2" />
+																	Download
+																</a>
+															</Button>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
 
 										{/* Label Management */}
 										{(order.mondialRelayShipmentNumber || order.mondialRelayPickupPointId) && (

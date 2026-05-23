@@ -5,6 +5,7 @@ import {
 	type FlagAudience,
 } from '#app/schemas/flag.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { log } from '#app/utils/logging.server.ts'
 
 // ---------------------------------------------------------------------------
 // In-memory cache (30s TTL)
@@ -142,7 +143,7 @@ export async function isFlagEnabled(
 			audience = FlagAudienceSchema.parse(JSON.parse(flag.audience))
 		} catch {
 			// Invalid JSON → deny (fail-closed)
-			console.warn(`[flag.server] Invalid audience JSON for flag "${key}": ${(flag.audience ?? '').slice(0, 100)}`)
+			log.warn({ flag: key, audience: (flag.audience ?? '').slice(0, 100) }, `[flag.server] Invalid audience JSON for flag "${key}"`)
 			return false
 		}
 

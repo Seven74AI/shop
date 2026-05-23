@@ -120,6 +120,9 @@ export async function createCheckoutSession({
 	userId,
 	vatTotalCents,
 	vatBreakdown,
+	idempotencyKey,
+	couponDiscountCents,
+	couponCode,
 }: {
 	cart: {
 		id: string
@@ -145,6 +148,9 @@ export async function createCheckoutSession({
 	userId?: string | null
 	vatTotalCents?: number
 	vatBreakdown?: Array<{ kind: string; rate: number; baseCents: number; vatCents: number }>
+	idempotencyKey?: string
+	couponDiscountCents?: number
+	couponCode?: string | null
 }): Promise<Stripe.Checkout.Session> {
 	// Build line items from cart
 	const lineItems: Array<any> = cart.items.map(
@@ -196,6 +202,21 @@ export async function createCheckoutSession({
 		})
 	}
 
+	// Add coupon discount as a negative line item if applicable
+	if (couponDiscountCents && couponDiscountCents > 0) {
+		lineItems.push({
+			price_data: {
+				currency: currency.code.toLowerCase(),
+				product_data: {
+					name: couponCode ? `Coupon: ${couponCode}` : 'Discount',
+					description: 'Coupon discount',
+				},
+				unit_amount: -couponDiscountCents, // negative for discount
+			},
+			quantity: 1,
+		})
+	}
+
 	// Create checkout session
 	const sessionParams: any = {
 		line_items: lineItems,
@@ -214,6 +235,10 @@ export async function createCheckoutSession({
 			shippingCountry: shippingInfo.country,
 			shippingMethodId: shippingMethodId,
 			shippingCost: shippingCost.toString(),
+			...(couponCode && { couponCode }),
+			...(couponDiscountCents !== undefined && {
+				couponDiscountCents: couponDiscountCents.toString(),
+			}),
 			...(customerVatNumber && {
 				customerVatNumber,
 			}),
@@ -239,6 +264,7 @@ export async function createCheckoutSession({
 		const sessionPromise = stripe.checkout.sessions.create(sessionParams, {
 			timeout: 8000, // 8 seconds timeout per request (shorter than global)
 			maxNetworkRetries: 0, // Disable retries to fail fast
+			...(idempotencyKey ? { idempotencyKey } : {}),
 		})
 		
 		// Add additional timeout wrapper as a safety net
