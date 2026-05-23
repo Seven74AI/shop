@@ -312,5 +312,21 @@
 	"marketing.support.address": "Postal address: Epic Shop, 1 rue de la Paix, 75002 Paris, France",
 	"marketing.support.responseTime": "Response time: within 48 business hours",
 	"marketing.support.legalInfo": "Legal Information",
-	"shop.checkout.review.cgvNotice": "By confirming your order, you accept our Terms of Sale (CGV) and our Privacy Policy."
+	"shop.checkout.review.cgvNotice": "By confirming your order, you accept our Terms of Sale (CGV) and our Privacy Policy.",
+
+	"cookie.consent.title": "Cookie Preferences",
+	"cookie.consent.description": "We use cookies to improve your experience and analyze site traffic. Choose which cookies you'd like to allow.",
+	"cookie.consent.acceptAll": "Accept All",
+	"cookie.consent.declineAll": "Decline All",
+	"cookie.consent.customize": "Customize",
+	"cookie.consent.customizeTitle": "Customize Cookie Preferences",
+	"cookie.consent.customizeDescription": "Choose which types of cookies you allow. Necessary cookies are always enabled for the website to function properly.",
+	"cookie.consent.necessary": "Necessary",
+	"cookie.consent.necessaryDesc": "Required for the website to function properly. Cannot be disabled.",
+	"cookie.consent.analytics": "Analytics",
+	"cookie.consent.analyticsDesc": "Help us understand how visitors interact with the website to improve your experience.",
+	"cookie.consent.marketing": "Marketing",
+	"cookie.consent.marketingDesc": "Used to deliver personalized ads and measure campaign effectiveness.",
+	"cookie.consent.save": "Save Preferences",
+	"cookie.consent.back": "Back"
 }
