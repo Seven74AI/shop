@@ -7,6 +7,7 @@ import {
 	renderJsonLd,
 } from '#app/utils/json-ld.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
+import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.ts'
 import { type Route } from './+types/index.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -36,14 +37,25 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return {
 		categories,
+		siteUrl,
 		jsonLd: renderJsonLd(orgLd) + '\n' + renderJsonLd(webSiteLd),
 	}
 }
 
-export const meta: Route.MetaFunction = () => [
-	{ title: 'Boutique | Epic Shop' },
-	{ name: 'description', content: 'Parcourir notre catalogue de produits' },
-]
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const siteUrl = loaderData?.siteUrl ?? 'http://localhost'
+	return [
+		{ title: 'Boutique | Epic Shop' },
+		{ name: 'description', content: 'Parcourir notre catalogue de produits' },
+		...generateOgTags({
+			siteName: 'Epic Shop',
+			siteUrl,
+			tagline: 'Your one-stop shop for epic products.',
+			homepageUrl: `${siteUrl}/shop`,
+		}),
+		...generateTwitterCard({ site: '@epicshop' }),
+	]
+}
 
 export default function ShopIndex({ loaderData }: Route.ComponentProps) {
 	const { t } = useTranslation()
