@@ -42,16 +42,19 @@ describe('updateReturnStatus', () => {
 		// Create test product
 		const productData = createProductData()
 		productData.price = 1999 // Price in cents
+		const productCreate: Record<string, unknown> = {
+			name: productData.name,
+			slug: productData.slug,
+			description: productData.description,
+			sku: productData.sku,
+			price: productData.price,
+			status: 'ACTIVE' as const,
+		}
+		if (productData.categoryId) {
+			productCreate.categoryId = productData.categoryId
+		}
 		const product = await prisma.product.create({
-			data: {
-				name: productData.name,
-				slug: productData.slug,
-				description: productData.description,
-				sku: productData.sku,
-				price: productData.price,
-				status: 'ACTIVE' as const,
-				categoryId: productData.categoryId,
-			},
+			data: productCreate as typeof productCreate & { status: 'ACTIVE' },
 		})
 		productId = product.id
 
@@ -265,16 +268,19 @@ describe('updateReturnAdminNotes', () => {
 
 		const productData = createProductData()
 		productData.price = 1999
+		const productCreate2: Record<string, unknown> = {
+			name: productData.name,
+			slug: productData.slug,
+			description: productData.description,
+			sku: productData.sku,
+			price: productData.price,
+			status: 'ACTIVE' as const,
+		}
+		if (productData.categoryId) {
+			productCreate2.categoryId = productData.categoryId
+		}
 		const product = await prisma.product.create({
-			data: {
-				name: productData.name,
-				slug: productData.slug,
-				description: productData.description,
-				sku: productData.sku,
-				price: productData.price,
-				status: 'ACTIVE' as const,
-				categoryId: productData.categoryId,
-			},
+			data: productCreate2 as typeof productCreate2 & { status: 'ACTIVE' },
 		})
 		productId = product.id
 
