@@ -8,6 +8,8 @@ const schema = z.object({
 	SESSION_SECRET: z.string(),
 	INTERNAL_COMMAND_TOKEN: z.string(),
 	HONEYPOT_SECRET: z.string(),
+	// HMAC secret for guest order lookup tokens (30-day expiry)
+	GUEST_SECRET: z.string().optional(),
 	CACHE_DATABASE_PATH: z.string(),
 	// If you plan on using Sentry, remove the .optional()
 	SENTRY_DSN: z.string().optional(),

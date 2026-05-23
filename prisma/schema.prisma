@@ -588,7 +588,9 @@ model Review {
   title      String?
   body       String?
   isVerifiedPurchase Boolean @default(false)
-  isApproved Boolean  @default(false)
+  isApproved       Boolean  @default(false)
+  rejectionReason  String?  // Reason when admin rejects the review
+  adminNotes       String?  // Internal admin notes
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

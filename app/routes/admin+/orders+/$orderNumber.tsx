@@ -699,6 +699,41 @@ export default function AdminOrderDetail({ loaderData }: Route.ComponentProps) {
 												</div>
 											)}
 
+										{/* Invoice Management */}
+										{'invoices' in order && Array.isArray(order.invoices) && order.invoices.length > 0 && (
+											<div className="mt-4 pt-4 border-t border-border">
+												<h3 className="text-sm font-medium mb-3">Invoices</h3>
+												<div className="flex flex-col gap-2">
+													{order.invoices.map((inv) => (
+														<div key={inv.id} className="flex items-center justify-between">
+															<span className="text-sm text-muted-foreground">
+																{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}{' '}
+																<span className="font-mono">
+																	F{inv.fiscalYear}-{String(inv.sequence).padStart(5, '0')}
+																</span>
+																{' '}({inv.status})
+															</span>
+															<Button
+																asChild
+																variant="outline"
+																size="sm"
+																className="h-9"
+															>
+																<a
+																	href={`/admin/orders/${order.orderNumber}/invoice.pdf?invoiceId=${inv.id}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																>
+																	<Icon name="download" className="h-4 w-4 mr-2" />
+																	Download
+																</a>
+															</Button>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
+
 										{/* Label Management */}
 										{(order.mondialRelayShipmentNumber || order.mondialRelayPickupPointId) && (
 											<div className="mt-4 pt-4 border-t border-border">

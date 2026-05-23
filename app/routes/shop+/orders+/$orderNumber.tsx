@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { getUserId } from '#app/utils/auth.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
+import { verifyGuestToken } from '#app/utils/guest-token.server.ts'
 import { formatDate } from '#app/utils/date.ts'
 import { formatAddress } from '#app/utils/address.ts'
 import { formatPrice } from '#app/utils/price.ts'
@@ -17,7 +18,16 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const { orderNumber } = params
 	const userId = await getUserId(request)
 	const url = new URL(request.url)
-	const email = url.searchParams.get('email')
+	let email = url.searchParams.get('email')
+
+	// Try token-based authentication first (signed HMAC token from email link)
+	const token = url.searchParams.get('token')
+	if (token && !email) {
+		const payload = verifyGuestToken(token)
+		if (payload && payload.orderId === orderNumber) {
+			email = payload.email
+		}
+	}
 
 	// Try to get order by order number
 	let order = await getOrderByOrderNumber(orderNumber)
@@ -212,6 +222,34 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							</div>
 						</CardContent>
 					</Card>
+
+					{'invoices' in order && Array.isArray(order.invoices) && order.invoices.length > 0 && (
+						<Card>
+							<CardHeader>
+								<h2>Invoices</h2>
+							</CardHeader>
+							<CardContent>
+								<div className="flex flex-col gap-2">
+									{order.invoices.map((inv) => (
+										<div key={inv.id} className="flex items-center justify-between">
+											<span className="text-sm text-muted-foreground">
+												{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}{' '}
+												<span className="font-mono">
+													F{inv.fiscalYear}-{String(inv.sequence).padStart(5, '0')}
+												</span>
+											</span>
+											<Button asChild variant="outline" size="sm">
+												<a href={`/account/invoices/${inv.id}.pdf`}>
+													<Icon name="download" className="h-4 w-4 mr-2" />
+													Download
+												</a>
+											</Button>
+										</div>
+									))}
+								</div>
+							</CardContent>
+						</Card>
+					)}
 
 					<Card>
 						<CardHeader>
