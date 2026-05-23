@@ -68,11 +68,11 @@ describe('CGV route with TranslationProvider (English)', () => {
 
 	test('renders translated title and sections', () => {
 		render(
-			createElement(
-				TranslationProvider,
-				{ locale: 'en', translations: enTranslations },
-				createElement(CgvRoute),
-			),
+			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: enTranslations,
+				children: createElement(CgvRoute),
+			}),
 		)
 		expect(
 			screen.getByRole('heading', { level: 1 }),
@@ -86,11 +86,11 @@ describe('CGV route with TranslationProvider (English)', () => {
 
 	test('renders last-updated text from translations', () => {
 		render(
-			createElement(
-				TranslationProvider,
-				{ locale: 'en', translations: enTranslations },
-				createElement(CgvRoute),
-			),
+			createElement(TranslationProvider, {
+				locale: 'en',
+				translations: enTranslations,
+				children: createElement(CgvRoute),
+			}),
 		)
 		expect(
 			screen.getByText('Last updated: January 2026'),
@@ -109,11 +109,11 @@ describe('CGV route with TranslationProvider (French)', () => {
 
 	test('renders French title and sections', () => {
 		render(
-			createElement(
-				TranslationProvider,
-				{ locale: 'fr', translations: frTranslations },
-				createElement(CgvRoute),
-			),
+			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: frTranslations,
+				children: createElement(CgvRoute),
+			}),
 		)
 		expect(
 			screen.getByRole('heading', { level: 1 }),
@@ -126,11 +126,11 @@ describe('CGV route with TranslationProvider (French)', () => {
 
 	test('renders French last-updated text', () => {
 		render(
-			createElement(
-				TranslationProvider,
-				{ locale: 'fr', translations: frTranslations },
-				createElement(CgvRoute),
-			),
+			createElement(TranslationProvider, {
+				locale: 'fr',
+				translations: frTranslations,
+				children: createElement(CgvRoute),
+			}),
 		)
 		expect(
 			screen.getByText('Dernière mise à jour : Janvier 2026'),
