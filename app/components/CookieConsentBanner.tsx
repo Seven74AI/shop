@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '#app/components/ui/button.tsx'
 import { Checkbox } from '#app/components/ui/checkbox.tsx'
 import { useTranslation } from '#app/utils/i18n.tsx'
+import { COOKIE_NAME } from '#app/utils/consent.server.ts'
 
-export const CONSENT_COOKIE_NAME = 'cookieConsent'
 
 interface ConsentPrefs {
 	necessary: boolean
@@ -20,7 +20,7 @@ interface ConsentPrefs {
 function getConsentFromDocument(): ConsentPrefs | null {
 	try {
 		const match = document.cookie.match(
-			new RegExp(`(?:^|;\\s*)${CONSENT_COOKIE_NAME}=([^;]*)`),
+			new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]*)`),
 		)
 		if (!match?.[1]) return null
 		const parsed = JSON.parse(decodeURIComponent(match[1])) as Record<
