@@ -9,6 +9,7 @@ import {
 } from '#app/utils/json-ld.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
+import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$categorySlug.ts'
 
@@ -73,6 +74,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		products,
 		allCategories,
 		currency: currency || { symbol: '$', code: 'USD', decimals: 2 },
+		siteUrl,
 		jsonLd: renderJsonLd(breadcrumbLd),
 	}
 }
@@ -82,6 +84,9 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 		return [{ title: 'Category not found' }]
 	}
 
+	const siteUrl = loaderData?.siteUrl ?? 'http://localhost'
+	const categoryUrl = `${siteUrl}/shop/categories/${loaderData.category.slug}`
+
 	return [
 		{ title: `${loaderData.category.name} - Shop` },
 		{
@@ -90,6 +95,14 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 				loaderData.category.description ||
 				`Browse ${loaderData.category.name} products`,
 		},
+		...generateOgTags({
+			siteName: 'Epic Shop',
+			siteUrl,
+			categoryName: loaderData.category.name,
+			categoryDescription: loaderData.category.description,
+			categoryUrl,
+		}),
+		...generateTwitterCard({ site: '@epicshop' }),
 	]
 }
 
