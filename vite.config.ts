@@ -86,7 +86,8 @@ export default defineConfig((config) => ({
 		external: ['node:sqlite'],
 	},
 	test: {
-		include: ['./app/**/*.test.{ts,tsx}'],
+		include: ['./app/**/*.test.{ts,tsx}', './tests/**/*.test.{ts,tsx}'],
+		exclude: ['./tests/e2e/**'],
 		setupFiles: ['./tests/setup/setup-test-env.ts'],
 		globalSetup: ['./tests/setup/global-setup.ts'],
 		restoreMocks: true,
