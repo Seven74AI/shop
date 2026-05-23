@@ -209,6 +209,15 @@ export async function getOrderByOrderNumber(orderNumber: string) {
 					},
 				},
 			},
+			invoices: {
+				select: {
+					id: true,
+					fiscalYear: true,
+					sequence: true,
+					kind: true,
+					status: true,
+				},
+			},
 		},
 	})
 }
@@ -237,6 +246,15 @@ export async function getUserOrders(userId: string) {
 							},
 						},
 					},
+				},
+			},
+			invoices: {
+				select: {
+					id: true,
+					fiscalYear: true,
+					sequence: true,
+					kind: true,
+					status: true,
 				},
 			},
 		},

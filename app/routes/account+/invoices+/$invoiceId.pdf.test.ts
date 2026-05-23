@@ -139,7 +139,7 @@ describe('customer invoice PDF download', () => {
 		expect(response.headers.get('Content-Disposition')).toContain(
 			'invoice-F2025-00042.pdf',
 		)
-		expect(response.headers.get('Content-Disposition')).toContain('inline')
+		expect(response.headers.get('Content-Disposition')).toContain('attachment')
 	})
 
 	test('returns 404 for non-existent invoice', async () => {

@@ -1,88 +1,124 @@
 /**
- * Customer Resource Route: Download Invoice PDF
+ * Admin Resource Route: Download Invoice PDF
  *
- * Generates and streams a PDF invoice for download.
- * Customer access — requires authentication and ownership verification.
+ * Generates and streams a PDF invoice for download by admin users.
+ * Admin access only — requires authentication with 'admin' role.
  * Uses @react-pdf/renderer for server-side PDF generation.
  */
 
 import { invariantResponse } from '@epic-web/invariant'
 import { prisma } from '#app/utils/db.server.ts'
-import { requireUserId } from '#app/utils/auth.server.ts'
+import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatInvoiceNumber } from '#app/utils/invoice.server.ts'
 import {
 	generateInvoicePdfStream,
 	type InvoicePdfData,
 } from '#app/utils/invoice-pdf.server.tsx'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
-import { type Route } from './+types/$invoiceId[.]pdf.ts'
+import { type Route } from './+types/$orderNumber.invoice.pdf.ts'
 
 export async function loader({ params, request }: Route.LoaderArgs) {
-	const userId = await requireUserId(request)
-	const { invoiceId } = params
-	const url = new URL(request.url)
-	const email = url.searchParams.get('email')
+	await requireUserWithRole(request, 'admin')
 
-	const invoice = await prisma.invoice.findUnique({
-		where: { id: invoiceId },
-		include: {
-			order: {
-				select: {
-					userId: true,
-					orderNumber: true,
-					email: true,
-					subtotal: true,
-					total: true,
-					shippingCost: true,
-					shippingName: true,
-					shippingStreet: true,
-					shippingCity: true,
-					shippingPostal: true,
-					shippingCountry: true,
-					createdAt: true,
-					taxCountry: true,
-					customerVatNumber: true,
-					user: {
+	const { orderNumber } = params
+	const url = new URL(request.url)
+	const invoiceId = url.searchParams.get('invoiceId')
+
+	// If invoiceId is provided, fetch that specific invoice
+	const invoice = invoiceId
+		? await prisma.invoice.findUnique({
+				where: { id: invoiceId },
+				include: {
+					order: {
 						select: {
-							id: true,
+							orderNumber: true,
+							userId: true,
 							email: true,
-							name: true,
-						},
-					},
-					items: {
-						include: {
-							product: {
-								select: { name: true },
+							subtotal: true,
+							total: true,
+							shippingCost: true,
+							shippingName: true,
+							shippingStreet: true,
+							shippingCity: true,
+							shippingPostal: true,
+							shippingCountry: true,
+							createdAt: true,
+							taxCountry: true,
+							customerVatNumber: true,
+							user: {
+								select: {
+									id: true,
+									email: true,
+									name: true,
+								},
 							},
-							variant: {
-								select: { sku: true },
+							items: {
+								include: {
+									product: {
+										select: { name: true },
+									},
+									variant: {
+										select: { sku: true },
+									},
+								},
 							},
 						},
 					},
 				},
-			},
-		},
-	})
+			})
+		: await prisma.invoice.findFirst({
+				where: {
+					order: { orderNumber },
+					kind: 'INVOICE',
+				},
+				orderBy: { createdAt: 'desc' },
+				include: {
+					order: {
+						select: {
+							orderNumber: true,
+							userId: true,
+							email: true,
+							subtotal: true,
+							total: true,
+							shippingCost: true,
+							shippingName: true,
+							shippingStreet: true,
+							shippingCity: true,
+							shippingPostal: true,
+							shippingCountry: true,
+							createdAt: true,
+							taxCountry: true,
+							customerVatNumber: true,
+							user: {
+								select: {
+									id: true,
+									email: true,
+									name: true,
+								},
+							},
+							items: {
+								include: {
+									product: {
+										select: { name: true },
+									},
+									variant: {
+										select: { sku: true },
+									},
+								},
+							},
+						},
+					},
+				},
+			})
 
-	invariantResponse(invoice, 'Invoice not found', { status: 404 })
+	invariantResponse(invoice, 'No invoice found for this order', { status: 404 })
 
-	// Authorization: verify the invoice belongs to this customer
-	if (invoice.order.userId) {
-		// Order belongs to a registered user — must match
+	// Verify invoice belongs to the requested order (when using invoiceId)
+	if (invoiceId && invoice.order.orderNumber !== orderNumber) {
 		invariantResponse(
-			userId === invoice.order.userId,
-			'Unauthorized',
-			{ status: 403 },
-		)
-	} else {
-		// Guest order — require email verification
-		invariantResponse(email, 'Email required to download guest invoice', {
-			status: 400,
-		})
-		invariantResponse(
-			email.toLowerCase() === invoice.order.email.toLowerCase(),
-			'Email does not match invoice order',
-			{ status: 403 },
+			false,
+			'Invoice does not belong to this order',
+			{ status: 400 },
 		)
 	}
 
@@ -126,9 +162,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 			invoice.fiscalYear,
 			invoice.sequence,
 		),
-	invoiceDate:
-		invoice.issuedAt?.toISOString()?.slice(0, 10) ??
-		invoice.createdAt.toISOString().slice(0, 10),
+		invoiceDate:
+			invoice.issuedAt?.toISOString()?.slice(0, 10) ??
+			invoice.createdAt.toISOString().slice(0, 10),
 		invoiceStatus: invoice.status,
 		orderNumber: invoice.order.orderNumber,
 		orderDate: invoice.order.createdAt.toISOString().slice(0, 10),
@@ -164,7 +200,6 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	const num = pdfData.invoiceNumber
 	const prefix = invoice.kind === 'CREDIT_NOTE' ? 'credit-note' : 'invoice'
 
-	// Return the PDF as a response with appropriate headers
 	return new Response(pdfStream as unknown as BodyInit, {
 		status: 200,
 		headers: {

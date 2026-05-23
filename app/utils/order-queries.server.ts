@@ -26,6 +26,15 @@ export async function getOrderByOrderNumber(orderNumber: string) {
 		include: {
 			user: orderUserSelect,
 			...orderItemsWithVariantInclude,
+			invoices: {
+				select: {
+					id: true,
+					fiscalYear: true,
+					sequence: true,
+					kind: true,
+					status: true,
+				},
+			},
 		},
 	})
 }
