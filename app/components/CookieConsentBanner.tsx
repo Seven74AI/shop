@@ -23,13 +23,18 @@ function getConsentFromDocument(): ConsentPrefs | null {
 			new RegExp(`(?:^|;\\s*)${CONSENT_COOKIE_NAME}=([^;]*)`),
 		)
 		if (!match?.[1]) return null
-		const parsed = JSON.parse(decodeURIComponent(match[1]))
+		const parsed = JSON.parse(decodeURIComponent(match[1])) as Record<
+			string,
+			unknown
+		>
 		if (
 			parsed &&
 			typeof parsed.necessary === 'boolean' &&
-			parsed.necessary === true
+			parsed.necessary === true &&
+			typeof parsed.analytics === 'boolean' &&
+			typeof parsed.marketing === 'boolean'
 		) {
-			return parsed
+			return parsed as unknown as ConsentPrefs
 		}
 		return null
 	} catch {
@@ -64,7 +69,7 @@ export function CookieConsentBanner() {
 		const formData = new FormData()
 		formData.set('analytics', 'true')
 		formData.set('marketing', 'true')
-		fetcher.submit(formData, {
+		void fetcher.submit(formData, {
 			method: 'POST',
 			action: '/resources/cookie-consent',
 		})
@@ -74,7 +79,7 @@ export function CookieConsentBanner() {
 		const formData = new FormData()
 		formData.set('analytics', 'false')
 		formData.set('marketing', 'false')
-		fetcher.submit(formData, {
+		void fetcher.submit(formData, {
 			method: 'POST',
 			action: '/resources/cookie-consent',
 		})
