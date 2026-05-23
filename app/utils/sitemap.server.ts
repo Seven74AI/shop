@@ -203,7 +203,7 @@ function generateSitemapXML(
 ): string {
 	const urls = items
 		.map((item) => {
-			const loc = `${siteUrl}${item.path === '/' ? '/' : item.path}`
+			const loc = `${siteUrl}${item.path === '/' ? '' : item.path}`
 			let xml = `\t<url>\n\t\t<loc>${escapeXml(loc)}</loc>`
 
 			if (item.lastmod) {
