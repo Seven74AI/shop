@@ -1,5 +1,6 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { Link, redirect } from 'react-router'
+import { StarRating } from '#app/components/star-rating.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { addToCart, getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
@@ -11,6 +12,8 @@ import {
 } from '#app/utils/json-ld.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
+import { getProductReviewAggregate } from '#app/utils/review-aggregate.server.ts'
+import { buildImageUrl, generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$slug.ts'
 
@@ -34,6 +37,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
 	const currency = await getStoreCurrency()
 	const siteUrl = getDomainUrl(request)
+	const reviewAggregate = await getProductReviewAggregate(product.id)
 
 	// Build JSON-LD structured data
 	const imageUrls = product.images.map(
@@ -68,6 +72,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	return {
 		product,
 		currency,
+		siteUrl,
+		reviewAggregate,
 		jsonLd: renderJsonLd(productLd) + '\n' + renderJsonLd(breadcrumbLd),
 	}
 }
@@ -106,13 +112,35 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
 	const product = loaderData?.product
+	const siteUrl = loaderData?.siteUrl ?? 'http://localhost'
 	if (!product) return [{ title: 'Product Not Found | Shop | Epic Shop' }]
-	return [{ title: `${product.name} | Products | Shop | Epic Shop` }]
+
+	const productUrl = `${siteUrl}/shop/products/${product.slug}`
+	const productImageUrl = product.images?.[0]?.objectKey
+		? buildImageUrl(product.images[0].objectKey, siteUrl)
+		: null
+	const price = loaderData?.currency
+		? `${formatPrice(product.price, loaderData.currency, 'en')} ${loaderData.currency.code}`
+		: undefined
+
+	return [
+		{ title: `${product.name} | Products | Shop | Epic Shop` },
+		...generateOgTags({
+			siteName: 'Epic Shop',
+			siteUrl,
+			productName: product.name,
+			productDescription: product.description,
+			productImageUrl,
+			productPrice: price,
+			productUrl,
+		}),
+		...generateTwitterCard({ site: '@epicshop' }),
+	]
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 	const { t, locale } = useTranslation()
-	const { product, currency } = loaderData
+	const { product, currency, reviewAggregate } = loaderData
 
 	return (
 		<div className="container mx-auto px-4 py-8">
@@ -149,10 +177,19 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 						<p className="text-muted-foreground mt-2">
 							{product.category.name}
 						</p>
-					</div>
+				</div>
 
-					<div>
-						<p className="text-3xl font-bold">
+				{/* Rating summary */}
+				<StarRating
+					averageRating={reviewAggregate.averageRating}
+					distribution={reviewAggregate.distribution}
+					totalCount={reviewAggregate.totalCount}
+					showDistribution
+					size="md"
+				/>
+
+				<div>
+					<p className="text-3xl font-bold">
 							{formatPrice(product.price, currency, locale)}
 						</p>
 					</div>
