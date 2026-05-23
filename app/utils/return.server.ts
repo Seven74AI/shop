@@ -44,6 +44,7 @@ const STATUS_EMAIL_BODIES: Record<ReturnStatus, string> = {
  * Enforces valid status transitions — a 400 is thrown for invalid ones.
  * Automatically sets timestamps:
  * - APPROVED → no timestamp change
+ * - SHIPPED → sets shippedAt
  * - RECEIVED → sets receivedAt
  * - REFUNDED → sets refundedAt
  * Sends email notification to the customer on status change.
@@ -65,15 +66,14 @@ export async function updateReturnStatus(
 	})
 
 	if (!current) {
-		throw new Response('Return request not found', { status: 404 })
+		throw new Error('Return request not found')
 	}
 
 	const currentStatus = current.status as ReturnStatus
 	const allowed = ALLOWED_TRANSITIONS[currentStatus]
 	if (!allowed || !allowed.includes(status)) {
-		throw new Response(
+		throw new Error(
 			`Invalid status transition: ${current.status} → ${status}`,
-			{ status: 400 },
 		)
 	}
 
@@ -81,6 +81,10 @@ export async function updateReturnStatus(
 
 	if (adminNotes !== undefined) {
 		data.adminNotes = adminNotes
+	}
+
+	if (status === 'SHIPPED') {
+		data.shippedAt = new Date()
 	}
 
 	if (status === 'RECEIVED') {
