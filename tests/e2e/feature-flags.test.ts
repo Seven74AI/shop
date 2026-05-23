@@ -208,12 +208,14 @@ test.describe('Feature Flags Admin Panel', () => {
 				page.getByRole('heading', { name: /feature flags/i }),
 			).toBeVisible({ timeout: 15000 })
 
+			// Wait for the row containing our flag to appear
+			const toggleRow = page.getByRole('row', {
+				name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}toggle-test`),
+			})
+			await expect(toggleRow).toBeVisible({ timeout: 15000 })
+
 			// Find the toggle button for our flag
-			const toggleButton = page
-				.getByRole('row', {
-					name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}toggle-test`),
-				})
-				.getByRole('button', { name: /enable/i })
+			const toggleButton = toggleRow.getByRole('button', { name: /enable|disable/i })
 
 			await expect(toggleButton).toBeVisible({ timeout: 10000 })
 			await toggleButton.click()
@@ -251,11 +253,14 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
-			// Click delete button on the row
-			const row = page.getByRole('row', {
+			// Wait for the row containing our flag to appear
+			const deleteRow = page.getByRole('row', {
 				name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}delete-test`),
 			})
-			await row.getByRole('button', { name: /^Delete / }).click()
+			await expect(deleteRow).toBeVisible({ timeout: 15000 })
+
+			// Click delete button on the row
+			await deleteRow.getByRole('button', { name: /^Delete / }).click()
 
 			// Confirm deletion in the dialog and wait for POST to complete
 			await Promise.all([

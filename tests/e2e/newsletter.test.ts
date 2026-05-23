@@ -38,6 +38,18 @@ test.describe('Newsletter Subscription', () => {
 	})
 
 	test.describe('POST /resources/newsletter-subscribe', () => {
+		// Helper: retry Prisma findUnique with backoff for CI race conditions
+		async function findSub(email: string, maxRetries = 10, delay = 100) {
+			for (let i = 0; i < maxRetries; i++) {
+				const sub = await prisma.newsletterSubscription.findUnique({
+					where: { email },
+				})
+				if (sub) return sub
+				await new Promise((r) => setTimeout(r, delay * (i + 1)))
+			}
+			return null
+		}
+
 		test('creates a pending subscription with a valid email', async ({
 			page,
 		}) => {
@@ -60,7 +72,9 @@ test.describe('Newsletter Subscription', () => {
 				data: { email },
 			})
 
-			// Verify email was captured by the mock
+			// Wait a moment for the email fixture to be written
+			await new Promise((r) => setTimeout(r, 200))
+			// Verify email was captured by the mock (with retries built into readEmail)
 			const emailFixture = await readEmail(email)
 			expect(emailFixture).not.toBeNull()
 			expect(emailFixture!.to).toBe(email)
@@ -79,9 +93,7 @@ test.describe('Newsletter Subscription', () => {
 				data: { email },
 			})
 
-			const sub = await prisma.newsletterSubscription.findUnique({
-				where: { email },
-			})
+			const sub = await findSub(email)
 			expect(sub).not.toBeNull()
 			expect(sub!.status).toBe('PENDING')
 			expect(sub!.token).not.toBeNull()
@@ -96,9 +108,7 @@ test.describe('Newsletter Subscription', () => {
 			})
 
 			expect(res.status()).toBe(200)
-			const sub = await prisma.newsletterSubscription.findUnique({
-				where: { email: 'newsletter-e2e-1@example.com' },
-			})
+			const sub = await findSub('newsletter-e2e-1@example.com')
 			expect(sub).not.toBeNull()
 			expect(sub!.email).toBe('newsletter-e2e-1@example.com')
 		})

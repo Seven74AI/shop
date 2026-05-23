@@ -1,7 +1,7 @@
 import { getPasswordHash } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { generateOrderNumber } from '#app/utils/order-number.server.ts'
-import { test, expectPageToBeAccessible } from '#tests/playwright-utils.ts'
+import { test, expect, expectPageToBeAccessible } from '#tests/playwright-utils.ts'
 import { createProductData } from '#tests/product-utils.ts'
 
 /**
@@ -148,21 +148,21 @@ test.describe('Accessibility', () => {
 			await expectPageToBeAccessible(page)
 		})
 
-	test('order detail page should be accessible', async ({ page, login }) => {
-		// Verify testOrder exists
-		if (!testOrder?.orderNumber) {
-			throw new Error('testOrder was not created in beforeAll')
-		}
-		await loginAndNavigateToAdminPage(
-			page,
-			login,
-			`/admin/orders/${testOrder.orderNumber}`,
-		)
-		// Wait for order detail content to fully render
-		await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
-		await expect(page.getByText(testOrder.orderNumber)).toBeVisible({ timeout: 15000 })
-		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
-	})
+		test('order detail page should be accessible', async ({ page, login }) => {
+			// Verify testOrder exists
+			if (!testOrder?.orderNumber) {
+				throw new Error('testOrder was not created in beforeAll')
+			}
+			await loginAndNavigateToAdminPage(
+				page,
+				login,
+				`/admin/orders/${testOrder.orderNumber}`,
+			)
+			// Wait for order detail content to fully render
+			await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+			await expect(page.getByText(testOrder.orderNumber)).toBeVisible({ timeout: 15000 })
+			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
+		})
 
 		test('products list page should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin/products')
@@ -241,17 +241,17 @@ test.describe('Accessibility', () => {
 			await expectPageToBeAccessible(page)
 		})
 
-	test('attribute edit page should be accessible', async ({ page, login }) => {
-		await loginAndNavigateToAdminPage(
-			page,
-			login,
-			`/admin/attributes/${testAttribute.id}/edit`,
-		)
-		// Wait for the edit form to render before a11y check
-		await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
-		await expect(page.getByRole('textbox', { name: /name/i })).toBeVisible({ timeout: 15000 })
-		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
-	})
+		test('attribute edit page should be accessible', async ({ page, login }) => {
+			await loginAndNavigateToAdminPage(
+				page,
+				login,
+				`/admin/attributes/${testAttribute.id}/edit`,
+			)
+			// Wait for the edit form to render before a11y check
+			await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+			await expect(page.getByRole('textbox', { name: /name/i })).toBeVisible({ timeout: 15000 })
+			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
+		})
 
 		test('cache page should be accessible', async ({ page, login }) => {
 			await loginAndNavigateToAdminPage(page, login, '/admin/cache')
