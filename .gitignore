@@ -29,3 +29,7 @@ node_modules
 .react-router/
 /data.db
 /data.db-journal
+
+# workspace artifacts
+repo/
+run-ci.sh
