@@ -2,6 +2,7 @@
  * @vitest-environment node
  */
 import { describe, expect, test, beforeEach, afterEach } from 'vitest'
+import { InvoiceKind } from '@prisma/client'
 import { getSessionExpirationDate, sessionKey } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { authSessionStorage } from '#app/utils/session.server.ts'
@@ -50,7 +51,7 @@ describe('customer invoices list', () => {
 
 	async function createOrderAndInvoice(
 		userId: string | null,
-		overrides: { kind?: string; status?: string } = {},
+		overrides: { kind?: InvoiceKind; status?: string } = {},
 	) {
 		const order = await prisma.order.create({
 			data: {
