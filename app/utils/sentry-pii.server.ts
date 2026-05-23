@@ -189,8 +189,11 @@ function isSensitiveBodyField(fieldName: string): boolean {
  * })
  * ```
  */
-export function createBeforeSendHook(): (event: Event) => Event | null {
-	return (event: Event): Event | null => {
+export function createBeforeSendHook<T extends Event = Event>(): (
+	event: T,
+	_hint?: unknown,
+) => T | null {
+	return (event: T, _hint?: unknown): T | null => {
 		// Redact sensitive headers from request
 		if (event.request?.headers) {
 			const headers: Record<string, string> = {}
@@ -231,10 +234,10 @@ export function createBeforeSendHook(): (event: Event) => Event | null {
  * Creates a Sentry beforeSendTransaction hook that strips PII from
  * transaction/performance events.
  */
-export function createBeforeSendTransactionHook(): (
-	event: Event,
-) => Event | null {
-	return (event: Event): Event | null => {
+export function createBeforeSendTransactionHook<
+	T extends Event = Event,
+>(): (event: T, _hint?: unknown) => T | null {
+	return (event: T, _hint?: unknown): T | null => {
 		// Strip query strings from URLs that may contain PII
 		// (address data is passed as query params in checkout flow)
 		if (event.request?.url) {
@@ -264,6 +267,6 @@ export function createBeforeSendTransactionHook(): (
 
 		// Also apply the standard PII stripping
 		const beforeSend = createBeforeSendHook()
-		return beforeSend(event)
+		return beforeSend(event) as T | null
 	}
 }

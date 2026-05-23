@@ -18,6 +18,8 @@ export function init() {
 			return event
 		},
 		integrations: [
+			// unmaskTextSelector and blockSelector are supported at runtime
+			// but may be missing from installed SDK type definitions
 			Sentry.replayIntegration({
 				// --- PII Masking Configuration ---
 				// Mask all text content by default (safest for e-commerce)
@@ -62,7 +64,7 @@ export function init() {
 					// Any element explicitly marked as sensitive
 					'[data-sentry-block]',
 				].join(', '),
-			}),
+			} as any),
 			Sentry.browserProfilingIntegration(),
 		],
 

@@ -34,7 +34,7 @@ export function init() {
 			}
 			return process.env.NODE_ENV === 'production' ? 1 : 0
 		},
-		beforeSendTransaction(event) {
+		beforeSendTransaction(event, _hint) {
 			// ignore all healthcheck related transactions
 			//  note that name of header here is case-sensitive
 			if (event.request?.headers?.['x-healthcheck'] === 'true') {
@@ -43,12 +43,12 @@ export function init() {
 
 			// Strip PII from transaction data
 			const piiHook = createBeforeSendTransactionHook()
-			return piiHook(event)
+			return piiHook(event) as any
 		},
-		beforeSend(event) {
+		beforeSend(event, _hint) {
 			// Strip PII from error events
 			const piiHook = createBeforeSendHook()
-			return piiHook(event)
+			return piiHook(event) as any
 		},
 	})
 }

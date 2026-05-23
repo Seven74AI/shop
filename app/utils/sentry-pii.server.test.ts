@@ -40,14 +40,13 @@ describe('createBeforeSendHook', () => {
 		const event = makeEvent()
 		const result = hook(event as any)
 		expect(result).not.toBeNull()
-		expect(result!.request!.headers).toBeDefined()
-		expect(result!.request!.headers['Authorization']).toBe('[Filtered]')
+		expect(result!.request!.headers!['Authorization']).toBe('[Filtered]')
 	})
 
 	test('redacts Cookie header values while preserving non-sensitive cookies', () => {
 		const event = makeEvent()
 		const result = hook(event as any)
-		const cookieHeader = result!.request!.headers['Cookie']
+		const cookieHeader = result!.request!.headers!['Cookie']
 		expect(cookieHeader).toContain('_session=[Filtered]')
 		expect(cookieHeader).toContain('theme=dark')
 	})
@@ -55,26 +54,32 @@ describe('createBeforeSendHook', () => {
 	test('redacts X-Csrf-Token header', () => {
 		const event = makeEvent()
 		const result = hook(event as any)
-		expect(result!.request!.headers['X-Csrf-Token']).toBe('[Filtered]')
+		expect(result!.request!.headers!['X-Csrf-Token']).toBe('[Filtered]')
 	})
 
 	test('redacts Fly-Client-Ip header', () => {
 		const event = makeEvent()
 		const result = hook(event as any)
-		expect(result!.request!.headers['Fly-Client-Ip']).toBe('[Filtered]')
+		expect(result!.request!.headers!['Fly-Client-Ip']).toBe('[Filtered]')
 	})
 
 	test('preserves safe headers', () => {
 		const event = makeEvent()
 		const result = hook(event as any)
-		expect(result!.request!.headers['Content-Type']).toBe('application/json')
-		expect(result!.request!.headers['Accept-Language']).toBe('en-US,en;q=0.9')
+		expect(result!.request!.headers!['Content-Type']).toBe(
+			'application/json',
+		)
+		expect(result!.request!.headers!['Accept-Language']).toBe(
+			'en-US,en;q=0.9',
+		)
 	})
 
 	test('redacts password from JSON request body', () => {
 		const event = makeEvent()
 		const result = hook(event as any)
-		const data = JSON.parse(result!.request!.data)
+		const data = JSON.parse(
+			result!.request!.data as string,
+		) as Record<string, any>
 		expect(data.password).toBe('[Filtered]')
 		expect(data.email).toBe('user@example.com')
 	})
@@ -97,11 +102,16 @@ describe('createBeforeSendHook', () => {
 
 	test('redacts sensitive cookies from cookies object', () => {
 		const event = makeEvent()
-		const result = hook(event as any) 
-		// The request cookies property is set by Sentry separately from headers
+		const result = hook(event as any)
 		if (result!.request!.cookies) {
-			for (const [name, value] of Object.entries(result!.request!.cookies)) {
-				if (name === '_session' || name.startsWith('__Host-') || name.startsWith('__Secure-')) {
+			for (const [name, value] of Object.entries(
+				result!.request!.cookies,
+			)) {
+				if (
+					name === '_session' ||
+					name.startsWith('__Host-') ||
+					name.startsWith('__Secure-')
+				) {
 					expect(value).toBe('[Filtered]')
 				}
 			}
@@ -115,7 +125,9 @@ describe('createBeforeSendHook', () => {
 			},
 		})
 		const result = hook(event as any)
-		expect(result!.request!.headers['Set-Cookie']).toContain('_session=[Filtered]')
+		expect(result!.request!.headers!['Set-Cookie']).toContain(
+			'_session=[Filtered]',
+		)
 	})
 
 	test('handles nested object fields', () => {
@@ -125,13 +137,15 @@ describe('createBeforeSendHook', () => {
 					email: 'nested@example.com',
 					password: 'nested-secret',
 					settings: {
-						apiKey: 'sk-nested-key',
+						apiKey: '***',
 					},
 				},
 			}),
 		})
 		const result = hook(event as any)
-		const data = JSON.parse(result!.request!.data)
+		const data = JSON.parse(
+			result!.request!.data as string,
+		) as Record<string, any>
 		expect(data.user.password).toBe('[Filtered]')
 		expect(data.user.settings.apiKey).toBe('[Filtered]')
 	})
@@ -152,7 +166,7 @@ describe('createBeforeSendTransactionHook', () => {
 		})
 		const result = hook(event as any)
 		expect(result).not.toBeNull()
-		const url = new URL(result!.request!.url)
+		const url = new URL(result!.request!.url!)
 		expect(url.searchParams.get('email')).toBe('[Filtered]')
 		expect(url.searchParams.get('name')).toBe('[Filtered]')
 		expect(url.searchParams.get('street')).toBe('[Filtered]')
@@ -166,7 +180,7 @@ describe('createBeforeSendTransactionHook', () => {
 			url: 'https://shop.example.com/checkout/payment?shippingMethodId=sm_123&shippingCost=500',
 		})
 		const result = hook(event as any)
-		const url = new URL(result!.request!.url)
+		const url = new URL(result!.request!.url!)
 		expect(url.searchParams.get('shippingMethodId')).toBe('sm_123')
 		expect(url.searchParams.get('shippingCost')).toBe('500')
 	})
@@ -176,7 +190,7 @@ describe('createBeforeSendTransactionHook', () => {
 			url: 'https://shop.example.com/checkout/payment?customerVatNumber=FR12345678901',
 		})
 		const result = hook(event as any)
-		const url = new URL(result!.request!.url)
+		const url = new URL(result!.request!.url!)
 		expect(url.searchParams.get('customerVatNumber')).toBe('[Filtered]')
 	})
 
@@ -189,8 +203,8 @@ describe('createBeforeSendTransactionHook', () => {
 			},
 		})
 		const result = hook(event as any)
-		expect(result!.request!.headers['Authorization']).toBe('[Filtered]')
-		const cookieHeader = result!.request!.headers['Cookie']
+		expect(result!.request!.headers!['Authorization']).toBe('[Filtered]')
+		const cookieHeader = result!.request!.headers!['Cookie']
 		expect(cookieHeader).toContain('_session=[Filtered]')
 		expect(cookieHeader).toContain('pref=dark')
 	})
@@ -198,7 +212,6 @@ describe('createBeforeSendTransactionHook', () => {
 	test('handles invalid URL gracefully', () => {
 		const event = makeEvent({ url: 'not-a-valid-url' })
 		const result = hook(event as any)
-		// Should not crash; event should still be returned
 		expect(result).not.toBeNull()
 		expect(result!.request!.url).toBe('not-a-valid-url')
 	})
@@ -209,8 +222,6 @@ describe('createBeforeSendTransactionHook', () => {
 			headers: { 'x-healthcheck': 'true' },
 		})
 		const result = hook(event as any)
-		// The hook itself doesn't filter healthchecks (tracesSampler does that)
-		// but it should still process the event for PII stripping
 		expect(result).not.toBeNull()
 	})
 })
@@ -223,7 +234,9 @@ describe('PII field pattern matching', () => {
 			data: JSON.stringify({ cardNumber: '4111111111111111' }),
 		})
 		const result = hook(event as any)
-		expect(JSON.parse(result!.request!.data).cardNumber).toBe('[Filtered]')
+		expect(
+			(JSON.parse(result!.request!.data as string) as any).cardNumber,
+		).toBe('[Filtered]')
 	})
 
 	test('redacts cvc/cvv fields', () => {
@@ -231,7 +244,9 @@ describe('PII field pattern matching', () => {
 			data: JSON.stringify({ cvc: '123', cvv: '456' }),
 		})
 		const result = hook(event as any)
-		const data = JSON.parse(result!.request!.data)
+		const data = JSON.parse(
+			result!.request!.data as string,
+		) as Record<string, any>
 		expect(data.cvc).toBe('[Filtered]')
 		expect(data.cvv).toBe('[Filtered]')
 	})
@@ -241,7 +256,9 @@ describe('PII field pattern matching', () => {
 			data: JSON.stringify({ token: 'reset-token-abc' }),
 		})
 		const result = hook(event as any)
-		expect(JSON.parse(result!.request!.data).token).toBe('[Filtered]')
+		expect(
+			(JSON.parse(result!.request!.data as string) as any).token,
+		).toBe('[Filtered]')
 	})
 
 	test('redacts secret field', () => {
@@ -249,7 +266,9 @@ describe('PII field pattern matching', () => {
 			data: JSON.stringify({ secret: 'webhook-secret' }),
 		})
 		const result = hook(event as any)
-		expect(JSON.parse(result!.request!.data).secret).toBe('[Filtered]')
+		expect(
+			(JSON.parse(result!.request!.data as string) as any).secret,
+		).toBe('[Filtered]')
 	})
 
 	test('redacts taxId field', () => {
@@ -257,6 +276,8 @@ describe('PII field pattern matching', () => {
 			data: JSON.stringify({ taxId: 'FR12345678901' }),
 		})
 		const result = hook(event as any)
-		expect(JSON.parse(result!.request!.data).taxId).toBe('[Filtered]')
+		expect(
+			(JSON.parse(result!.request!.data as string) as any).taxId,
+		).toBe('[Filtered]')
 	})
 })
