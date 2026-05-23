@@ -1,4 +1,4 @@
-import { describe, expect, test, afterEach, beforeEach } from 'vitest'
+import { describe, expect, test, afterEach, beforeEach, vi } from 'vitest'
 import { prisma } from './db.server.ts'
 import {
 	generateInvoiceNumber,
@@ -329,11 +329,11 @@ describe('getInvoicePdfData', () => {
 	let invoiceId: string
 
 	beforeEach(async () => {
-		// Ensure 'uncategorized' category exists
-		await prisma.category.upsert({
-			where: { id: 'uncategorized' },
-			update: { name: 'Uncategorized', slug: 'uncategorized' },
-			create: { id: 'uncategorized', name: 'Uncategorized', slug: 'uncategorized' },
+		// Ensure 'uncategorized' category exists and get its id
+		const category = await prisma.category.upsert({
+			where: { slug: 'uncategorized' },
+			update: { name: 'Uncategorized' },
+			create: { name: 'Uncategorized', slug: 'uncategorized' },
 		})
 
 		// Create a test user
@@ -378,7 +378,7 @@ describe('getInvoicePdfData', () => {
 				name: 'PDF Product',
 				slug: `pdf-product-${Date.now()}`,
 				sku: `PDF-${Date.now()}`,
-				categoryId: 'uncategorized',
+				categoryId: category.id,
 				price: 10000,
 				stockQuantity: 999,
 				taxKind: 'STANDARD',
@@ -444,7 +444,7 @@ describe('getInvoicePdfData', () => {
 		const data = await getInvoicePdfData(invoiceId)
 
 		expect(data.customer.name).toBe('PDF Test User')
-		expect(data.customer.email).toBe('pdf-order@example.com')
+		expect(data.customer.email).toBe('invoice-pdf-test@example.com')
 		expect(data.customer.vatNumber).toBe('FR12345678901')
 	})
 
@@ -462,10 +462,12 @@ describe('getInvoicePdfData', () => {
 		const data = await getInvoicePdfData(invoiceId)
 
 		expect(data.items).toHaveLength(1)
-		expect(data.items[0].description).toBe('PDF Product')
-		expect(data.items[0].quantity).toBe(1)
-		expect(data.items[0].unitPriceCents).toBe(10000)
-		expect(data.items[0].totalCents).toBe(10000)
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const item = data.items[0]!
+		expect(item.description).toBe('PDF Product')
+		expect(item.quantity).toBe(1)
+		expect(item.unitPriceCents).toBe(10000)
+		expect(item.totalCents).toBe(10000)
 	})
 
 	test('should include VAT breakdown', async () => {
@@ -502,8 +504,11 @@ describe('getInvoicePdfData', () => {
 describe('getInvoicePdf', () => {
 	let orderId: string
 	let invoiceId: string
+	let warnSpy: ReturnType<typeof vi.spyOn>
 
 	beforeEach(async () => {
+		// Suppress MSW warning from react-pdf WASM loading
+		warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		const order = await prisma.order.create({
 			data: {
 				orderNumber: `ORD-PDF2-${Date.now()}`,
@@ -523,6 +528,7 @@ describe('getInvoicePdf', () => {
 		})
 		orderId = order.id
 
+		// Create a minimal invoice
 		const fiscalYear = new Date().getFullYear()
 		const invoice = await prisma.invoice.create({
 			data: {
@@ -541,6 +547,7 @@ describe('getInvoicePdf', () => {
 	})
 
 	afterEach(async () => {
+		warnSpy.mockRestore()
 		await prisma.invoice.deleteMany({ where: { orderId } })
 		await prisma.orderItem.deleteMany({ where: { orderId } })
 		await prisma.order.deleteMany({ where: { id: orderId } })
