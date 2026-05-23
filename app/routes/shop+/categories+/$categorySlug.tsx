@@ -5,7 +5,7 @@ import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
-import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.server.ts'
+import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$categorySlug.ts'
 

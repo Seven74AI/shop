@@ -6,7 +6,7 @@ import {
 	type OgCategoryInput,
 	type OgHomepageInput,
 	type OgProductInput,
-} from './seo-meta.server.ts'
+} from './seo-meta.ts'
 
 const SITE_URL = 'https://epicshop.example.com'
 

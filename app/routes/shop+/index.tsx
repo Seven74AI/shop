@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { getDomainUrl } from '#app/utils/misc.tsx'
-import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.server.ts'
+import { generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.ts'
 import { type Route } from './+types/index.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
