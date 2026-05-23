@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from 'vitest'
+import { describe, expect, test, beforeEach, vi } from 'vitest'
 import { prisma } from './db.server.ts'
 import {
 	formatCreditNoteNumber,
@@ -9,6 +9,13 @@ import {
 	type CreateCreditNoteItem,
 	type CreateCreditNoteResult,
 } from './credit-note.server.ts'
+
+// Mock invoice-pdf to avoid MSW unhandled request warnings from @react-pdf/renderer
+vi.mock('./invoice-pdf.server.tsx', () => ({
+	generateInvoicePdf: vi.fn().mockResolvedValue(
+		Buffer.from('%PDF-1.4 mock credit note pdf content '.repeat(8)),
+	),
+}))
 
 // ---------------------------------------------------------------------------
 // Helpers
