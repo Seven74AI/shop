@@ -8,7 +8,7 @@ import { formatDate } from '#app/utils/date.ts'
 import { formatInvoiceNumber } from '#app/utils/invoice.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
-import { type Route } from './+types/invoices+/_index.ts'
+import { type Route } from './+types/index.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const userId = await requireUserId(request)
@@ -81,7 +81,7 @@ export default function InvoicesPage({ loaderData }: Route.ComponentProps) {
 				</Card>
 			) : (
 				<div className="space-y-4">
-					{invoices.map((invoice) => {
+					{invoices.map((invoice: typeof invoices[number]) => {
 						const invoiceNumber = formatInvoiceNumber(
 							invoice.fiscalYear,
 							invoice.sequence,
