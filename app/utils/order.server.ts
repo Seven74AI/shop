@@ -1435,7 +1435,8 @@ export async function getAdminOrders(
 		}
 	}
 
-	const skip = (page - 1) * perPage
+	const safePage = Math.max(1, page)
+	const skip = (safePage - 1) * perPage
 
 	const [orders, total] = await Promise.all([
 		getOrdersForPage(where, skip, perPage),
@@ -1445,7 +1446,7 @@ export async function getAdminOrders(
 	return {
 		orders,
 		total,
-		page,
+		page: safePage,
 		perPage,
 		totalPages: Math.ceil(total / perPage),
 	}
