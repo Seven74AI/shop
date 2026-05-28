@@ -351,11 +351,10 @@ describe('admin reviews index', () => {
 			)
 
 			const result = await action({ request, params: {}, context: {} } as any)
-			expect(result).toBeInstanceOf(Response)
-			// Should be an error response
-			if (result instanceof Response) {
-				expect(result.status).toBeGreaterThanOrEqual(400)
-			}
+			// React Router's data() returns DataWithResponseInit, not Response
+			expect(result).toBeDefined()
+			// For invalid actions, status should be 400
+			expect((result as any).init?.status || (result as any).status).toBe(400)
 		})
 	})
 })
