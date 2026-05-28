@@ -1,10 +1,8 @@
 import { type Prisma } from '@prisma/client'
 import { prisma } from './db.server.ts'
 import {
-	generateInvoiceNumber,
 	formatInvoiceNumber,
 	parseInvoiceNumber,
-	withInvoiceLock,
 } from './invoice-numbering.server.ts'
 import { generateInvoicePdf, type InvoicePdfData } from './invoice-pdf.server.tsx'
 import { getStoreCurrency } from './settings.server.ts'
