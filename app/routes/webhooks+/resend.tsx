@@ -50,7 +50,7 @@ function verifyResendSignature(
 		const parts = sig.split(',')
 		if (parts.length >= 2) {
 			try {
-				const sigBytes = Buffer.from(parts[1], 'hex')
+				const sigBytes = Buffer.from(parts[1]!, 'hex')
 				const expectedBytes = Buffer.from(expectedSignature, 'hex')
 				if (
 					sigBytes.length === expectedBytes.length &&
@@ -91,7 +91,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	let payload: { type?: string; data?: Record<string, unknown> }
 	try {
-		payload = JSON.parse(body)
+		payload = JSON.parse(body) as { type?: string; data?: Record<string, unknown> }
 	} catch (err) {
 		return data({ error: 'Invalid JSON body' }, { status: 400 })
 	}
