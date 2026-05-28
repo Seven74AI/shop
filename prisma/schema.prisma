@@ -687,8 +687,16 @@ model Invoice {
   // PDF generation placeholder — populated by P1.2.2 PDF rendering
   pdfObjectKey String?
 
-  // Status lifecycle: DRAFT → FINAL (when issued), or CANCELLED
-  status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED"
+  // Credit note reason — populated when kind=CREDIT_NOTE to record
+  // the reason for the credit note (e.g., "return", "damaged", "partial refund").
+  reason String?
+
+  // Status lifecycle:
+  //   DRAFT → FINAL (when issued), or CANCELLED
+  //   INVOICE status updates on refund:
+  //     PARTIALLY_REFUNDED — some order items refunded
+  //     REFUNDED — all order items refunded
+  status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED" | "PARTIALLY_REFUNDED" | "REFUNDED"
 
   issuedAt  DateTime?
   createdAt DateTime  @default(now())
