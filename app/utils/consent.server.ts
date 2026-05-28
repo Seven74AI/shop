@@ -1,6 +1,6 @@
 import * as cookie from 'cookie'
-
-export const COOKIE_NAME = 'cookieConsent'
+import { COOKIE_NAME } from '#app/utils/consent-constants.ts'
+export { COOKIE_NAME }
 
 export type ConsentPreferences = {
 	necessary: boolean
