@@ -1,6 +1,10 @@
 import { PrismaInstrumentation } from '@prisma/instrumentation'
 import { nodeProfilingIntegration } from '@sentry/profiling-node'
 import * as Sentry from '@sentry/react-router'
+import {
+	createBeforeSendHook,
+	createBeforeSendTransactionHook,
+} from '../../app/utils/sentry-pii.server.ts'
 
 export function init() {
 	Sentry.init({
@@ -30,14 +34,21 @@ export function init() {
 			}
 			return process.env.NODE_ENV === 'production' ? 1 : 0
 		},
-		beforeSendTransaction(event) {
+		beforeSendTransaction(event, _hint) {
 			// ignore all healthcheck related transactions
 			//  note that name of header here is case-sensitive
 			if (event.request?.headers?.['x-healthcheck'] === 'true') {
 				return null
 			}
 
-			return event
+			// Strip PII from transaction data
+			const piiHook = createBeforeSendTransactionHook()
+			return piiHook(event) as any
+		},
+		beforeSend(event, _hint) {
+			// Strip PII from error events
+			const piiHook = createBeforeSendHook()
+			return piiHook(event) as any
 		},
 	})
 }

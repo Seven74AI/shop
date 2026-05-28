@@ -353,7 +353,7 @@ export default function CheckoutShipping() {
 						</Select>
 						
 						{selectedAddress && !useNewAddress && (
-							<div className="p-4 border rounded-lg bg-muted/50">
+							<div className="p-4 border rounded-lg bg-muted/50" data-sentry-block="">
 								<p className="font-medium">{selectedAddress.name}</p>
 								<p className="text-sm text-muted-foreground">
 									{selectedAddress.street}
