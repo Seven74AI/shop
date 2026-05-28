@@ -7,11 +7,13 @@ import { StockUnavailableError } from '#app/utils/order-stock.server.ts'
 import { createOrderFromStripeSession } from '#app/utils/order.server.ts'
 import { type StoreAddress } from '#app/utils/shipment.server.ts'
 import { stripe } from '#app/utils/stripe.server.ts'
+import { processWebhook } from '#app/utils/webhook.server.ts'
 import { type Route } from './+types/stripe.ts'
 
 /**
  * Webhook handler for Stripe events.
  * Handles checkout.session.completed events to create orders.
+ * Uses WebhookEvent table for idempotent deduplication.
  */
 export async function action({ request }: Route.ActionArgs) {
 	const body = await request.text()
@@ -51,17 +53,16 @@ export async function action({ request }: Route.ActionArgs) {
 			expand: ['line_items', 'payment_intent'],
 		})
 
-		// Verify payment status before fulfilling order
+		// Verify payment status before proceeding to idempotent processing
 		if (fullSession.payment_status !== 'paid') {
-		// Log payment status issues for monitoring
-		void Sentry.captureMessage(
-			`Payment not completed for session ${session.id}. Payment status: ${fullSession.payment_status}`,
-			{
-				level: 'warning',
-				tags: { context: 'webhook-payment-status' },
-				extra: { sessionId: session.id, paymentStatus: fullSession.payment_status },
-			},
-		)
+			void Sentry.captureMessage(
+				`Payment not completed for session ${session.id}. Payment status: ${fullSession.payment_status}`,
+				{
+					level: 'warning',
+					tags: { context: 'webhook-payment-status' },
+					extra: { sessionId: session.id, paymentStatus: fullSession.payment_status },
+				},
+			)
 			return data(
 				{
 					received: true,
@@ -72,61 +73,71 @@ export async function action({ request }: Route.ActionArgs) {
 			)
 		}
 
-		// Create order using shared function
-		try {
-			const order = await createOrderFromStripeSession(
-				session.id,
-				fullSession,
-				request,
-			)
+		// Process with idempotent deduplication via WebhookEvent table
+		const result = await processWebhook(
+			event.id,
+			event.type,
+			'stripe',
+			{ sessionId: session.id, paymentIntent: typeof fullSession.payment_intent === 'string' ? fullSession.payment_intent : fullSession.payment_intent?.id },
+			async () => {
+				// Create order
+				const order = await createOrderFromStripeSession(
+					session.id,
+					fullSession,
+					request,
+				)
 
-			// Fulfill order (create shipments, etc.) - non-blocking
-			// Don't fail webhook if fulfillment fails - it can be retried manually
-			try {
-				const storeAddress: StoreAddress = {
-					name: process.env.STORE_NAME || 'Store',
-					address1: process.env.STORE_ADDRESS1 || '',
-					address2: process.env.STORE_ADDRESS2,
-					city: process.env.STORE_CITY || '',
-					postalCode: process.env.STORE_POSTAL_CODE || '',
-					country: process.env.STORE_COUNTRY || 'FR',
-					phone: process.env.STORE_PHONE || '',
-					email: process.env.STORE_EMAIL,
+				// Fulfill order (create shipments, etc.) - non-blocking
+				// Don't fail webhook if fulfillment fails - it can be retried manually
+				try {
+					const storeAddress: StoreAddress = {
+						name: process.env.STORE_NAME || 'Store',
+						address1: process.env.STORE_ADDRESS1 || '',
+						address2: process.env.STORE_ADDRESS2,
+						city: process.env.STORE_CITY || '',
+						postalCode: process.env.STORE_POSTAL_CODE || '',
+						country: process.env.STORE_COUNTRY || 'FR',
+						phone: process.env.STORE_PHONE || '',
+						email: process.env.STORE_EMAIL,
+					}
+
+					await fulfillOrder(order.id, storeAddress)
+				} catch (fulfillmentError) {
+					// Log fulfillment errors but don't fail webhook
+					// Order was created successfully, fulfillment can be retried
+					Sentry.captureException(fulfillmentError, {
+						tags: { context: 'webhook-order-fulfillment' },
+						extra: {
+							orderId: order.id,
+							sessionId: session.id,
+						},
+					})
 				}
+			},
+		)
 
-				await fulfillOrder(order.id, storeAddress)
-			} catch (fulfillmentError) {
-				// Log fulfillment errors but don't fail webhook
-				// Order was created successfully, fulfillment can be retried
-				Sentry.captureException(fulfillmentError, {
-					tags: { context: 'webhook-order-fulfillment' },
-					extra: {
-						orderId: order.id,
-						sessionId: session.id,
-					},
-				})
-			}
+		if (result.status === 'PROCESSED') {
+			return data({ received: true, idempotent: !result.processed })
+		}
 
-			// Cart is already deleted within the transaction above
-			return data({ received: true, orderId: order.id })
-		} catch (error) {
-			// Log critical errors to Sentry
-			Sentry.captureException(error, {
-				tags: { context: 'webhook-order-creation' },
-				extra: {
-					sessionId: session.id,
-					message: error instanceof Error ? error.message : 'Unknown error',
-				},
-			})
-			if (error instanceof StockUnavailableError) {
-				// Stock unavailable after payment - this is a critical error
-				// Payment was already processed, so we need to handle refund
+		// Handle FAILED status — only refund for permanent errors (stock unavailable).
+		// Transient errors (DB timeout, network) return 500 without refund so Stripe
+		// retries; processWebhook re-processes FAILED events automatically.
+		if (result.status === 'FAILED' && result.error) {
+			const isStockError = result.errorType === 'StockUnavailableError'
+
+			if (isStockError) {
+				// Stock unavailable after payment — permanent failure, must refund
 				const paymentIntentId =
 					typeof fullSession.payment_intent === 'string'
 						? fullSession.payment_intent
 						: fullSession.payment_intent?.id
 
 				if (paymentIntentId && fullSession.amount_total) {
+					// Extract product name from error message for metadata
+					const productNameMatch = result.error?.match(/Insufficient stock for (.+)$/)
+					const productName = productNameMatch ? productNameMatch[1] : undefined
+
 					try {
 						await stripe.refunds.create({
 							payment_intent: paymentIntentId,
@@ -135,10 +146,9 @@ export async function action({ request }: Route.ActionArgs) {
 							metadata: {
 								reason: 'stock_unavailable',
 								checkout_session_id: fullSession.id,
-								product_name: error.data.productName,
+								product_name: productName ?? null,
 							},
 						})
-						// Log successful refund for monitoring
 						Sentry.captureMessage(
 							`Refund created for payment ${paymentIntentId} due to stock unavailability`,
 							{
@@ -148,7 +158,6 @@ export async function action({ request }: Route.ActionArgs) {
 							},
 						)
 					} catch (refundError) {
-						// Log refund errors - these are critical
 						Sentry.captureException(refundError, {
 							tags: { context: 'webhook-refund-error' },
 							extra: { paymentIntentId, sessionId: fullSession.id },
@@ -160,17 +169,27 @@ export async function action({ request }: Route.ActionArgs) {
 					{
 						received: true,
 						error: 'Stock unavailable',
-						message: error.message,
+						message: result.error,
 					},
 					{ status: 500 },
 				)
 			}
-			// Re-throw other errors to trigger Stripe retry
-			throw error
+
+			// Transient error (DB timeout, network, etc.) — return 500 without refunding.
+			// Stripe will retry; processWebhook re-processes the FAILED event on retry.
+			return data(
+				{
+					received: true,
+					error: 'Webhook processing failed',
+					message: result.error,
+				},
+				{ status: 500 },
+			)
 		}
+
+		return data({ received: true })
 	}
 
 	// Return success for unhandled event types
 	return data({ received: true })
 }
-
