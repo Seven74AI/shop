@@ -11,6 +11,7 @@ const STORAGE_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID
 const STORAGE_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const STORAGE_REGION = process.env.AWS_REGION
 
+
 /**
  * Upload a verified, sanitized buffer to storage.
  * Used by upload functions after verifyUpload has passed.

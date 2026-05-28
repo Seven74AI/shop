@@ -1,21 +1,97 @@
 import { type Prisma } from '@prisma/client'
 import { prisma } from './db.server.ts'
 import {
-	generateInvoiceNumber,
 	formatInvoiceNumber,
 	parseInvoiceNumber,
-	withInvoiceLock,
 } from './invoice-numbering.server.ts'
 import { generateInvoicePdf, type InvoicePdfData } from './invoice-pdf.server.tsx'
 import { getStoreCurrency } from './settings.server.ts'
 
-// Re-export the numbering functions for backward compatibility
+/**
+ * Promise-chain lock for serializing invoice creation operations.
+ * In a single-process LiteFS primary, a Promise-based lock is sufficient
+ * to prevent concurrent invoice number generation from racing.
+ *
+ * Usage: await withInvoiceLock(() => createInvoice(payload))
+ */
+let invoiceLock: Promise<void> = Promise.resolve()
+
+export async function withInvoiceLock<T>(fn: () => Promise<T>): Promise<T> {
+	const prev = invoiceLock
+	let release: () => void
+	invoiceLock = new Promise<void>((resolve) => {
+		release = resolve
+	})
+	await prev
+	try {
+		return await fn()
+	} finally {
+		release!()
+	}
+}
+
+/**
+ * Generates a unique invoice number in the format "F{year}-{sequence:05d}" (e.g., "F2025-00001").
+ *
+ * Uses a database-level write transaction to atomically read the highest sequence
+ * for the given fiscal year and return the next one. The @@unique([fiscalYear, sequence])
+ * constraint provides a safety net against race conditions.
+ *
+ * @param fiscalYear - The fiscal year for the invoice (e.g., 2025).
+ * @param tx - Optional transaction client. If provided, uses the existing transaction
+ *   instead of creating a new one. This allows the invoice number generation to be
+ *   composed within a larger transaction (e.g., creating the invoice record).
+ * @returns The formatted invoice number string.
+ */
+export async function generateInvoiceNumber(
+	fiscalYear: number,
+	tx?: Prisma.TransactionClient,
+): Promise<string> {
+	// If a transaction client is provided, use it directly
+	if (tx) {
+		const lastInvoice = await tx.invoice.findFirst({
+			where: { fiscalYear },
+			orderBy: { sequence: 'desc' },
+			select: { sequence: true },
+		})
+
+		const nextSequence =
+			lastInvoice && !isNaN(lastInvoice.sequence)
+				? lastInvoice.sequence + 1
+				: 1
+
+		return formatInvoiceNumber(fiscalYear, nextSequence)
+	}
+
+	// For SQLite, we use BEGIN IMMEDIATE to get an exclusive write lock.
+	// This ensures sequential numbering even with concurrent requests.
+	return await prisma.$transaction(
+		async (transactionTx) => {
+			const lastInvoice = await transactionTx.invoice.findFirst({
+				where: { fiscalYear },
+				orderBy: { sequence: 'desc' },
+				select: { sequence: true },
+			})
+
+			const nextSequence =
+				lastInvoice && !isNaN(lastInvoice.sequence)
+					? lastInvoice.sequence + 1
+					: 1
+
+			return formatInvoiceNumber(fiscalYear, nextSequence)
+		},
+		{
+			// Use maxWait to prevent indefinite waits
+			maxWait: 5000, // 5 seconds
+			timeout: 10000, // 10 seconds
+		},
+	)
+}
+
 export {
-	generateInvoiceNumber,
 	formatInvoiceNumber,
 	parseInvoiceNumber,
-	withInvoiceLock,
-}
+} from './invoice.ts'
 
 // ---------------------------------------------------------------------------
 // Credit note helpers
