@@ -33,6 +33,8 @@ async function main() {
   const jpegGps = await sharp({ create: { width: 10, height: 10, channels: 3, background: { r: 128, g: 128, b: 128 } } })
     .jpeg()
     .withMetadata({
+      // GPSInfo is supported by sharp at runtime but not in TypeScript types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       exif: {
         IFD0: {
           Make: 'Apple',
@@ -44,7 +46,7 @@ async function main() {
           GPSLongitudeRef: 'E',
           GPSLongitude: [2, 20, 56.4504],
         },
-      },
+      } as any,
     })
     .toBuffer()
   fs.writeFileSync('/tmp/test-jpeg-gps.jpg', jpegGps)
