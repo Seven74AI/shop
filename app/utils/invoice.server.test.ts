@@ -1,10 +1,12 @@
-import { describe, expect, test, afterEach } from 'vitest'
+import { describe, expect, test, afterEach, beforeEach, vi } from 'vitest'
 import { prisma } from './db.server.ts'
 import {
 	generateInvoiceNumber,
 	formatInvoiceNumber,
 	parseInvoiceNumber,
 	withInvoiceLock,
+	getInvoicePdfData,
+	getInvoicePdf,
 } from './invoice.server.ts'
 import { generateOrderNumber } from './order-number.server.ts'
 
@@ -315,5 +317,247 @@ describe('withInvoiceLock', () => {
 		numbers.forEach((num, idx) => {
 			expect(num).toBe(`F2025-${String(idx + 1).padStart(5, '0')}`)
 		})
+	})
+	})
+
+// ---------------------------------------------------------------------------
+// getInvoicePdfData and getInvoicePdf tests
+// ---------------------------------------------------------------------------
+
+describe('getInvoicePdfData', () => {
+	let orderId: string
+	let invoiceId: string
+
+	beforeEach(async () => {
+		// Ensure 'uncategorized' category exists and get its id
+		const category = await prisma.category.upsert({
+			where: { slug: 'uncategorized' },
+			update: { name: 'Uncategorized' },
+			create: { name: 'Uncategorized', slug: 'uncategorized' },
+		})
+
+		// Create a test user
+		const user = await prisma.user.upsert({
+			where: { email: 'invoice-pdf-test@example.com' },
+			create: {
+				email: 'invoice-pdf-test@example.com',
+				name: 'PDF Test User',
+				username: `pdf-user-${Date.now()}`,
+			},
+			update: {},
+		})
+
+		// Create a test order with user, shipping, VAT data
+		const order = await prisma.order.create({
+			data: {
+				orderNumber: `ORD-PDF-${Date.now()}`,
+				userId: user.id,
+				email: 'pdf-order@example.com',
+				subtotal: 10000,
+				total: 12000,
+				shippingName: 'PDF Ship',
+				shippingStreet: '789 PDF Blvd',
+				shippingCity: 'Lyon',
+				shippingPostal: '69001',
+				shippingCountry: 'FR',
+				shippingCost: 500,
+				taxCountry: 'FR',
+				customerVatNumber: 'FR12345678901',
+				stripeCheckoutSessionId: `cs_pdf_${Date.now()}`,
+				vatBreakdown: [
+					{ kind: 'STANDARD', rate: 2000, baseCents: 9500, vatCents: 1900 },
+				],
+				vatTotalCents: 1900,
+			},
+		})
+		orderId = order.id
+
+		// Create a test product and order item
+		const product = await prisma.product.create({
+			data: {
+				name: 'PDF Product',
+				slug: `pdf-product-${Date.now()}`,
+				sku: `PDF-${Date.now()}`,
+				categoryId: category.id,
+				price: 10000,
+				stockQuantity: 999,
+				taxKind: 'STANDARD',
+			},
+		})
+
+		await prisma.orderItem.create({
+			data: {
+				orderId: order.id,
+				productId: product.id,
+				price: 10000,
+				quantity: 1,
+			},
+		})
+
+		// Create an invoice for the order
+		const fiscalYear = new Date().getFullYear()
+		const invoice = await prisma.invoice.create({
+			data: {
+				fiscalYear,
+				sequence: 42,
+				kind: 'INVOICE',
+				orderId: order.id,
+				subtotalCents: 10000,
+				totalCents: 12000,
+				vatBreakdown: [
+					{ kind: 'STANDARD', rate: 2000, baseCents: 9500, vatCents: 1900 },
+				],
+				vatTotalCents: 1900,
+				status: 'FINAL',
+				issuedAt: new Date('2026-02-15'),
+			},
+		})
+		invoiceId = invoice.id
+	})
+
+	afterEach(async () => {
+		await prisma.invoice.deleteMany({ where: { orderId } })
+		await prisma.orderItem.deleteMany({ where: { orderId } })
+		await prisma.order.deleteMany({ where: { id: orderId } })
+		await prisma.product.deleteMany({ where: { name: 'PDF Product' } })
+		await prisma.user.deleteMany({ where: { email: 'invoice-pdf-test@example.com' } })
+	})
+
+	test('should return InvoicePdfData with correct invoice number', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.invoiceNumber).toBe(`F${new Date().getFullYear()}-00042`)
+		expect(data.invoiceStatus).toBe('FINAL')
+		expect(data.kind).toBe('INVOICE')
+	})
+
+	test('should return correct order details', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.orderNumber).toContain('ORD-PDF-')
+		expect(data.invoiceDate).toBe('2026-02-15')
+		expect(data.subtotalCents).toBe(10000)
+		expect(data.totalCents).toBe(12000)
+	})
+
+	test('should include customer information from user', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.customer.name).toBe('PDF Test User')
+		expect(data.customer.email).toBe('invoice-pdf-test@example.com')
+		expect(data.customer.vatNumber).toBe('FR12345678901')
+	})
+
+	test('should include shipping information', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.shipping.name).toBe('PDF Ship')
+		expect(data.shipping.street).toBe('789 PDF Blvd')
+		expect(data.shipping.city).toBe('Lyon')
+		expect(data.shipping.postal).toBe('69001')
+		expect(data.shipping.country).toBe('FR')
+	})
+
+	test('should include line items', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.items).toHaveLength(1)
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const item = data.items[0]!
+		expect(item.description).toBe('PDF Product')
+		expect(item.quantity).toBe(1)
+		expect(item.unitPriceCents).toBe(10000)
+		expect(item.totalCents).toBe(10000)
+	})
+
+	test('should include VAT breakdown', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.vatBreakdown).toHaveLength(1)
+		expect(data.vatBreakdown[0]).toEqual({
+			kind: 'STANDARD',
+			rate: 2000,
+			baseCents: 9500,
+			vatCents: 1900,
+		})
+		expect(data.vatTotalCents).toBe(1900)
+	})
+
+	test('should include store information', async () => {
+		const data = await getInvoicePdfData(invoiceId)
+
+		expect(data.storeName).toBe('Epic Shop')
+		expect(data.storeVatNumber).toBe('FR12345678901')
+		expect(data.storeEmail).toBe('contact@epicshop.example.com')
+		expect(data.currency).toBeTruthy()
+		expect(data.currency!.code).toBe('USD')
+		expect(data.currency!.symbol).toBe('$')
+	})
+
+	test('should throw for non-existent invoice', async () => {
+		await expect(getInvoicePdfData('non-existent-id')).rejects.toThrow(
+			'Invoice non-existent-id not found',
+		)
+	})
+})
+
+describe('getInvoicePdf', () => {
+	let orderId: string
+	let invoiceId: string
+	let warnSpy: ReturnType<typeof vi.spyOn>
+
+	beforeEach(async () => {
+		// Suppress MSW warning from react-pdf WASM loading
+		warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const order = await prisma.order.create({
+			data: {
+				orderNumber: `ORD-PDF2-${Date.now()}`,
+				email: 'pdf2-order@example.com',
+				subtotal: 5000,
+				total: 5000,
+				shippingName: 'Minimal Ship',
+				shippingStreet: '1 Min St',
+				shippingCity: 'Paris',
+				shippingPostal: '75001',
+				shippingCountry: 'FR',
+				taxCountry: 'FR',
+				stripeCheckoutSessionId: `cs_pdf2_${Date.now()}`,
+				vatBreakdown: [],
+				vatTotalCents: 0,
+			},
+		})
+		orderId = order.id
+
+		// Create a minimal invoice
+		const fiscalYear = new Date().getFullYear()
+		const invoice = await prisma.invoice.create({
+			data: {
+				fiscalYear,
+				sequence: 99,
+				kind: 'INVOICE',
+				orderId: order.id,
+				subtotalCents: 5000,
+				totalCents: 5000,
+				vatBreakdown: [],
+				vatTotalCents: 0,
+				status: 'FINAL',
+			},
+		})
+		invoiceId = invoice.id
+	})
+
+	afterEach(async () => {
+		warnSpy.mockRestore()
+		await prisma.invoice.deleteMany({ where: { orderId } })
+		await prisma.orderItem.deleteMany({ where: { orderId } })
+		await prisma.order.deleteMany({ where: { id: orderId } })
+	})
+
+	test('should generate a non-empty PDF buffer', async () => {
+		const pdfBuffer = await getInvoicePdf(invoiceId)
+		expect(pdfBuffer).toBeInstanceOf(Buffer)
+		expect(pdfBuffer.length).toBeGreaterThan(0)
+		// PDFs start with '%PDF-'
+		expect(pdfBuffer.toString('latin1').slice(0, 5)).toBe('%PDF-')
 	})
 })
