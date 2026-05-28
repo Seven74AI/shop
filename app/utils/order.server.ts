@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
 import { prisma } from './db.server.ts'
 import { sendEmail } from './email.server.ts'
+import { generateGuestToken } from './guest-token.server.ts'
 import { getDomainUrl } from './misc.tsx'
 import { generateOrderNumber } from './order-number.server.ts'
 import { generateInvoiceNumber, parseInvoiceNumber, formatInvoiceNumber } from './invoice.server.ts'
@@ -208,6 +209,15 @@ export async function getOrderByOrderNumber(orderNumber: string) {
 					},
 				},
 			},
+			invoices: {
+				select: {
+					id: true,
+					fiscalYear: true,
+					sequence: true,
+					kind: true,
+					status: true,
+				},
+			},
 		},
 	})
 }
@@ -236,6 +246,15 @@ export async function getUserOrders(userId: string) {
 							},
 						},
 					},
+				},
+			},
+			invoices: {
+				select: {
+					id: true,
+					fiscalYear: true,
+					sequence: true,
+					kind: true,
+					status: true,
 				},
 			},
 		},
@@ -935,6 +954,15 @@ export async function createOrderFromStripeSession(
 			}
 		}
 		
+		// Generate a signed token for guest orders so they can access their order
+		// without typing email+orderNumber manually
+		const guestToken = !order.userId
+			? generateGuestToken(order.orderNumber, order.email)
+			: null
+		const orderLink = guestToken
+			? `${domainUrl}/shop/orders?token=${encodeURIComponent(guestToken)}`
+			: `${domainUrl}/shop/orders/${order.orderNumber}`
+
 		await sendEmail({
 			to: order.email,
 			subject: `Order Confirmation - ${order.orderNumber}`,
@@ -945,7 +973,7 @@ export async function createOrderFromStripeSession(
 				<p><strong>Subtotal:</strong> €${(order.subtotal / 100).toFixed(2)}</p>
 				${vatHtml}
 				<p><strong>Total:</strong> €${(order.total / 100).toFixed(2)}</p>
-				<p><a href="${domainUrl}/shop/orders/${order.orderNumber}">View Order Details</a></p>
+				<p><a href="${orderLink}">View Order Details</a></p>
 			`,
 			text: `
 Order Confirmation
@@ -957,7 +985,7 @@ Subtotal: €${(order.subtotal / 100).toFixed(2)}
 ${vatText}
 Total: €${(order.total / 100).toFixed(2)}
 
-View Order Details: ${domainUrl}/shop/orders/${order.orderNumber}
+View Order Details: ${orderLink}
 			`,
 		})
 	} catch (emailError) {

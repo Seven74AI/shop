@@ -8,6 +8,7 @@
  */
 
 import * as Sentry from '@sentry/react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { prisma } from './db.server.ts'
 import { createMondialRelayShipment, type StoreAddress } from './shipment.server.ts'
 import { sendShippingConfirmationEmail } from './shipping-email.server.tsx'
@@ -56,23 +57,23 @@ export async function fulfillOrder(
 		order.shippingCarrierName === 'Mondial Relay'
 
 	// Log fulfillment check for debugging
-	console.log('[Fulfillment] Checking order:', {
+	log.info({
 		orderNumber: order.orderNumber,
 		status: order.status,
 		hasPickupPointId: !!order.mondialRelayPickupPointId,
 		hasShipmentNumber: !!order.mondialRelayShipmentNumber,
 		shippingCarrierName: order.shippingCarrierName,
 		needsMondialRelayShipment,
-	})
+	}, '[Fulfillment] Checking order')
 
 	if (needsMondialRelayShipment) {
-		console.log('[Fulfillment] Creating Mondial Relay shipment for order:', order.orderNumber)
+		log.info({ orderNumber: order.orderNumber }, '[Fulfillment] Creating Mondial Relay shipment')
 		try {
 			const shipmentResult = await createMondialRelayShipment(order.id, storeAddress)
-			console.log('[Fulfillment] Shipment created successfully:', {
+			log.info({
 				shipmentNumber: shipmentResult.shipmentNumber,
 				labelUrl: shipmentResult.labelUrl,
-			})
+			}, '[Fulfillment] Shipment created successfully')
 			
 			// Shipment creation updates the order with shipment number and label URL
 
@@ -81,7 +82,7 @@ export async function fulfillOrder(
 				where: { id: order.id },
 				data: { status: 'SHIPPED' },
 			})
-			console.log('[Fulfillment] Order status updated to SHIPPED')
+			log.info({ orderNumber: order.orderNumber }, '[Fulfillment] Order status updated to SHIPPED')
 
 			// Send shipping confirmation email (non-blocking)
 			try {
@@ -109,7 +110,7 @@ export async function fulfillOrder(
 		} catch (error) {
 			// Log error but don't fail fulfillment
 			// Admin can manually create shipment later if needed
-			console.error('[Fulfillment] Error creating shipment (non-fatal):', error)
+			log.error({ err: error, orderId: order.id, orderNumber: order.orderNumber }, '[Fulfillment] Error creating shipment (non-fatal)')
 			Sentry.captureException(error, {
 				tags: { context: 'order-fulfillment-shipment' },
 				extra: {

@@ -588,7 +588,9 @@ model Review {
   title      String?
   body       String?
   isVerifiedPurchase Boolean @default(false)
-  isApproved Boolean  @default(false)
+  isApproved       Boolean  @default(false)
+  rejectionReason  String?  // Reason when admin rejects the review
+  adminNotes       String?  // Internal admin notes
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -739,6 +741,50 @@ model TaxRate {
   @@index([country])
   @@index([kind])
   @@index([isActive])
+}
+
+// Coupon & Promotion System
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+// Coupon — discount code applied at checkout by the customer
+model Coupon {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  discountType  DiscountType
+  discountValue Int          // percentage in basis points (1000 = 10.00%) or cents for FIXED_AMOUNT
+  minOrderAmount Int?        // minimum order total in cents required to apply
+  maxUses       Int?         // null = unlimited uses
+  usedCount     Int          @default(0)
+  startsAt      DateTime?
+  expiresAt     DateTime?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  @@index([code])
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([expiresAt])
+}
+
+// Promotion — site-wide or targeted discount (automatic or via banner)
+model Promotion {
+  id            String       @id @default(cuid())
+  name          String
+  description   String?
+  discountType  DiscountType
+  discountValue Int          // percentage in basis points (1000 = 10.00%) or cents for FIXED_AMOUNT
+  startsAt      DateTime?
+  expiresAt     DateTime?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([expiresAt])
 }
 
 enum OrderStatus {

@@ -1,6 +1,7 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { data } from 'react-router'
 import { getUserId } from '#app/utils/auth.server.ts'
+import { log } from '#app/utils/logging.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order-queries.server.ts'
 import { getMondialRelayTrackingInfo } from '#app/utils/tracking.server.ts'
 import { type Route } from './+types/$orderNumber.tracking.ts'
@@ -41,7 +42,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		const trackingInfo = await getMondialRelayTrackingInfo(order.id)
 		return data({ trackingInfo })
 	} catch (error) {
-		console.error('Error fetching tracking info:', error)
+		log.error({ err: error }, 'Error fetching tracking info')
 		return data(
 			{
 				error: 'Failed to fetch tracking information',

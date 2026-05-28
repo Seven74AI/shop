@@ -81,3 +81,17 @@ Prisma: `pnpm exec prisma migrate dev --name <name>`, `pnpm exec prisma studio`.
 ## Environment
 
 Copy `.env.example` to `.env` for local config. Stripe CLI setup notes are in `STRIPE_CLI_SETUP.md`. Engines field pins Node 22 but recent commits migrated to Node 24 — check the active CI matrix (`.github/workflows/deploy.yml`) before assuming a version.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `Seven74AI/shop`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.

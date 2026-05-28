@@ -8,12 +8,14 @@
 
 import { invariantResponse } from '@epic-web/invariant'
 import { data } from 'react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
-	generateInvoiceNumber,
-	withInvoiceLock,
-	formatInvoiceNumber,
-} from '#app/utils/invoice.server.ts'
+		formatInvoiceNumber,
+		generateInvoiceNumber,
+		parseInvoiceNumber,
+		withInvoiceLock,
+	} from '#app/utils/invoice.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { type Route } from './+types/$orderNumber.create-invoice.ts'
@@ -70,11 +72,11 @@ export async function action({ params, request }: Route.ActionArgs) {
 			const invoiceNumber = await generateInvoiceNumber(fiscalYear)
 
 			// Extract sequence from the generated number
-			const match = invoiceNumber.match(/^F\d{4}-(\d{5})$/)
-			if (!match) {
+			const parsed = parseInvoiceNumber(invoiceNumber)
+			if (!parsed) {
 				throw new Error(`Invalid generated invoice number: ${invoiceNumber}`)
 			}
-			const sequence = parseInt(match[1]!, 10)
+			const sequence = parsed.sequence
 
 			// Build VAT breakdown from order data (snapshot at invoice time)
 			// If order has VAT info, use it; otherwise create a simple breakdown
@@ -142,7 +144,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 			},
 		})
 	} catch (error) {
-		console.error('Failed to create invoice:', error)
+		log.error({ err: error }, 'Failed to create invoice')
 		return data(
 			{
 				error: 'Failed to create invoice',

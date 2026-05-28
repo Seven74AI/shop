@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { log } from '#app/utils/logging.server.ts'
 
 const schema = z.object({
 	NODE_ENV: z.enum(['production', 'development', 'test'] as const),
@@ -7,6 +8,8 @@ const schema = z.object({
 	SESSION_SECRET: z.string(),
 	INTERNAL_COMMAND_TOKEN: z.string(),
 	HONEYPOT_SECRET: z.string(),
+	// HMAC secret for guest order lookup tokens (30-day expiry)
+	GUEST_SECRET: z.string().optional(),
 	CACHE_DATABASE_PATH: z.string(),
 	// If you plan on using Sentry, remove the .optional()
 	SENTRY_DSN: z.string().optional(),
@@ -38,9 +41,9 @@ export function init() {
 	const parsed = schema.safeParse(process.env)
 
 	if (parsed.success === false) {
-		console.error(
-			'❌ Invalid environment variables:',
-			parsed.error.flatten().fieldErrors,
+		log.error(
+			{ fieldErrors: parsed.error.flatten().fieldErrors },
+			'❌ Invalid environment variables',
 		)
 
 		throw new Error('Invalid environment variables')

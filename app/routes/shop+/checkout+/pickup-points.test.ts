@@ -3,8 +3,17 @@
  */
 import { describe, expect, test, beforeEach, afterEach, vi } from 'vitest'
 import * as mondialRelayApi1 from '#app/utils/carriers/mondial-relay-api1.server.ts'
-import { consoleError } from '#tests/setup/setup-test-env'
+import { log } from '#app/utils/logging.server.ts'
 import { loader } from './pickup-points.ts'
+
+vi.mock('#app/utils/logging.server.ts', () => ({
+	log: {
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
+	},
+}))
 
 // Mock the Mondial Relay API1 client
 vi.mock('#app/utils/carriers/mondial-relay-api1.server.ts', () => ({
@@ -14,11 +23,6 @@ vi.mock('#app/utils/carriers/mondial-relay-api1.server.ts', () => ({
 describe('pickup-points route', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		consoleError.mockImplementation(() => {})
-	})
-
-	afterEach(() => {
-		consoleError.mockClear()
 	})
 
 	test('returns pickup points for valid postal code and country', async () => {
@@ -152,7 +156,7 @@ describe('pickup-points route', () => {
 			throw new Error('Expected result to have data property')
 		}
 
-		expect(consoleError).toHaveBeenCalled()
+		expect(log.error).toHaveBeenCalled()
 	})
 
 	test('uppercases country code', async () => {

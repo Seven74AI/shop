@@ -1,3 +1,4 @@
+import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fsExtra from 'fs-extra'
@@ -17,7 +18,12 @@ export async function createFixture(
 ) {
 	const dir = path.join(fixturesDirPath, subdir)
 	await fsExtra.ensureDir(dir)
-	return fsExtra.writeJSON(path.join(dir, `./${name}.json`), data)
+	const filePath = path.join(dir, `./${name}.json`)
+	await fsExtra.writeJSON(filePath, data)
+	// fsync the file to ensure data is on disk before returning
+	const fd = await fs.open(filePath, 'r')
+	await fd.sync()
+	await fd.close()
 }
 
 export const EmailSchema = z.object({
@@ -41,13 +47,22 @@ export async function requireEmail(recipient: string) {
 }
 
 export async function readEmail(recipient: string) {
-	try {
-		const email = await readFixture('email', recipient)
-		return EmailSchema.parse(email)
-	} catch (error) {
-		console.error(`Error reading email`, error)
-		return null
+	// Retry on JSON parse failure or transient I/O errors — the file may
+	// not be fully flushed when a previous mock write just completed
+	for (let attempt = 0; attempt < 5; attempt++) {
+		try {
+			const email = await readFixture('email', recipient)
+			return EmailSchema.parse(email)
+		} catch (error) {
+			if (attempt < 4) {
+				await new Promise((r) => setTimeout(r, 50 * (attempt + 1)))
+				continue
+			}
+			console.error(`Error reading email`, error)
+			return null
+		}
 	}
+	return null
 }
 
 export function requireHeader(headers: Headers, header: string) {

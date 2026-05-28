@@ -103,6 +103,9 @@ export async function action({ request }: Route.ActionArgs) {
 	const shippingMethodId = submission.value.shippingMethodId
 	const mondialRelayPickupPointId = submission.value.mondialRelayPickupPointId || ''
 
+	// Get coupon code from URL params (not in the form schema)
+	const couponCode = url.searchParams.get('couponCode') || undefined
+
 	// Get cart for weight calculation
 	const { cart } = await getOrCreateCartFromRequest(request)
 	invariantResponse(cart, 'Cart not found', { status: 404 })
@@ -166,7 +169,8 @@ export async function action({ request }: Route.ActionArgs) {
 		`country=${encodeURIComponent(country)}&` +
 		`shippingMethodId=${encodeURIComponent(shippingMethodId)}&` +
 		`shippingCost=${shippingCost}&` +
-		`mondialRelayPickupPointId=${encodeURIComponent(mondialRelayPickupPointId)}`
+		`mondialRelayPickupPointId=${encodeURIComponent(mondialRelayPickupPointId)}` +
+		`${couponCode ? `&couponCode=${encodeURIComponent(couponCode)}` : ''}`
 	)
 }
 

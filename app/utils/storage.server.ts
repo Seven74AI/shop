@@ -2,6 +2,7 @@ import { createHash, createHmac } from 'crypto'
 import { type FileUpload } from '@mjackson/form-data-parser'
 import { createId } from '@paralleldrive/cuid2'
 import * as Sentry from '@sentry/react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { verifyUpload } from './upload-verify.server.ts'
 
 const STORAGE_ENDPOINT = process.env.AWS_ENDPOINT_URL_S3

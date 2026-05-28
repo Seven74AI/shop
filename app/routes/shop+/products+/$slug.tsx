@@ -1,14 +1,18 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { Link, redirect } from 'react-router'
 import { Button } from '#app/components/ui/button.tsx'
+import { StarRating } from '#app/components/star-rating.tsx'
 import { addToCart, getOrCreateCartFromRequest } from '#app/utils/cart.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
+import { getDomainUrl } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
+import { getProductReviewAggregate } from '#app/utils/review-aggregate.server.ts'
+import { buildImageUrl, generateOgTags, generateTwitterCard } from '#app/utils/seo-meta.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
 import { type Route } from './+types/$slug.ts'
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
 	const product = await prisma.product.findUnique({
 		where: {
 			slug: params.slug,
@@ -27,8 +31,10 @@ export async function loader({ params }: Route.LoaderArgs) {
 	invariantResponse(product, 'Product not found', { status: 404 })
 
 	const currency = await getStoreCurrency()
+	const origin = getDomainUrl(request)
+	const reviewAggregate = await getProductReviewAggregate(product.id)
 
-	return { product, currency }
+	return { product, currency, origin, reviewAggregate }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -68,13 +74,35 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
 	const product = loaderData?.product
+	const origin = loaderData?.origin ?? 'http://localhost'
 	if (!product) return [{ title: 'Product Not Found | Shop | Epic Shop' }]
-	return [{ title: `${product.name} | Products | Shop | Epic Shop` }]
+
+	const productUrl = `${origin}/shop/products/${product.slug}`
+	const productImageUrl = product.images?.[0]?.objectKey
+		? buildImageUrl(product.images[0].objectKey, origin)
+		: null
+	const price = loaderData?.currency
+		? `${formatPrice(product.price, loaderData.currency, 'en')} ${loaderData.currency.code}`
+		: undefined
+
+	return [
+		{ title: `${product.name} | Products | Shop | Epic Shop` },
+		...generateOgTags({
+			siteName: 'Epic Shop',
+			siteUrl: origin,
+			productName: product.name,
+			productDescription: product.description,
+			productImageUrl,
+			productPrice: price,
+			productUrl,
+		}),
+		...generateTwitterCard({ site: '@epicshop' }),
+	]
 }
 
 export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 	const { t, locale } = useTranslation()
-	const { product, currency } = loaderData
+	const { product, currency, reviewAggregate } = loaderData
 
 	return (
 		<div className="container mx-auto px-4 py-8">
@@ -101,6 +129,15 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 						<p className="text-muted-foreground mt-2">{product.category.name}</p>
 					</div>
 
+					{/* Rating summary */}
+					<StarRating
+						averageRating={reviewAggregate.averageRating}
+						distribution={reviewAggregate.distribution}
+						totalCount={reviewAggregate.totalCount}
+						showDistribution
+						size="md"
+					/>
+
 					<div>
 						<p className="text-3xl font-bold">{formatPrice(product.price, currency, locale)}</p>
 					</div>
@@ -114,9 +151,9 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 
 					<form method="post" className="space-y-4">
 						<input type="hidden" name="intent" value="add-to-cart" />
-					<Button type="submit" size="lg" className="w-full">
-						{t('shop.product.detail.addToCart')}
-					</Button>
+						<Button type="submit" size="lg" className="w-full">
+							{t('shop.product.detail.addToCart')}
+						</Button>
 					</form>
 
 					<div className="pt-4 border-t">
@@ -129,4 +166,3 @@ export default function ProductSlug({ loaderData }: Route.ComponentProps) {
 		</div>
 	)
 }
-
