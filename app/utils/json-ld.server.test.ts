@@ -27,7 +27,7 @@ describe('renderJsonLd', () => {
 			/<script type="application\/ld\+json">(.+)<\/script>/s,
 		)
 		expect(match).not.toBeNull()
-		const parsed = JSON.parse(match![1]!) as Record<string, unknown>
+		const parsed = JSON.parse(match![1]!) as { name: string }
 		expect(parsed.name).toBe('Shop & Go <Fast>')
 	})
 
@@ -162,8 +162,9 @@ describe('buildBreadcrumbListLd', () => {
 			{ name: 'Home', href: 'https://epic.shop/' },
 		])
 
-		expect(result.itemListElement).toHaveLength(1)
-		expect(result.itemListElement[0]!.position).toBe(1)
+		const firstItem = result.itemListElement[0]
+		expect(firstItem).toBeDefined()
+		expect(firstItem!.position).toBe(1)
 	})
 })
 
