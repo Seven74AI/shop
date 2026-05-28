@@ -123,11 +123,11 @@ describe('admin reviews index', () => {
 
 			const result = await loader({ request, params: {}, context: {} } as any)
 			expect(result.reviews).toHaveLength(1)
-			expect(result.reviews[0].id).toBe(review.id)
-			expect(result.reviews[0].product).toBeTruthy()
-			expect(result.reviews[0].product.name).toBeTruthy()
-			expect(result.reviews[0].user).toBeTruthy()
-			expect(result.reviews[0].user.username).toBeTruthy()
+			expect(result.reviews[0]!.id).toBe(review.id)
+			expect(result.reviews[0]!.product).toBeTruthy()
+			expect(result.reviews[0]!.product!.name).toBeTruthy()
+			expect(result.reviews[0]!.user).toBeTruthy()
+			expect(result.reviews[0]!.user!.username).toBeTruthy()
 		})
 
 		test('filters by pending status', async () => {
@@ -146,7 +146,7 @@ describe('admin reviews index', () => {
 
 			const result = await loader({ request, params: {}, context: {} } as any)
 			expect(result.reviews).toHaveLength(1)
-			expect(result.reviews[0].title).toBe('Pending')
+			expect(result.reviews[0]!.title).toBe('Pending')
 		})
 
 		test('filters by approved status', async () => {
@@ -164,7 +164,7 @@ describe('admin reviews index', () => {
 
 			const result = await loader({ request, params: {}, context: {} } as any)
 			expect(result.reviews).toHaveLength(1)
-			expect(result.reviews[0].title).toBe('Approved')
+			expect(result.reviews[0]!.title).toBe('Approved')
 		})
 
 		test('filters by rejected status', async () => {
@@ -182,7 +182,7 @@ describe('admin reviews index', () => {
 
 			const result = await loader({ request, params: {}, context: {} } as any)
 			expect(result.reviews).toHaveLength(1)
-			expect(result.reviews[0].title).toBe('Rejected')
+			expect(result.reviews[0]!.title).toBe('Rejected')
 		})
 
 		test('filters by product', async () => {
@@ -211,7 +211,7 @@ describe('admin reviews index', () => {
 
 			const result = await loader({ request, params: {}, context: {} } as any)
 			expect(result.reviews).toHaveLength(1)
-			expect(result.reviews[0].title).toBe('On Product 2')
+			expect(result.reviews[0]!.title).toBe('On Product 2')
 
 			await prisma.review.deleteMany({})
 			await prisma.product.delete({ where: { id: otherProduct.id } })
@@ -232,7 +232,7 @@ describe('admin reviews index', () => {
 
 			const result = await loader({ request, params: {}, context: {} } as any)
 			expect(result.reviews).toHaveLength(1)
-			expect(result.reviews[0].title).toBe('Five star')
+			expect(result.reviews[0]!.title).toBe('Five star')
 		})
 
 		test('blocks non-admin users', async () => {

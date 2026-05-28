@@ -123,7 +123,7 @@ describe('admin review detail', () => {
 			expect(result.review.product).toBeTruthy()
 			expect(result.review.product.name).toBeTruthy()
 			expect(result.review.user).toBeTruthy()
-			expect(result.review.user.username).toBeTruthy()
+			expect(result.review.user!.username).toBeTruthy()
 		})
 
 		test('returns 404 for non-existent review', async () => {
