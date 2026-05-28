@@ -51,8 +51,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # --- Build staging container image ---
+  # Only run on upstream repo — fork does not have FLY_API_TOKEN secret
   build:
     needs: ci-gate
+    if: github.repository == 'mnlamart/shop'
     runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
@@ -83,8 +85,10 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   # --- Deploy to staging ---
+  # Only run on upstream repo — fork does not have FLY_API_TOKEN secret
   deploy:
     needs: build
+    if: github.repository == 'mnlamart/shop'
     runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
@@ -110,8 +114,10 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   # --- Smoke tests against staging ---
+  # Only run on upstream repo — fork does not have FLY_API_TOKEN secret
   smoke-tests:
     needs: deploy
+    if: github.repository == 'mnlamart/shop'
     runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
