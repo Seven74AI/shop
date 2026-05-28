@@ -4,17 +4,12 @@ import * as Sentry from '@sentry/react-router'
 import type Stripe from 'stripe'
 import { prisma } from './db.server.ts'
 import { sendEmail } from './email.server.ts'
-import { generateGuestToken } from './guest-token.server.ts'
 import { getDomainUrl } from './misc.tsx'
+import { generateGuestToken } from './guest-token.server.ts'
 import { generateOrderNumber } from './order-number.server.ts'
 import { generateInvoiceNumber, parseInvoiceNumber, formatInvoiceNumber } from './invoice.server.ts'
 import { stripe } from './stripe.server.ts'
 import { calculateVat, type TaxableItem } from './tax.server.ts'
-import { issueCreditNote, type RefundedLineItem } from './invoice.server.ts'
-import {
-	generateInvoicePdf,
-	type InvoicePdfData,
-} from './invoice-pdf.server.tsx'
 import {
 	createCreditNote,
 	generateCreditNotePdf,
@@ -919,7 +914,14 @@ export async function createOrderFromStripeSession(
 	// Send confirmation email (non-blocking - don't fail order creation if email fails)
 	try {
 		const domainUrl = request ? getDomainUrl(request) : 'http://localhost:3000'
-		
+
+		const guestToken = !order.userId
+			? generateGuestToken(order.orderNumber, order.email)
+			: null
+		const orderLink = guestToken
+			? `${domainUrl}/shop/orders?token=${encodeURIComponent(guestToken)}`
+			: `${domainUrl}/shop/orders/${order.orderNumber}`
+
 		// Build VAT details for email
 		let vatHtml = ''
 		let vatText = ''
@@ -936,15 +938,6 @@ export async function createOrderFromStripeSession(
 			}
 		}
 		
-		// Generate a signed token for guest orders so they can access their order
-		// without typing email+orderNumber manually
-		const guestToken = !order.userId
-			? generateGuestToken(order.orderNumber, order.email)
-			: null
-		const orderLink = guestToken
-			? `${domainUrl}/shop/orders?token=${encodeURIComponent(guestToken)}`
-			: `${domainUrl}/shop/orders/${order.orderNumber}`
-
 		await sendEmail({
 			to: order.email,
 			subject: `Order Confirmation - ${order.orderNumber}`,
@@ -1039,7 +1032,7 @@ export async function processReturnRefund(
 
 	// Compute refund amount from returned items
 	let itemRefundCents = 0
-	const refundedItems: RefundedLineItem[] = []
+	const refundedItems: CreateCreditNoteItem[] = []
 
 	for (const returnItem of returnRequest.items) {
 		const oi = returnItem.orderItem
@@ -1119,57 +1112,33 @@ export async function processReturnRefund(
 		})
 
 		if (parentInvoice && refundedItems.length > 0) {
-			const creditNote = await issueCreditNote(
+			// Create credit note via the centralized flow — handles
+			// partial/full detection, parent invoice status update,
+			// and reason recording automatically.
+			const creditNote = await createCreditNote(
 				parentInvoice.id,
+				refundAmountCents,
+				'Return',
 				refundedItems,
 				shippingRefundCents,
 			)
 
 			creditNoteNumber = creditNote.number
 
-			// Generate PDF for credit note
-			const parentInvoiceNumber = `F${parentInvoice.fiscalYear}-${String(parentInvoice.sequence).padStart(5, '0')}`
-
-			const pdfData: InvoicePdfData = {
-				kind: 'CREDIT_NOTE',
-				invoiceNumber: creditNote.number,
-				parentInvoiceNumber,
-				invoiceDate: new Date().toLocaleDateString('fr-FR'),
-				invoiceStatus: 'FINAL',
-				orderNumber: order.orderNumber,
-				orderDate: new Date(order.createdAt).toLocaleDateString('fr-FR'),
-				customer: {
+			// Generate PDF via the centralized credit note PDF pipeline
+			creditNotePdfBuffer = await generateCreditNotePdf(
+				creditNote.id,
+				order.orderNumber,
+				order.createdAt,
+				{
 					name: order.shippingName,
 					email: order.email,
-					company: null,
-					vatNumber: null,
-				},
-				shipping: {
-					name: order.shippingName,
 					street: order.shippingStreet,
 					city: order.shippingCity,
 					postal: order.shippingPostal,
 					country: order.shippingCountry,
 				},
-				items: refundedItems.map((item) => ({
-					description: item.description,
-					quantity: -item.quantity,
-					unitPriceCents: item.unitPriceCents,
-					totalCents: -item.totalCents,
-				})),
-				subtotalCents: -itemRefundCents,
-				vatBreakdown: [],
-				vatTotalCents: 0,
-				shippingCostCents: -shippingRefundCents,
-				totalCents: -(itemRefundCents - restockingFee),
-			currency: { symbol: '€', code: 'EUR', decimals: 2 },
-				storeName: 'Epic Shop',
-				storeAddress: '123 Epic Street, 75001 Paris, France',
-				storeVatNumber: 'FR12345678901',
-				storeEmail: 'support@epicstack.dev',
-			}
-
-			creditNotePdfBuffer = await generateInvoicePdf(pdfData)
+			)
 		}
 	} catch (creditNoteError) {
 		// Log credit note error but don't fail refund — the Stripe refund

@@ -716,7 +716,7 @@ describe('processReturnRefund', () => {
 		const result = await processReturnRefund(returnRequestId)
 
 		expect(result.refundId).toBe('re_test_refund')
-		expect(result.creditNoteNumber).toMatch(/^F\d{4}-\d{5}$/)
+		expect(result.creditNoteNumber).toMatch(/^CN-\d{4}-\d{5}$/)
 
 		// Verify Stripe refund was called with correct amount
 		const { stripe } = await import('./stripe.server.ts')
@@ -1002,7 +1002,7 @@ describe('processReturnRefund', () => {
 			})
 
 			expect(result.id).toBeTruthy()
-			expect(result.invoiceNumber).toMatch(/^F\d{4}-\d{5}$/)
+		expect(result.invoiceNumber).toMatch(/^F\d{4}-\d{5}$/)
 
 			// Verify persisted invoice
 			const invoice = await prisma.invoice.findFirst({ where: { orderId } })
