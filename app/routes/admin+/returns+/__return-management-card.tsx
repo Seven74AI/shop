@@ -33,7 +33,8 @@ interface ReturnManagementCardProps {
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
 	REQUESTED: ['APPROVED', 'REJECTED'],
-	APPROVED: ['RECEIVED', 'REJECTED'],
+	APPROVED: ['SHIPPED', 'RECEIVED', 'REJECTED'],
+	SHIPPED: ['RECEIVED', 'REJECTED'],
 	RECEIVED: ['REFUNDED', 'REJECTED'],
 	REFUNDED: [],
 	REJECTED: [],

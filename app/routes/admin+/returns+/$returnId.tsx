@@ -24,10 +24,10 @@ import { ReturnManagementCard } from './__return-management-card.tsx'
 
 const StatusUpdateSchema = z.object({
 	status: z.enum(
-		['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDED', 'REJECTED'],
+		['REQUESTED', 'APPROVED', 'SHIPPED', 'RECEIVED', 'REFUNDED', 'REJECTED'],
 		{
 			error:
-				'Status must be one of: REQUESTED, APPROVED, RECEIVED, REFUNDED, REJECTED',
+				'Status must be one of: REQUESTED, APPROVED, SHIPPED, RECEIVED, REFUNDED, REJECTED',
 		},
 	),
 	adminNotes: z
@@ -94,17 +94,23 @@ export async function action({ params, request }: Route.ActionArgs) {
 	const { status, adminNotes, refundAmountCents, restockingFeeCents } =
 		submission.value
 
-	if (status === 'REFUNDED') {
-		// Process the full refund via Stripe + credit note
-		await processReturnRefund(returnId, request)
-	} else {
-		await updateReturnStatus(
-			returnId,
-			status,
-			adminNotes || null,
-			refundAmountCents ? parseInt(refundAmountCents, 10) : null,
-			restockingFeeCents ? parseInt(restockingFeeCents, 10) : null,
-		)
+	try {
+		if (status === 'REFUNDED') {
+			// Process the full refund via Stripe + credit note
+			await processReturnRefund(returnId, request)
+		} else {
+			await updateReturnStatus(
+				returnId,
+				status,
+				adminNotes || null,
+				refundAmountCents ? parseInt(refundAmountCents, 10) : null,
+				restockingFeeCents ? parseInt(restockingFeeCents, 10) : null,
+			)
+		}
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : 'An unexpected error occurred'
+		return data({ error: message }, { status: 400 })
 	}
 
 	const statusLabel = getReturnStatusLabel(status)
@@ -438,6 +444,24 @@ export default function AdminReturnDetail({
 										})}
 									</span>
 								</div>
+								{returnRequest.shippedAt && (
+									<div className="flex items-center justify-between text-sm">
+										<span className="text-muted-foreground">
+											Shipped
+										</span>
+										<span className="text-[var(--text-dark)]">
+											{new Date(
+												returnRequest.shippedAt,
+											).toLocaleDateString('en-US', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric',
+												hour: '2-digit',
+												minute: '2-digit',
+											})}
+										</span>
+									</div>
+								)}
 								{returnRequest.receivedAt && (
 									<div className="flex items-center justify-between text-sm">
 										<span className="text-muted-foreground">
