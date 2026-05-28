@@ -88,6 +88,7 @@ export default async function handleRequest(...args: DocRequestArgs) {
 								'object-src': ["'none'"],
 								'script-src': [
 									"'strict-dynamic'",
+									"'unsafe-eval'",
 									"'self'",
 									`'nonce-${nonce}'`,
 									'https://js.stripe.com',
