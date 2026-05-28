@@ -154,13 +154,15 @@ export function validateFileSize(
 // ─── EXIF Stripping ─────────────────────────────────────────────────────────
 
 /**
- * Strip EXIF metadata (including GPS data) from an image, keeping
- * only the ICC color profile.
+ * Strip EXIF metadata (including GPS data) from an image.
+ * Re-encodes via sharp's format methods which strip ALL metadata
+ * (EXIF, GPS, XMP, and ICC profile) by default.
  *
- * Uses sharp's `.withMetadata({})` which strips all metadata except ICC.
+ * Note: `.withMetadata({})` preserves metadata in sharp v0.34.x,
+ * so we deliberately avoid calling it.
  *
  * @param buffer - Raw image buffer
- * @returns Image buffer with EXIF/GPS metadata removed
+ * @returns Image buffer with all metadata removed
  * @throws If sharp fails to process the image
  */
 export async function stripExifMetadata(buffer: Buffer): Promise<Buffer> {
@@ -183,13 +185,13 @@ export async function stripExifMetadata(buffer: Buffer): Promise<Buffer> {
 
 		switch (format) {
 			case 'jpeg':
-				pipeline = pipeline.jpeg()
+				pipeline = pipeline.jpeg({ quality: 95 })
 				break
 			case 'png':
 				pipeline = pipeline.png()
 				break
 			case 'webp':
-				pipeline = pipeline.webp()
+				pipeline = pipeline.webp({ quality: 95 })
 				break
 			default:
 				// Unknown format — return as-is (no stripping possible)

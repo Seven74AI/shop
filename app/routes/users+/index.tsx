@@ -40,7 +40,7 @@ export default function UsersRoute({ loaderData }: Route.ComponentProps) {
 								{ 'opacity-50': isPending },
 							)}
 						>
-							{loaderData.users.map((user) => (
+							{loaderData.users.filter((u): u is NonNullable<typeof u> => u != null).map((user) => (
 								<li key={user.id}>
 									<Link
 										to={user.username}

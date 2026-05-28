@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '#app/components/ui/button.tsx'
 import { Checkbox } from '#app/components/ui/checkbox.tsx'
 import { useTranslation } from '#app/utils/i18n.tsx'
-import { COOKIE_NAME } from '#app/utils/consent.server.ts'
+import { COOKIE_NAME } from '#app/utils/consent-constants.ts'
 
 
 interface ConsentPrefs {
