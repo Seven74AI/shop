@@ -10,7 +10,7 @@ import Stripe from 'stripe'
  * In development/production, we use fetch-based HTTP client to bypass MSW.
  */
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-	apiVersion: '2026-04-22.dahlia',
+	apiVersion: '2026-05-27.dahlia',
 	maxNetworkRetries: 0, // Disable retries to fail fast
 	timeout: 10000, // 10 seconds global timeout
 	telemetry: false, // Disable telemetry for faster requests
