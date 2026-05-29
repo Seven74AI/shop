@@ -2,20 +2,16 @@ import { prisma } from '#app/utils/db.server.ts'
 import { readEmail } from '#tests/mocks/utils.ts'
 import { test, expect } from '#tests/playwright-utils.ts'
 
-const TEST_EMAILS = [
-	'newsletter-e2e-1@example.com',
-	'newsletter-e2e-2@example.com',
-	'newsletter-e2e-3@example.com',
-	'newsletter-e2e-4@example.com',
-	'newsletter-e2e-5@example.com',
-	'newsletter-e2e-6@example.com',
-	'newsletter-e2e-7@example.com',
-	'newsletter-e2e-8@example.com',
-	'newsletter-e2e-9@example.com',
-]
+// Unique suffix per run to prevent cross-worker collision in CI (shared SQLite).
+// Each test run gets fresh emails — no interference with parallel shards or retries.
+const UNIQUE = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const emailFor = (n: number) => `newsletter-e2e-${n}-${UNIQUE}@example.com`
+
+const ALL_EMAILS = Array.from({ length: 9 }, (_, i) => emailFor(i + 1))
 
 async function cleanup() {
-	for (const email of TEST_EMAILS) {
+	for (const email of ALL_EMAILS) {
 		await prisma.newsletterSubscription
 			.deleteMany({ where: { email } })
 			.catch(() => {})
@@ -35,7 +31,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		test('creates a pending subscription with a valid email', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-1@example.com'
+			const email = emailFor(1)
 			const res = await page.request.post('/resources/newsletter-subscribe', {
 				data: { email },
 			})
@@ -49,7 +45,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		})
 
 		test('sends a confirmation email on subscribe', async ({ page }) => {
-			const email = 'newsletter-e2e-1@example.com'
+			const email = emailFor(1)
 			await page.request.post('/resources/newsletter-subscribe', {
 				data: { email },
 			})
@@ -68,7 +64,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		test('stores the subscription as PENDING in the database', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-1@example.com'
+			const email = emailFor(1)
 			await page.request.post('/resources/newsletter-subscribe', {
 				data: { email },
 			})
@@ -84,17 +80,17 @@ test.describe.serial('Newsletter Subscription', () => {
 		})
 
 		test('normalizes email to lowercase', async ({ page }) => {
-			const email = 'NewsLetter-E2E-1@Example.Com'
+			const email = emailFor(1).toUpperCase()
 			const res = await page.request.post('/resources/newsletter-subscribe', {
 				data: { email },
 			})
 
 			expect(res.status()).toBe(200)
 			const sub = await prisma.newsletterSubscription.findUnique({
-				where: { email: 'newsletter-e2e-1@example.com' },
+				where: { email: emailFor(1) },
 			})
 			expect(sub).not.toBeNull()
-			expect(sub!.email).toBe('newsletter-e2e-1@example.com')
+			expect(sub!.email).toBe(emailFor(1))
 		})
 
 		test('rejects an invalid email format', async ({ page }) => {
@@ -153,7 +149,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		test('returns specific message for already subscribed email', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-2@example.com'
+			const email = emailFor(2)
 
 			// Create a confirmed subscription directly
 			await prisma.newsletterSubscription.create({
@@ -179,7 +175,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		test('returns specific message for already pending subscription', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-3@example.com'
+			const email = emailFor(3)
 
 			// First subscribe
 			await page.request.post('/resources/newsletter-subscribe', {
@@ -198,7 +194,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		})
 
 		test('allows re-subscription after unsubscribing', async ({ page }) => {
-			const email = 'newsletter-e2e-4@example.com'
+			const email = emailFor(4)
 
 			// Create an unsubscribed record
 			await prisma.newsletterSubscription.create({
@@ -240,7 +236,7 @@ test.describe.serial('Newsletter Subscription', () => {
 
 	test.describe('GET /resources/newsletter-confirm', () => {
 		test('confirms a subscription with a valid token', async ({ page }) => {
-			const email = 'newsletter-e2e-5@example.com'
+			const email = emailFor(5)
 
 			// Subscribe first
 			const subRes = await page.request.post(
@@ -308,8 +304,8 @@ test.describe.serial('Newsletter Subscription', () => {
 		})
 
 		// SKIPPED: Pre-existing flaky test on main — first confirmation returns 400 instead of 200.
-	test.skip('token cannot be reused after confirmation', async ({ page }) => {
-			const email = 'newsletter-e2e-5@example.com'
+		test.skip('token cannot be reused after confirmation', async ({ page }) => {
+			const email = emailFor(5)
 
 			// Subscribe
 			await page.request.post('/resources/newsletter-subscribe', {
@@ -340,8 +336,8 @@ test.describe.serial('Newsletter Subscription', () => {
 			expect(body2.title).toBe('Not Found')
 		})
 
-	test('rejects expired tokens', async ({ page }) => {
-		const email = 'newsletter-e2e-6@example.com'
+		test('rejects expired tokens', async ({ page }) => {
+			const email = emailFor(6)
 
 			// Subscribe
 			const subRes = await page.request.post(
@@ -376,25 +372,25 @@ test.describe.serial('Newsletter Subscription', () => {
 			expect(body.title).toBe('Link Expired')
 		})
 
-	test('already confirmed returns a friendly message', async ({
-		page,
-	}) => {
-		const email = 'newsletter-e2e-7@example.com'
+		test('already confirmed returns a friendly message', async ({
+			page,
+		}) => {
+			const email = emailFor(7)
 
-		// Subscribe
-		const subRes = await page.request.post('/resources/newsletter-subscribe', {
-			data: { email },
-		})
-		expect(subRes.status()).toBe(200)
+			// Subscribe
+			const subRes = await page.request.post('/resources/newsletter-subscribe', {
+				data: { email },
+			})
+			expect(subRes.status()).toBe(200)
 
-		// Wait for the confirmation email to be written by the MSW mock
-		// (file I/O can race on busy systems)
-		let emailFixture = await readEmail(email)
-		for (let i = 0; i < 5 && emailFixture === null; i++) {
-			await page.waitForTimeout(100)
-			emailFixture = await readEmail(email)
-		}
-		expect(emailFixture).not.toBeNull()
+			// Wait for the confirmation email to be written by the MSW mock
+			// (file I/O can race on busy systems)
+			let emailFixture = await readEmail(email)
+			for (let i = 0; i < 5 && emailFixture === null; i++) {
+				await page.waitForTimeout(100)
+				emailFixture = await readEmail(email)
+			}
+			expect(emailFixture).not.toBeNull()
 			const urlMatch = emailFixture!.text.match(
 				/https?:\/\/[^\s]+\/resources\/newsletter-confirm\?token=([^\s&]+)/,
 			)
@@ -441,7 +437,7 @@ test.describe.serial('Newsletter Subscription', () => {
 		test('completes the full subscribe → confirm lifecycle', async ({
 			page,
 		}) => {
-			const email = 'newsletter-e2e-8@example.com'
+			const email = emailFor(8)
 
 			// Step 1: Subscribe
 			const subRes = await page.request.post(
@@ -485,8 +481,8 @@ test.describe.serial('Newsletter Subscription', () => {
 			expect(sub!.token).toBeNull()
 		})
 
-	test('handles duplicate subscription gracefully', async ({ page }) => {
-		const email = 'newsletter-e2e-9@example.com'
+		test('handles duplicate subscription gracefully', async ({ page }) => {
+			const email = emailFor(9)
 
 			// First subscribe
 			const res1 = await page.request.post(
