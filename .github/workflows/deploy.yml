@@ -32,12 +32,6 @@ jobs:
       - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: 🏄 Copy test env vars
-        run: cp .env.example .env
-
-      - name: 🛠 Setup Database
-        run: npx prisma migrate deploy && npx prisma generate --sql
-
       - name: 🔬 Lint
         run: pnpm lint
 

@@ -193,7 +193,7 @@ export function generateTestWebhookSignature(
 	secret: string,
 ): string {
 	const stripe = new Stripe(secret, {
-		apiVersion: '2026-04-22.dahlia',
+		apiVersion: '2026-05-27.dahlia',
 	})
 	
 	const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload)
