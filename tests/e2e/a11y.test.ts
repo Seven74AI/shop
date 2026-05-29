@@ -5,6 +5,25 @@ import { test, expect, expectPageToBeAccessible } from '#tests/playwright-utils.
 import { createProductData } from '#tests/product-utils.ts'
 
 /**
+ * Retry order creation on unique constraint violation for orderNumber.
+ * The generateOrderNumber function can produce collisions under concurrent access.
+ */
+async function retryGenerateOrder<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+	for (let i = 0; i < maxRetries; i++) {
+		try {
+			return await fn()
+		} catch (error: any) {
+			const isUniqueConstraint =
+				error?.code === 'P2002' &&
+				Array.isArray(error?.meta?.target) &&
+				error.meta.target.includes('orderNumber')
+			if (!isUniqueConstraint || i === maxRetries - 1) throw error
+		}
+	}
+	throw new Error('maxRetries exceeded')
+}
+
+/**
  * Helper function to login as admin and navigate to a page
  * Now uses the login fixture for faster execution
  */
@@ -160,7 +179,7 @@ test.describe('Accessibility', () => {
 			)
 			// Wait for order detail content to fully render
 			await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
-			await expect(page.getByText(testOrder.orderNumber)).toBeVisible({ timeout: 15000 })
+			await expect(page.getByRole('heading', { name: `Order ${testOrder.orderNumber}` })).toBeVisible({ timeout: 15000 })
 			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 		})
 
@@ -480,7 +499,7 @@ test.describe('Accessibility', () => {
 				},
 			})
 			
-			const order = await prisma.order.create({
+			const order = await retryGenerateOrder(async () => prisma.order.create({
 				data: {
 					orderNumber: await generateOrderNumber(),
 					userId: user.id,
@@ -503,7 +522,7 @@ test.describe('Accessibility', () => {
 						},
 					},
 				},
-			})
+			}))
 			
 			try {
 				// Login as the user
@@ -528,7 +547,7 @@ test.describe('Accessibility', () => {
 				await page.waitForSelector('main', { timeout: 10000 })
 				await page.waitForSelector('h1', { timeout: 10000 })
 				// Wait for order content to render before a11y check
-				await expect(page.getByText(order.orderNumber)).toBeVisible({ timeout: 10000 })
+				await expect(page.getByText(order.orderNumber).first()).toBeVisible({ timeout: 10000 })
 				await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 			} finally {
 				// Cleanup: delete order first, then user

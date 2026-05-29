@@ -3,7 +3,7 @@ import { test, expect, expectPageToBeAccessible } from '../playwright-utils.ts'
 
 const FEATURE_FLAG_E2E_PREFIX = 'e2e-test-flag-'
 
-test.describe('Feature Flags Admin Panel', () => {
+test.describe.serial('Feature Flags Admin Panel', () => {
 	// Increase timeout for slow server responses (admin pages, CRUD, search)
 	test.setTimeout(60000)
 
@@ -65,7 +65,7 @@ test.describe('Feature Flags Admin Panel', () => {
 		})
 	})
 
-	test.describe('CRUD operations', () => {
+	test.describe.serial('CRUD operations', () => {
 		const FLAG_KEY = `${FEATURE_FLAG_E2E_PREFIX}new-checkout`
 		const FLAG_DESC = 'E2E test - new checkout flow'
 
@@ -205,7 +205,7 @@ test.describe('Feature Flags Admin Panel', () => {
 
 			// Wait for the data table to render (React Router .data loader may be async)
 			await expect(
-				page.getByRole('heading', { name: /feature flags/i }),
+				page.getByRole('heading', { name: /feature flags/i }).first(),
 			).toBeVisible({ timeout: 15000 })
 
 			// Wait for the row containing our flag to appear
@@ -334,7 +334,7 @@ test.describe('Feature Flags Admin Panel', () => {
 
 			// Wait for the data table to render
 			await expect(
-				page.getByRole('heading', { name: /feature flags/i }),
+				page.getByRole('heading', { name: /feature flags/i }).first(),
 			).toBeVisible({ timeout: 15000 })
 
 			// Search by description keyword
@@ -469,7 +469,7 @@ test.describe('Feature Flags Admin Panel', () => {
 		// Wait for the data table to render
 		await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
 		await expect(
-			page.getByRole('heading', { name: /feature flags/i }),
+			page.getByRole('heading', { name: /feature flags/i }).first(),
 		).toBeVisible({ timeout: 15000 })
 
 		// Wait for data rows to appear (not just the heading)

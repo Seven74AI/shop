@@ -22,7 +22,7 @@ async function cleanup() {
 	}
 }
 
-test.describe('Newsletter Subscription', () => {
+test.describe.serial('Newsletter Subscription', () => {
 	test.beforeEach(async () => {
 		await cleanup()
 	})
