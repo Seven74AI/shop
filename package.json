@@ -74,7 +74,7 @@
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.0",
     "@tailwindcss/vite": "^4.3.0",
-    "@tusbar/cache-control": "3.0.0",
+    "@tusbar/cache-control": "3.0.1",
     "address": "^2.0.3",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
@@ -136,7 +136,6 @@
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.4",
-    "@types/glob": "^9.0.0",
     "@types/mime-types": "^3.0.1",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.9.0",
@@ -154,6 +153,8 @@
     "jsdom": "^29.1.1",
     "msw": "^2.14.6",
     "npm-run-all": "^4.1.5",
+    "oxfmt": "^0.52.0",
+    "oxlint": "^1.67.0",
     "react-router-devtools": "^6.2.0",
     "remix-flat-routes": "^0.8.5",
     "tsx": "^4.22.2",
@@ -161,9 +162,7 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.13",
     "vite-plugin-icons-spritesheet": "^3.0.1",
-    "vitest": "^4.1.6",
-    "oxlint": "^1.67.0",
-    "oxfmt": "^0.47.0"
+    "vitest": "^4.1.6"
   },
   "engines": {
     "node": "22"
