@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./node_modules/@epic-web/config/oxlint-config.json"
+  ],
+  "ignorePatterns": [
+    "node_modules",
+    "build",
+    "public/build",
+    "playwright-report",
+    "server-build",
+    ".react-router",
+    "coverage",
+    "test-results"
+  ],
+  "env": {
+    "node": true,
+    "browser": true
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.js",
+        "**/*.mjs",
+        "**/*.cjs"
+      ],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": [
+        "prisma/seed.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import { render } from '@react-email/components'
 import path from 'node:path'
 import { type ReactElement } from 'react'
 import { z } from 'zod'
+import { log } from '#app/utils/logging.server.ts'
 
 const resendErrorSchema = z.union([
 	z.object({
@@ -51,16 +52,13 @@ export async function sendEmail({
 	if (attachments && attachments.length > 0) {
 		email.attachments = attachments.map((att) => ({
 			filename: att.filename,
-			content:
-				typeof att.content === 'string'
-					? att.content
-					: att.content.toString('base64'),
+			content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
 		}))
 	}
 
 	// Skip real API call when no valid API key or in mocks mode
 	if (!process.env.RESEND_API_KEY || process.env.MOCKS === 'true') {
-		console.info('🔶 Mocking email send (no API key or mocks mode)')
+		log.info('🔶 Mocking email send (no API key or mocks mode)')
 		// Write email fixture for e2e tests
 		try {
 			const { default: fsExtra } = await import('fs-extra')

@@ -175,8 +175,10 @@ test.describe('Admin User Management', () => {
 		await login({ asAdmin: true })
 
 		// Use unique names to avoid conflicts
-		const aliceName = `Alice ${faker.string.alphanumeric(8)}`
-		const bobName = `Bob ${faker.string.alphanumeric(8)}`
+		const aliceSuffix = faker.string.alphanumeric(8)
+		const bobSuffix = faker.string.alphanumeric(8)
+		const aliceName = `Alice ${aliceSuffix}`
+		const bobName = `Bob ${bobSuffix}`
 
 		await createPrefixedUser(test.info().testId, { name: aliceName })
 		await createPrefixedUser(test.info().testId, { name: bobName })
@@ -190,19 +192,16 @@ test.describe('Admin User Management', () => {
 		await expect(page.getByText(aliceName, { exact: false })).toBeVisible({ timeout: 10000 })
 		await expect(page.getByText(bobName, { exact: false })).toBeVisible({ timeout: 10000 })
 
-		// Search for Alice by first name only
+		// Search for Alice by her unique suffix — ensures filter is truly applied
 		const searchInput = page.getByPlaceholder(/search users/i)
-		await searchInput.fill('Alice')
-		await searchInput.blur() // Trigger change event
+		await searchInput.fill(aliceSuffix)
+		await searchInput.press('Enter') // Trigger form submission / state update
 
-		// Wait for React to update the filtered list - wait for state, not time
-		await expect(page.getByText(aliceName, { exact: false })).toBeVisible({ timeout: 5000 })
+		// Wait for Bob to disappear — this is the real confirmation filter was applied
+		await expect(page.getByText(bobName, { exact: false })).not.toBeVisible({ timeout: 10000 })
 
-		// Check that Alice is visible
-		await expect(page.getByText(aliceName, { exact: false })).toBeVisible({ timeout: 5000 })
-		
-		// Bob should not be visible - wait for him to disappear
-		await expect(page.getByText(bobName, { exact: false })).not.toBeVisible({ timeout: 5000 })
+		// Alice should still be visible
+		await expect(page.getByText(aliceName, { exact: false })).toBeVisible()
 	})
 
 	test('should search users by email', async ({ page, navigate, login }) => {

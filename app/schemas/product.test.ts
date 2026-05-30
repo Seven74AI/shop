@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2'
 import { describe, expect, test } from 'vitest'
 import { createMockFile, createLargeMockFile } from '#tests/product-utils'
 import { UNCATEGORIZED_CATEGORY_ID } from './category'
-import { CURRENCIES, PRODUCT_STATUSES } from './constants'
+import { PRODUCT_STATUSES } from './constants'
 import { productSchema, VariantSchema, ImageFieldsetSchema, MAX_DESCRIPTION_LENGTH, MAX_ALT_TEXT_LENGTH, MAX_TAG_LENGTH } from './product.ts'
 
 describe('productSchema', () => {
@@ -276,52 +276,6 @@ describe('productSchema', () => {
 
 			const result = productSchema.safeParse(product)
 			expect(result.success).toBe(true)
-		})
-	})
-
-	describe('Currency validation', () => {
-		test.each(CURRENCIES)('accepts valid currency: %s', (currency) => {
-			const product = {
-				id: createId(),
-				name: 'Test Product',
-				slug: 'test-product',
-				sku: 'SKU-001',
-				price: 99.99,
-				currency,
-			}
-
-			const result = productSchema.safeParse(product)
-			expect(result.success).toBe(true)
-		})
-
-		test('rejects invalid currency', () => {
-			const product = {
-				id: createId(),
-				name: 'Test Product',
-				slug: 'test-product',
-				sku: 'SKU-001',
-				price: 99.99,
-				currency: 'XYZ',
-			}
-
-			const result = productSchema.safeParse(product)
-			expect(result.success).toBe(false)
-		})
-
-		test('defaults to EUR when currency not provided', () => {
-			const product = {
-				id: createId(),
-				name: 'Test Product',
-				slug: 'test-product',
-				sku: 'SKU-001',
-				price: 99.99,
-			}
-
-			const result = productSchema.safeParse(product)
-			expect(result.success).toBe(true)
-			if (result.success) {
-				expect(result.data.currency).toBe('EUR')
-			}
 		})
 	})
 

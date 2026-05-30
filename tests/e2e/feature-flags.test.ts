@@ -3,7 +3,7 @@ import { test, expect, expectPageToBeAccessible } from '../playwright-utils.ts'
 
 const FEATURE_FLAG_E2E_PREFIX = 'e2e-test-flag-'
 
-test.describe('Feature Flags Admin Panel', () => {
+test.describe.serial('Feature Flags Admin Panel', () => {
 	// Increase timeout for slow server responses (admin pages, CRUD, search)
 	test.setTimeout(60000)
 
@@ -65,7 +65,7 @@ test.describe('Feature Flags Admin Panel', () => {
 		})
 	})
 
-	test.describe('CRUD operations', () => {
+	test.describe.serial('CRUD operations', () => {
 		const FLAG_KEY = `${FEATURE_FLAG_E2E_PREFIX}new-checkout`
 		const FLAG_DESC = 'E2E test - new checkout flow'
 
@@ -119,51 +119,71 @@ test.describe('Feature Flags Admin Panel', () => {
 			).toBeVisible()
 		})
 
-		test('should edit an existing feature flag', async ({
-			page,
-			login,
-		}) => {
-			// Create a flag first
-			await prisma.flag.create({
-				data: {
-					key: `${FEATURE_FLAG_E2E_PREFIX}edit-test`,
-					enabled: false,
-					rolloutPercentage: 0,
-					description: 'Before edit',
-				},
-			})
-
-			await login({ asAdmin: true })
-			await page.goto(
-				`/admin/feature-flags/${FEATURE_FLAG_E2E_PREFIX}edit-test/edit`,
-			)
-			await page.waitForLoadState('networkidle')
-
-			await expect(
-				page.getByRole('heading', { name: /edit feature flag/i }),
-			).toBeVisible()
-
-			// Update description
-			const descField = page.getByLabel(/description/i)
-			await descField.clear()
-			await descField.fill('After edit - updated')
-
-			// Check enabled
-			await page.getByLabel(/enabled/i).check()
-
-			// Save
-			await page.getByRole('button', { name: /save changes/i }).click()
-
-			// Should redirect to list
-			await expect(page).toHaveURL(/\/admin\/feature-flags$/)
-
-			// Verify update in database
-			const flag = await prisma.flag.findUnique({
-				where: { key: `${FEATURE_FLAG_E2E_PREFIX}edit-test` },
-			})
-			expect(flag?.enabled).toBe(true)
-			expect(flag?.description).toBe('After edit - updated')
+	test('should edit an existing feature flag', async ({
+		page,
+		login,
+	}) => {
+		// Create a flag first
+		await prisma.flag.create({
+			data: {
+				key: `${FEATURE_FLAG_E2E_PREFIX}edit-test`,
+				enabled: false,
+				rolloutPercentage: 0,
+				description: 'Before edit',
+			},
 		})
+
+		await login({ asAdmin: true })
+		await page.goto(
+			`/admin/feature-flags/${FEATURE_FLAG_E2E_PREFIX}edit-test/edit`,
+		)
+
+		// Ensure the page fully loads before checking content
+		await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {
+			// networkidle may never fire on SPAs; fall through to explicit waits
+		})
+
+		// If redirected to login (session issue), fail with clear message
+		if (page.url().includes('/login')) {
+			throw new Error('Edit page redirected to login — session not established')
+		}
+
+		// Wait for the edit page to fully load — explicit heading + form field
+		await expect(
+			page.getByRole('heading', { name: /edit feature flag/i }),
+		).toBeVisible({ timeout: 20000 })
+		await expect(page.getByLabel(/description/i)).toBeVisible({ timeout: 10000 })
+
+		// Update description
+		const descField = page.getByLabel(/description/i)
+		await descField.clear()
+		await descField.fill('After edit - updated')
+
+		// Check enabled
+		await page.getByLabel(/enabled/i).check()
+
+		// Save — wait for the POST response before checking URL
+		await Promise.all([
+			page.waitForResponse(
+				(resp) =>
+					resp.url().includes('/edit') &&
+					resp.request().method() === 'POST',
+				{ timeout: 15000 },
+			).catch(() => {}), // don't fail if we can't catch the response
+			page.getByRole('button', { name: /save changes/i }).click(),
+		])
+
+		// Should redirect to list — wait for the redirect to complete
+		await page.waitForURL(/\/admin\/feature-flags$/, { timeout: 15000 })
+		await page.waitForLoadState('domcontentloaded')
+
+		// Verify update in database
+		const flag = await prisma.flag.findUnique({
+			where: { key: `${FEATURE_FLAG_E2E_PREFIX}edit-test` },
+		})
+		expect(flag?.enabled).toBe(true)
+		expect(flag?.description).toBe('After edit - updated')
+	})
 
 		test('should toggle flag enabled/disabled status', async ({
 			page,
@@ -183,13 +203,21 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
-			// Find the toggle button for our flag
-			const toggleButton = page
-				.getByRole('row', {
-					name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}toggle-test`),
-				})
-				.getByRole('button', { name: /enable/i })
+			// Wait for the data table to render (React Router .data loader may be async)
+			await expect(
+				page.getByRole('heading', { name: /feature flags/i }).first(),
+			).toBeVisible({ timeout: 15000 })
 
+			// Wait for the row containing our flag to appear
+			const toggleRow = page.getByRole('row', {
+				name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}toggle-test`),
+			})
+			await expect(toggleRow).toBeVisible({ timeout: 15000 })
+
+			// Find the toggle button for our flag
+			const toggleButton = toggleRow.getByRole('button', { name: /enable|disable/i })
+
+			await expect(toggleButton).toBeVisible({ timeout: 10000 })
 			await toggleButton.click()
 
 		// Wait for toggle to complete and page to reload
@@ -225,11 +253,14 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
-			// Click delete button on the row
-			const row = page.getByRole('row', {
+			// Wait for the row containing our flag to appear
+			const deleteRow = page.getByRole('row', {
 				name: new RegExp(`${FEATURE_FLAG_E2E_PREFIX}delete-test`),
 			})
-			await row.getByRole('button', { name: /^Delete / }).click()
+			await expect(deleteRow).toBeVisible({ timeout: 15000 })
+
+			// Click delete button on the row
+			await deleteRow.getByRole('button', { name: /^Delete / }).click()
 
 			// Confirm deletion in the dialog and wait for POST to complete
 			await Promise.all([
@@ -301,10 +332,18 @@ test.describe('Feature Flags Admin Panel', () => {
 			await page.goto('/admin/feature-flags')
 			await page.waitForLoadState('networkidle')
 
+			// Wait for the data table to render
+			await expect(
+				page.getByRole('heading', { name: /feature flags/i }).first(),
+			).toBeVisible({ timeout: 15000 })
+
 			// Search by description keyword
 			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
 			await page.getByPlaceholder(/search flags/i).fill('production')
-			await page.waitForTimeout(300)
+			// Wait for search results to update — expect the target row to appear
+			await expect(
+				page.getByText(`${FEATURE_FLAG_E2E_PREFIX}gamma-feature`),
+			).toBeVisible({ timeout: 10000 })
 
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}gamma-feature`)).toBeVisible()
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}alpha-feature`)).not.toBeVisible()
@@ -404,34 +443,38 @@ test.describe('Feature Flags Admin Panel', () => {
 	})
 
 	test.describe('Flag count display', () => {
-		test('should show correct flag count', async ({
-			page,
-			login,
-		}) => {
-			// Create some flags
-			await prisma.flag.createMany({
-				data: [
-					{
-						key: `${FEATURE_FLAG_E2E_PREFIX}count-1`,
-						enabled: true,
-						rolloutPercentage: 0,
-					},
-					{
-						key: `${FEATURE_FLAG_E2E_PREFIX}count-2`,
-						enabled: false,
-						rolloutPercentage: 0,
-					},
-				],
-			})
-
-			await login({ asAdmin: true })
-			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
-
-			// Should show "N flags" in the header area
-			// The count includes the seeded e2e flags; verify at least ours are visible
-			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible()
-			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible()
+	test('should show correct flag count', async ({
+		page,
+		login,
+	}) => {
+		// Create some flags
+		await prisma.flag.createMany({
+			data: [
+				{
+					key: `${FEATURE_FLAG_E2E_PREFIX}count-1`,
+					enabled: true,
+					rolloutPercentage: 0,
+				},
+				{
+					key: `${FEATURE_FLAG_E2E_PREFIX}count-2`,
+					enabled: false,
+					rolloutPercentage: 0,
+				},
+			],
 		})
+
+		await login({ asAdmin: true })
+		await page.goto('/admin/feature-flags')
+
+		// Wait for the data table to render
+		await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+		await expect(
+			page.getByRole('heading', { name: /feature flags/i }).first(),
+		).toBeVisible({ timeout: 15000 })
+
+		// Wait for data rows to appear (not just the heading)
+		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible({ timeout: 10000 })
 	})
+})
 })

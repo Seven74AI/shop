@@ -1,8 +1,9 @@
-export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'RECEIVED' | 'REFUNDED' | 'REJECTED'
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'SHIPPED' | 'RECEIVED' | 'REFUNDED' | 'REJECTED'
 
 const RETURN_STATUS_LABELS: Record<ReturnStatus, string> = {
 	REQUESTED: 'Requested',
 	APPROVED: 'Approved',
+	SHIPPED: 'Shipped',
 	RECEIVED: 'Received',
 	REFUNDED: 'Refunded',
 	REJECTED: 'Rejected',
@@ -16,6 +17,8 @@ export function getReturnStatusBadgeVariant(
 			return 'warning'
 		case 'APPROVED':
 			return 'default'
+		case 'SHIPPED':
+			return 'secondary'
 		case 'RECEIVED':
 			return 'secondary'
 		case 'REFUNDED':

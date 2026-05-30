@@ -2,6 +2,8 @@ import { createHash, createHmac } from 'crypto'
 import { type FileUpload } from '@mjackson/form-data-parser'
 import { createId } from '@paralleldrive/cuid2'
 import * as Sentry from '@sentry/react-router'
+import { log } from '#app/utils/logging.server.ts'
+import { verifyUpload } from './upload-verify.server.ts'
 
 const STORAGE_ENDPOINT = process.env.AWS_ENDPOINT_URL_S3
 const STORAGE_BUCKET = process.env.BUCKET_NAME
@@ -9,19 +11,37 @@ const STORAGE_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID
 const STORAGE_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const STORAGE_REGION = process.env.AWS_REGION
 
-async function uploadToStorage(file: File | FileUpload, key: string) {
+
+/**
+ * Upload a verified, sanitized buffer to storage.
+ * Used by upload functions after verifyUpload has passed.
+ */
+async function uploadBufferToStorage(buffer: Buffer, key: string, contentType: string) {
 	// In mocks mode, skip actual upload
 	if (process.env.MOCKS === 'true') {
-		console.info('🔶 Mocking storage upload:', key)
+		console.info('🔶 Mocking storage upload (verified):', key)
 		return key
 	}
 
-	const { url, headers } = getSignedPutRequestInfo(file, key)
+	const uploadDate = new Date().toISOString()
+	const { url, baseHeaders } = getBaseSignedRequestInfo({
+		method: 'PUT',
+		key,
+		contentType,
+		uploadDate,
+	})
+
+	const headers = {
+		...baseHeaders,
+		'Content-Type': contentType,
+		'Content-Length': String(buffer.length),
+		'X-Amz-Meta-Upload-Date': uploadDate,
+	}
 
 	const uploadResponse = await fetch(url, {
 		method: 'PUT',
 		headers,
-		body: file instanceof File ? file : (file as FileUpload).stream(),
+		body: new Uint8Array(buffer),
 	})
 
 	if (!uploadResponse.ok) {
@@ -36,6 +56,21 @@ async function uploadToStorage(file: File | FileUpload, key: string) {
 	return key
 }
 
+async function verifyAndUpload(
+	file: File | FileUpload,
+	key: string,
+): Promise<string> {
+	const result = await verifyUpload(file)
+
+	if (!result.valid) {
+		throw new Error(`Upload rejected: ${result.error}`)
+	}
+
+	// Use sanitized buffer for upload (EXIF-stripped for images)
+	const contentType = result.detectedType ?? file.type
+	return uploadBufferToStorage(result.sanitizedBuffer!, key, contentType)
+}
+
 export async function uploadProfileImage(
 	userId: string,
 	file: File | FileUpload,
@@ -44,7 +79,7 @@ export async function uploadProfileImage(
 	const fileExtension = file.name.split('.').pop() || ''
 	const timestamp = Date.now()
 	const key = `users/${userId}/profile-images/${timestamp}-${fileId}.${fileExtension}`
-	return uploadToStorage(file, key)
+	return verifyAndUpload(file, key)
 }
 
 export async function uploadNoteImage(
@@ -56,7 +91,7 @@ export async function uploadNoteImage(
 	const fileExtension = file.name.split('.').pop() || ''
 	const timestamp = Date.now()
 	const key = `users/${userId}/notes/${noteId}/images/${timestamp}-${fileId}.${fileExtension}`
-	return uploadToStorage(file, key)
+	return verifyAndUpload(file, key)
 }
 
 export async function uploadProductImage(
@@ -67,7 +102,7 @@ export async function uploadProductImage(
 	const fileExtension = file.name.split('.').pop() || ''
 	const timestamp = Date.now()
 	const key = `products/${productId}/images/${timestamp}-${fileId}.${fileExtension}`
-	return uploadToStorage(file, key)
+	return verifyAndUpload(file, key)
 }
 
 export async function uploadProductImages(

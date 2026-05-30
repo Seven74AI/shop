@@ -1,12 +1,22 @@
 import { createHash } from 'node:crypto'
-import { test, expect } from 'vitest'
+import { test, expect, vi } from 'vitest'
 import { prisma } from '#app/utils/db.server.ts'
+import { log } from '#app/utils/logging.server.ts'
 import { isFlagEnabled, invalidateFlagCache } from '#app/utils/flag.server.ts'
+
+vi.mock('#app/utils/logging.server.ts', () => ({
+	log: {
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
+	},
+}))
 
 // Helper to hash the same way the implementation does
 function hashRollout(key: string, userId: string): number {
 	const hash = createHash('sha256')
-	hash.update(key + userId)
+	hash.update(key + ':' + userId)
 	return hash.digest().readUInt32BE(0) % 100
 }
 
@@ -177,10 +187,18 @@ test.describe('isFlagEnabled', () => {
 		})
 		invalidateFlagCache()
 
+		// Verify warning was logged via the logger
+		const warnSpy = log.warn as ReturnType<typeof vi.fn>
+
 		const result = await isFlagEnabled('test_corrupt_audience', {
 			userId: 'alice',
 		})
 		expect(result).toBe(false)
+		expect(warnSpy).toHaveBeenCalledOnce()
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.objectContaining({ flag: 'test_corrupt_audience' }),
+			expect.stringContaining('[flag.server] Invalid audience JSON'),
+		)
 
 		await prisma.flag.delete({ where: { key: 'test_corrupt_audience' } })
 		invalidateFlagCache()

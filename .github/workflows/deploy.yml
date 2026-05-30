@@ -32,12 +32,6 @@ jobs:
       - name: 📥 Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: 🏄 Copy test env vars
-        run: cp .env.example .env
-
-      - name: 🛠 Setup Database
-        run: npx prisma migrate deploy && npx prisma generate --sql
-
       - name: 🔬 Lint
         run: pnpm lint
 
@@ -142,7 +136,7 @@ jobs:
         run: pnpm build
 
       - name: 🎭 Playwright tests
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: pnpm exec playwright test --repeat-each=3 --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: 📊 Upload report
         uses: actions/upload-artifact@v7

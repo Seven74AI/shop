@@ -13,7 +13,7 @@ import ProductTag from '#app/components/ui/productTag.tsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#app/components/ui/select.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
-import { CURRENCIES, PRODUCT_STATUSES } from '#app/schemas/constants'
+import { PRODUCT_STATUSES } from '#app/schemas/constants'
 import { productSchema, type ImageFieldset } from '#app/schemas/product.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
@@ -294,23 +294,7 @@ export default function EditProduct({ loaderData, actionData }: Route.ComponentP
 										className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
 									/>
 									<ErrorList errors={fields.price.errors} />
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor={fields.currency.id}>Currency</Label>
-									<Select {...getInputProps(fields.currency, { type: 'text' })}>
-										<SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" aria-label="Currency">
-											<SelectValue placeholder="Select currency" />
-										</SelectTrigger>
-										<SelectContent>
-											{CURRENCIES.map((currency) => (
-												<SelectItem key={currency} value={currency}>
-													{currency}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<ErrorList errors={fields.currency.errors} />
-								</div>
+							</div>
 							</div>
 						</CardContent>
 					</Card>

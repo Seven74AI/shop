@@ -34,6 +34,9 @@ model User {
   cart        Cart?
   orders      Order[]
   addresses   Address[]
+  reviews       Review[]
+  loginAttempts LoginAttempt[]
+  auditLogs     AuditLog[]
 }
 
 model Note {
@@ -101,6 +104,21 @@ model Session {
 
   // non-unique foreign key
   @@index([userId])
+}
+
+model LoginAttempt {
+  id            String   @id @default(cuid())
+  userId        String
+  ipAddress     String?
+  userAgent     String?
+  success       Boolean
+  failureReason String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Permission {
@@ -288,6 +306,7 @@ model Product {
   tags       ProductToTag[]
   cartItems  CartItem[]
   orderItems OrderItem[]
+  reviews    Review[]
 
   @@index([categoryId])
   @@index([status])
@@ -522,6 +541,7 @@ model Order {
   items          OrderItem[]
   invoices       Invoice[]
   returnRequests ReturnRequest[]
+  reviews        Review[]
   shippingMethod ShippingMethod? @relation(fields: [shippingMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
@@ -556,9 +576,39 @@ model OrderItem {
   @@index([productId])
 }
 
+// Review model — P4 Competitive phase
+// Users can rate/review products they've purchased (verified purchase) or
+// any product (unverified). Admin moderation via isApproved flag.
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  userId     String?
+  orderId    String?
+  rating     Int // 1-5 star rating
+  title      String?
+  body       String?
+  isVerifiedPurchase Boolean @default(false)
+  isApproved       Boolean  @default(false)
+  rejectionReason  String?  // Reason when admin rejects the review
+  adminNotes       String?  // Internal admin notes
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([userId])
+  @@index([orderId])
+  @@index([productId, isApproved])
+  @@index([productId, rating])
+}
+
 enum ReturnStatus {
   REQUESTED
   APPROVED
+  SHIPPED
   RECEIVED
   REFUNDED
   REJECTED
@@ -577,6 +627,7 @@ model ReturnRequest {
   restockingFeeCents Int? // Restocking fee deducted (in cents)
 
   requestedAt DateTime  @default(now()) // When the return was requested
+  shippedAt   DateTime? // When the items were shipped back (status: SHIPPED)
   receivedAt  DateTime? // When the returned items were received
   refundedAt  DateTime? // When the refund was processed
 
@@ -638,8 +689,16 @@ model Invoice {
   // PDF generation placeholder — populated by P1.2.2 PDF rendering
   pdfObjectKey String?
 
-  // Status lifecycle: DRAFT → FINAL (when issued), or CANCELLED
-  status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED"
+  // Credit note reason — populated when kind=CREDIT_NOTE to record
+  // the reason for the credit note (e.g., "return", "damaged", "partial refund").
+  reason String?
+
+  // Status lifecycle:
+  //   DRAFT → FINAL (when issued), or CANCELLED
+  //   INVOICE status updates on refund:
+  //     PARTIALLY_REFUNDED — some order items refunded
+  //     REFUNDED — all order items refunded
+  status String @default("DRAFT") // "DRAFT" | "FINAL" | "CANCELLED" | "PARTIALLY_REFUNDED" | "REFUNDED"
 
   issuedAt  DateTime?
   createdAt DateTime  @default(now())
@@ -660,6 +719,23 @@ enum InvoiceKind {
   CREDIT_NOTE
 }
 
+// IdempotencyRecord — P2 Reliability phase
+// Tracks idempotency keys for Stripe operations to prevent duplicate
+// payment processing. Keys are unique and expire after 24h.
+// See: https://docs.stripe.com/api/idempotent_requests
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @unique
+  operationType  String // e.g., "payment_intent", "refund", "checkout_session", "webhook"
+  status         String   @default("processing") // "processing" | "completed" | "failed"
+  response       Json? // Cached Stripe response (null while processing)
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime // TTL for cleanup (createdAt + 24h window)
+
+  @@index([expiresAt])
+  @@index([status])
+}
+
 model TaxRate {
   id            String    @id @default(cuid())
   country       String // ISO 2-letter country code
@@ -675,6 +751,50 @@ model TaxRate {
   @@index([country])
   @@index([kind])
   @@index([isActive])
+}
+
+// Coupon & Promotion System
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+// Coupon — discount code applied at checkout by the customer
+model Coupon {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  discountType  DiscountType
+  discountValue Int          // percentage in basis points (1000 = 10.00%) or cents for FIXED_AMOUNT
+  minOrderAmount Int?        // minimum order total in cents required to apply
+  maxUses       Int?         // null = unlimited uses
+  usedCount     Int          @default(0)
+  startsAt      DateTime?
+  expiresAt     DateTime?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  @@index([code])
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([expiresAt])
+}
+
+// Promotion — site-wide or targeted discount (automatic or via banner)
+model Promotion {
+  id            String       @id @default(cuid())
+  name          String
+  description   String?
+  discountType  DiscountType
+  discountValue Int          // percentage in basis points (1000 = 10.00%) or cents for FIXED_AMOUNT
+  startsAt      DateTime?
+  expiresAt     DateTime?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([expiresAt])
 }
 
 enum OrderStatus {
@@ -834,4 +954,52 @@ model Flag {
   description       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// Audit Log System
+// Records security-relevant actions for compliance and debugging.
+// Audit logs persist after user deletion (userId → null) for the duration
+// of the data retention policy (6 years per French tax law CGI art. L. 102 B).
+// See: docs/data-retention.md
+
+model AuditLog {
+  id         String @id @default(cuid())
+  userId     String?
+  action     String // e.g., "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT"
+  entityType String // e.g., "User", "Product", "Order", "Invoice"
+  entityId   String // The ID of the affected entity
+  changes    Json? // JSON diff of changes made (null for read-only actions)
+  ipAddress  String? // IP address of the requester (GDPR: pseudonymised after retention)
+  userAgent  String? // User-Agent header
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// Webhook Idempotency System — P3 Security phase
+// Stores incoming webhook events for idempotent processing.
+// The eventId field (provider-side event ID) acts as the idempotency key —
+// duplicate events with the same eventId are skipped.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique // Provider-side event ID (idempotency key)
+  eventType   String    // e.g., "checkout.session.completed"
+  provider    String    // e.g., "stripe"
+  payload     Json      // Full webhook payload from provider
+  processedAt DateTime? // When the event was successfully processed
+  status      String    @default("RECEIVED") // RECEIVED | PROCESSING | PROCESSED | FAILED
+  attempts    Int       @default(0) // Number of processing attempts
+  lastError   String?   // Last error message if processing failed
+  createdAt   DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([status])
+  @@index([createdAt])
 }

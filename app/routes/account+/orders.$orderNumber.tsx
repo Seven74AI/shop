@@ -10,6 +10,8 @@ import { formatDate } from '#app/utils/date.ts'
 import { formatAddress } from '#app/utils/address.ts'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { formatPrice } from '#app/utils/price.ts'
+import { formatInvoiceNumber } from '#app/utils/invoice.ts'
+import { prisma } from '#app/utils/db.server.ts'
 import { type BreadcrumbHandle } from '../account.tsx'
 import { type Route } from './+types/orders.$orderNumber.ts'
 
@@ -43,7 +45,23 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		)
 	}
 
-	return { order }
+	// Fetch invoices for this order
+	const invoices = await prisma.invoice.findMany({
+		where: { orderId: order.id },
+		orderBy: { createdAt: 'desc' },
+		select: {
+			id: true,
+			fiscalYear: true,
+			sequence: true,
+			kind: true,
+			status: true,
+			totalCents: true,
+			issuedAt: true,
+			createdAt: true,
+		},
+	})
+
+	return { order, invoices }
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
@@ -55,7 +73,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 	const { locale } = useTranslation()
-	const { order } = loaderData
+	const { order, invoices } = loaderData
 
 	return (
 		<div className="space-y-8">
@@ -117,38 +135,66 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 				</Card>
 
 				{/* Order Summary */}
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<h2>Order Summary</h2>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="flex justify-between">
-								<span className="text-gray-500">Subtotal</span>
-								<span>{formatPrice(order.subtotal, null, locale)}</span>
-							</div>
-							{order.shippingCost > 0 && (
+					<div className="space-y-6">
+						<Card>
+							<CardHeader>
+								<h2>Order Summary</h2>
+							</CardHeader>
+							<CardContent className="space-y-4">
 								<div className="flex justify-between">
-									<span className="text-gray-500">Shipping</span>
-									<span>{formatPrice(order.shippingCost, null, locale)}</span>
+									<span className="text-gray-500">Subtotal</span>
+									<span>{formatPrice(order.subtotal, null, locale)}</span>
 								</div>
-							)}
-							{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
-								<>
-									{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
-										<div key={i} className="flex justify-between text-sm text-gray-500">
-											<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
-											<span>{formatPrice(line.vatCents, null, locale)}</span>
-										</div>
-									))}
-								</>
-							)}
-							<div className="border-t pt-4 flex justify-between text-lg font-bold">
-								<span>Total</span>
-								<span>{formatPrice(order.total, null, locale)}</span>
-							</div>
-						</CardContent>
-					</Card>
+								{order.shippingCost > 0 && (
+									<div className="flex justify-between">
+										<span className="text-gray-500">Shipping</span>
+										<span>{formatPrice(order.shippingCost, null, locale)}</span>
+									</div>
+								)}
+								{order.vatTotalCents > 0 && order.vatBreakdown && Array.isArray(order.vatBreakdown) && (
+									<>
+										{(order.vatBreakdown as Array<{ kind: string; rate: number; vatCents: number }>).map((line, i) => (
+											<div key={i} className="flex justify-between text-sm text-gray-500">
+												<span>VAT ({line.kind} {(line.rate / 100).toFixed(1)}%)</span>
+												<span>{formatPrice(line.vatCents, null, locale)}</span>
+											</div>
+										))}
+									</>
+								)}
+								<div className="border-t pt-4 flex justify-between text-lg font-bold">
+									<span>Total</span>
+									<span>{formatPrice(order.total, null, locale)}</span>
+								</div>
+							</CardContent>
+						</Card>
+
+						{'invoices' in order && Array.isArray(order.invoices) && order.invoices.length > 0 && (
+							<Card>
+								<CardHeader>
+									<h2>Invoices</h2>
+								</CardHeader>
+								<CardContent>
+									<div className="flex flex-col gap-2">
+										{order.invoices.map((inv) => (
+											<div key={inv.id} className="flex items-center justify-between">
+												<span className="text-sm text-gray-500">
+													{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}{' '}
+													<span className="font-mono">
+														F{inv.fiscalYear}-{String(inv.sequence).padStart(5, '0')}
+													</span>
+												</span>
+												<Button asChild variant="outline" size="sm">
+													<a href={`/account/invoices/${inv.id}.pdf`}>
+														<Icon name="download" className="h-4 w-4 mr-2" />
+														Download
+													</a>
+												</Button>
+											</div>
+										))}
+									</div>
+								</CardContent>
+							</Card>
+						)}
 
 					<Card>
 						<CardHeader>
@@ -200,6 +246,59 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
 							)}
 						</CardContent>
 					</Card>
+
+					{invoices.length > 0 && (
+						<Card>
+							<CardHeader>
+								<h2>Invoices</h2>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								{invoices.map((inv) => {
+									const invNumber = formatInvoiceNumber(inv.fiscalYear, inv.sequence)
+									return (
+										<div
+											key={inv.id}
+											className="flex items-center justify-between py-2 border-b last:border-0"
+										>
+											<div className="flex items-center gap-3">
+												<Icon name="file-text" className="h-5 w-5 text-gray-500" />
+												<div>
+													<Link
+														to={`/account/invoices/${inv.id}.pdf`}
+														reloadDocument
+														className="font-medium hover:text-primary hover:underline"
+													>
+														{invNumber}
+													</Link>
+													<p className="text-xs text-gray-500">
+														{inv.kind === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}
+														{inv.status === 'DRAFT' && ' · Draft'}
+														{inv.status === 'CANCELLED' && ' · Cancelled'}
+														{inv.issuedAt &&
+															` · ${formatDate(inv.issuedAt, locale, { dateStyle: 'medium' })}`}
+													</p>
+												</div>
+											</div>
+											<div className="flex items-center gap-3">
+												<span className="text-sm font-medium text-gray-900">
+													{formatPrice(inv.totalCents, null, locale)}
+												</span>
+												<Button variant="outline" size="sm" asChild>
+													<Link
+														to={`/account/invoices/${inv.id}.pdf`}
+														reloadDocument
+													>
+														<Icon name="download" className="h-4 w-4 mr-2" />
+														Download
+													</Link>
+												</Button>
+											</div>
+										</div>
+									)
+								})}
+							</CardContent>
+						</Card>
+					)}
 				</div>
 			</div>
 

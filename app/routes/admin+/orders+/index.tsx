@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Link } from 'react-router'
+import { Form, Link, useSearchParams } from 'react-router'
+import { useRef } from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { OrderStatusBadge } from '#app/components/order-status-badge.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -20,7 +20,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '#app/components/ui/table.tsx'
-import { prisma } from '#app/utils/db.server.ts'
+import { getAdminOrders } from '#app/utils/order.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { getStoreCurrency } from '#app/utils/settings.server.ts'
@@ -29,33 +29,31 @@ import { type Route } from './+types/index.ts'
 export async function loader({ request }: Route.LoaderArgs) {
 	await requireUserWithRole(request, 'admin')
 
-	// Get all orders for client-side filtering
-	const orders = await prisma.order.findMany({
-		include: {
-			user: {
-				select: {
-					id: true,
-					email: true,
-					username: true,
-					name: true,
-				},
-			},
-			items: {
-				select: {
-					id: true,
-					quantity: true,
-				},
-			},
-		},
-		orderBy: { createdAt: 'desc' },
+	const url = new URL(request.url)
+	const page = parseInt(url.searchParams.get('page') || '1', 10)
+	const search = url.searchParams.get('search') || ''
+	const status = url.searchParams.get('status') || ''
+	const dateFrom = url.searchParams.get('dateFrom') || ''
+	const dateTo = url.searchParams.get('dateTo') || ''
+
+	const result = await getAdminOrders({
+		page: isNaN(page) || page < 1 ? 1 : page,
+		perPage: 25,
+		search,
+		status,
+		dateFrom,
+		dateTo,
 	})
 
-	// Get currency for price formatting
 	const currency = await getStoreCurrency()
 
 	return {
-		orders,
+		...result,
 		currency,
+		search,
+		status,
+		dateFrom,
+		dateTo,
 	}
 }
 
@@ -64,49 +62,39 @@ export const meta: Route.MetaFunction = () => [
 	{ name: 'description', content: 'Manage all orders' },
 ]
 
-const ITEMS_PER_PAGE = 25
-
 export default function OrdersList({ loaderData }: Route.ComponentProps) {
-	const { orders, currency } = loaderData
+	const { orders, total, page, perPage, totalPages, currency, search, status, dateFrom, dateTo } = loaderData
+	const [searchParams, setSearchParams] = useSearchParams()
+	const searchInputRef = useRef<HTMLInputElement>(null)
 
-	// State for search and filtering
-	const [searchTerm, setSearchTerm] = useState('')
-	const [statusFilter, setStatusFilter] = useState('all')
-	const [currentPage, setCurrentPage] = useState(1)
+	const startIndex = (page - 1) * perPage + 1
+	const endIndex = Math.min(page * perPage, total)
 
-	// Filter orders based on search and filter criteria
-	const filteredOrders = useMemo(() => {
-		let filtered = orders
+	const hasFilters = search.trim() || status || dateFrom || dateTo
 
-		// Apply search filter
-		if (searchTerm.trim()) {
-			const search = searchTerm.toLowerCase()
-			filtered = filtered.filter(
-				(order) =>
-					order.orderNumber.toLowerCase().includes(search) ||
-					order.email.toLowerCase().includes(search) ||
-					(order.user?.email && order.user.email.toLowerCase().includes(search)),
-			)
+	// Build search params for page navigation preserving current filters
+	function pageParams(targetPage: number): string {
+		const params = new URLSearchParams(searchParams)
+		params.set('page', String(targetPage))
+		return `?${params.toString()}`
+	}
+
+	// Update status filter instantly on change
+	function handleStatusChange(value: string) {
+		const params = new URLSearchParams(searchParams)
+		if (value === 'all') {
+			params.delete('status')
+		} else {
+			params.set('status', value)
 		}
+		params.delete('page')
+		setSearchParams(params)
+	}
 
-		// Apply status filter
-		if (statusFilter !== 'all') {
-			filtered = filtered.filter((order) => order.status === statusFilter)
-		}
-
-		return filtered
-	}, [orders, searchTerm, statusFilter])
-
-	// Pagination calculations
-	const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE)
-	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-	const endIndex = startIndex + ITEMS_PER_PAGE
-	const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
-
-	// Reset to page 1 when filters change
-	useEffect(() => {
-		setCurrentPage(1)
-	}, [searchTerm, statusFilter])
+	// Clear all filters
+	function clearFilters() {
+		setSearchParams({})
+	}
 
 	return (
 		<div className="space-y-8 animate-slide-top">
@@ -115,45 +103,94 @@ export default function OrdersList({ loaderData }: Route.ComponentProps) {
 				<div>
 					<h1 className="text-2xl font-normal tracking-tight text-foreground">Orders</h1>
 					<p className="text-sm text-muted-foreground mt-1">
-						Manage all orders ({orders.length} total)
-						{searchTerm.trim() || statusFilter !== 'all'
-							? ` • ${filteredOrders.length} shown`
-							: ''}
+						Manage all orders ({total} total)
+						{hasFilters ? ` • ${total} shown` : ''}
 					</p>
 				</div>
 			</div>
 
 			{/* Search and Filter Controls */}
-			<div className="flex flex-col sm:flex-row gap-4">
-				<div className="flex-1">
-					<div className="relative">
-						<Icon
-							name="magnifying-glass"
-							className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
-						/>
-						<Input
-							placeholder="Search orders by order number or email..."
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-							className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-						/>
+			<div className="flex flex-col gap-4">
+				<div className="flex flex-col sm:flex-row gap-4">
+					{/* Search — uses GET form submitted on Enter or Apply button */}
+					<Form method="get" className="flex-1">
+						<div className="relative">
+							<Icon
+								name="magnifying-glass"
+								className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
+							/>
+							<Input
+								ref={searchInputRef}
+								type="search"
+								name="search"
+								placeholder="Search orders by order number or email..."
+								defaultValue={search}
+								className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+							/>
+						</div>
+					</Form>
+
+					{/* Status filter — instant on change */}
+					<div className="sm:w-48">
+						<Select
+							defaultValue={status || 'all'}
+							onValueChange={handleStatusChange}
+							name="status"
+						>
+							<SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" aria-label="Filter by status">
+								<SelectValue placeholder="Filter by status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All Status</SelectItem>
+								<SelectItem value="PENDING">Pending</SelectItem>
+								<SelectItem value="CONFIRMED">Confirmed</SelectItem>
+								<SelectItem value="SHIPPED">Shipped</SelectItem>
+								<SelectItem value="DELIVERED">Delivered</SelectItem>
+								<SelectItem value="CANCELLED">Cancelled</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 				</div>
-				<div className="sm:w-48">
-					<Select value={statusFilter} onValueChange={setStatusFilter}>
-						<SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20" aria-label="Filter by status">
-							<SelectValue placeholder="Filter by status" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Status</SelectItem>
-							<SelectItem value="PENDING">Pending</SelectItem>
-							<SelectItem value="CONFIRMED">Confirmed</SelectItem>
-							<SelectItem value="SHIPPED">Shipped</SelectItem>
-							<SelectItem value="DELIVERED">Delivered</SelectItem>
-							<SelectItem value="CANCELLED">Cancelled</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
+
+				{/* Date Range Filters — uses GET form */}
+				<Form method="get" className="flex flex-col sm:flex-row gap-4 items-end">
+					{/* Preserve current status when submitting date form */}
+					{status && <input type="hidden" name="status" value={status} />}
+					<div className="sm:w-48">
+						<label htmlFor="dateFrom" className="block text-sm text-muted-foreground mb-1">
+							From Date
+						</label>
+						<Input
+							id="dateFrom"
+							type="date"
+							name="dateFrom"
+							defaultValue={dateFrom}
+							className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+						/>
+					</div>
+					<div className="sm:w-48">
+						<label htmlFor="dateTo" className="block text-sm text-muted-foreground mb-1">
+							To Date
+						</label>
+						<Input
+							id="dateTo"
+							type="date"
+							name="dateTo"
+							defaultValue={dateTo}
+							className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+						/>
+					</div>
+					<div className="flex gap-2">
+						<Button type="submit" variant="default" size="sm">
+							Apply Filters
+						</Button>
+						{hasFilters && (
+							<Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+								Clear All
+							</Button>
+						)}
+					</div>
+				</Form>
 			</div>
 
 			{/* Table */}
@@ -171,10 +208,10 @@ export default function OrdersList({ loaderData }: Route.ComponentProps) {
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{filteredOrders.length === 0 ? (
+					{orders.length === 0 ? (
 						<TableRow>
 							<TableCell colSpan={8} className="text-center py-8">
-								{searchTerm.trim() || statusFilter !== 'all' ? (
+								{hasFilters ? (
 									<div className="text-muted-foreground">
 										<Icon
 											name="magnifying-glass"
@@ -193,7 +230,7 @@ export default function OrdersList({ loaderData }: Route.ComponentProps) {
 							</TableCell>
 						</TableRow>
 					) : (
-						paginatedOrders.map((order) => {
+						orders.map((order) => {
 							const itemCount = order.items.reduce(
 								(sum, item) => sum + item.quantity,
 								0,
@@ -253,43 +290,56 @@ export default function OrdersList({ loaderData }: Route.ComponentProps) {
 				</TableBody>
 			</Table>
 
-			{/* Pagination */}
+			{/* Pagination — server-side with page links */}
 			{totalPages > 1 && (
 				<div className="flex items-center justify-between">
 					<div className="text-sm text-muted-foreground">
-						Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of{' '}
-						{filteredOrders.length} orders
+						Showing {startIndex} to {endIndex} of{' '}
+						{total} orders
 					</div>
 					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={currentPage === 1}
-							onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+							disabled={page <= 1}
+							asChild={page > 1}
 						>
-							<Icon name="arrow-left" className="h-4 w-4" />
-							Previous
+							{page > 1 ? (
+								<Link to={pageParams(page - 1)}>
+									<Icon name="arrow-left" className="h-4 w-4" />
+									Previous
+								</Link>
+							) : (
+								<span>
+									<Icon name="arrow-left" className="h-4 w-4" />
+									Previous
+								</span>
+							)}
 						</Button>
 						<div className="flex items-center gap-1">
 							{Array.from({ length: totalPages }, (_, i) => i + 1)
 								.filter(
-									(page) =>
-										page === 1 ||
-										page === totalPages ||
-										Math.abs(page - currentPage) <= 1,
+									(p) =>
+										p === 1 ||
+										p === totalPages ||
+										Math.abs(p - page) <= 1,
 								)
-								.map((page, index, arr) => (
-									<div key={page} className="flex items-center gap-1">
-										{index > 0 && arr[index - 1] !== page - 1 && (
+								.map((p, index, arr) => (
+									<div key={p} className="flex items-center gap-1">
+										{index > 0 && arr[index - 1] !== p - 1 && (
 											<span className="px-2 text-muted-foreground">...</span>
 										)}
 										<Button
-											variant={currentPage === page ? 'default' : 'outline'}
+											variant={page === p ? 'default' : 'outline'}
 											size="sm"
-											onClick={() => setCurrentPage(page)}
+											asChild={page !== p}
 											className="min-w-[2.5rem]"
 										>
-											{page}
+											{page !== p ? (
+												<Link to={pageParams(p)}>{p}</Link>
+											) : (
+												<span>{p}</span>
+											)}
 										</Button>
 									</div>
 								))}
@@ -297,11 +347,20 @@ export default function OrdersList({ loaderData }: Route.ComponentProps) {
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={currentPage === totalPages}
-							onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+							disabled={page >= totalPages}
+							asChild={page < totalPages}
 						>
-							Next
-							<Icon name="arrow-right" className="h-4 w-4" />
+							{page < totalPages ? (
+								<Link to={pageParams(page + 1)}>
+									Next
+									<Icon name="arrow-right" className="h-4 w-4" />
+								</Link>
+							) : (
+								<span>
+									Next
+									<Icon name="arrow-right" className="h-4 w-4" />
+								</span>
+							)}
 						</Button>
 					</div>
 				</div>
@@ -332,9 +391,3 @@ export function ErrorBoundary() {
 		/>
 	)
 }
-
-
-
-
-
-

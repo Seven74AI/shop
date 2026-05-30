@@ -115,4 +115,30 @@ describe('GET /api/admin/circuit-breakers', () => {
 			expect(data.total).toBe(1)
 		}
 	})
+
+	test('includes lastEvents in breaker entries', async () => {
+		const breaker = new CircuitBreaker('event-api-test', {
+			failureThreshold: 1,
+			onStateChange: undefined,
+		})
+		breaker.trip()
+		breaker.reset()
+
+		const result = await loader(mockLoaderArgs())
+
+		const data = (result as { data: unknown }).data as Record<string, unknown>
+		const breakers = data.breakers as Array<Record<string, unknown>>
+		expect(breakers).toHaveLength(1)
+
+		const entry = breakers[0]!
+		expect(entry.lastEvents).toBeDefined()
+		const events = entry.lastEvents as Array<Record<string, unknown>>
+		expect(Array.isArray(events)).toBe(true)
+		expect(events.length).toBeGreaterThanOrEqual(2)
+
+		const eventTypes = events.map((e) => e.type)
+		expect(eventTypes).toContain('OPEN')
+		expect(eventTypes).toContain('CLOSED')
+		expect(eventTypes).toContain('RESET')
+	})
 })

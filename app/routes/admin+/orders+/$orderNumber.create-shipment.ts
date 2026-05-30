@@ -7,6 +7,7 @@
 
 import { invariantResponse } from '@epic-web/invariant'
 import { data } from 'react-router'
+import { log } from '#app/utils/logging.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getOrderByOrderNumber } from '#app/utils/order-queries.server.ts'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
@@ -96,7 +97,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 			)
 		} catch (emailError) {
 			// Log email error but don't fail shipment creation
-			console.error('Failed to send shipping confirmation email:', emailError)
+			log.error({ err: emailError }, 'Failed to send shipping confirmation email')
 		}
 
 		return data({
@@ -106,7 +107,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 			labelUrl: shipmentResult.labelUrl,
 		})
 	} catch (error) {
-		console.error('Failed to create shipment:', error)
+		log.error({ err: error }, 'Failed to create shipment')
 		return data(
 			{
 				error: 'Failed to create shipment',

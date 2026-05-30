@@ -7,6 +7,7 @@ import {
 	getSessionExpirationDate,
 	sessionKey,
 } from '#app/utils/auth.server.ts'
+import { COOKIE_NAME } from '#app/utils/consent-constants.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { MOCK_CODE_GITHUB_HEADER } from '#app/utils/providers/constants.js'
 import { normalizeEmail } from '#app/utils/providers/provider.js'
@@ -85,6 +86,21 @@ export const test = base.extend<{
 	logout(): Promise<void>
 	prepareGitHubUser(): Promise<GitHubUser>
 }>({
+	// Set cookie consent for all tests to avoid consent banner blocking interactions
+	page: async ({ page }, use) => {
+		const consentValue = encodeURIComponent(
+			JSON.stringify({ necessary: true, analytics: true, marketing: true }),
+		)
+		await page.context().addCookies([
+			{
+				name: COOKIE_NAME,
+				value: consentValue,
+				domain: 'localhost',
+				path: '/',
+			},
+		])
+		await use(page)
+	},
 	navigate: async ({ page }, use) => {
 		await use((...args) => {
 			return page.goto(href(...args))
