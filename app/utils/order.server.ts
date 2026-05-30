@@ -28,6 +28,7 @@ export {
 	getOrderByOrderNumber,
 	getUserOrders,
 	getGuestOrder,
+	getOrderByCheckoutSessionId,
 } from './order-queries.server.ts'
 
 // Order status
@@ -37,7 +38,6 @@ export {
 
 // Order creation (Stripe)
 export {
-	getOrderByCheckoutSessionId,
 	createOrderFromStripeSession,
 } from './order-creation.server.ts'
 

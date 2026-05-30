@@ -173,3 +173,21 @@ export async function getGuestOrder(orderNumber: string, email: string) {
 	return order
 }
 
+/**
+ * Gets an order by checkout session ID (for webhook idempotency).
+ */
+export async function getOrderByCheckoutSessionId(
+	checkoutSessionId: string,
+) {
+	return prisma.order.findUnique({
+		where: { stripeCheckoutSessionId: checkoutSessionId },
+		include: {
+			items: {
+				include: {
+					product: true,
+					variant: true,
+				},
+			},
+		},
+	})
+}

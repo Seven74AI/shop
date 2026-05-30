@@ -10,26 +10,7 @@ import { stripe } from './stripe.server.ts'
 import { calculateVat, type TaxableItem } from './tax.server.ts'
 import { createInvoiceForOrder } from './order-invoice.server.ts'
 import { StockUnavailableError } from './order-stock.server.ts'
-
-/**
- * Gets an order by checkout session ID (for webhook idempotency).
- */
-export async function getOrderByCheckoutSessionId(
-	checkoutSessionId: string,
-) {
-	return prisma.order.findUnique({
-		where: { stripeCheckoutSessionId: checkoutSessionId },
-		include: {
-			items: {
-				include: {
-					product: true,
-					variant: true,
-				},
-			},
-		},
-	})
-}
-
+import { getOrderByCheckoutSessionId } from './order-queries.server.ts'
 /**
  * Creates an order from a Stripe checkout session.
  * This function handles the complete order creation process including:
