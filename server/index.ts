@@ -77,10 +77,48 @@ app.use(compression())
 app.disable('x-powered-by')
 
 app.use((_, res, next) => {
-	// Set Referrer-Policy to browser default (strict-origin-when-cross-origin)
-	// This is safe for same-origin redirects — the original issue was with
-	// helmet's default no-referrer which strips Referer even for same-origin
-	helmet(res, { general: { referrerPolicy: ['strict-origin-when-cross-origin'] } })
+	helmet(res, {
+		general: {
+			referrerPolicy: ['strict-origin-when-cross-origin'],
+		},
+		content: {
+			contentSecurityPolicy: {
+				useDefaults: true,
+				directives: {
+					fetch: {
+						'connect-src': [
+							"'self'",
+							'https://api.stripe.com',
+							process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
+						],
+						'frame-src': [
+							"'self'",
+							'https://*.stripe.com',
+						],
+						'img-src': [
+							"'self'",
+							'data:',
+							'https://*.stripe.com',
+						],
+						'style-src': [
+							"'self'",
+							"'unsafe-inline'",
+						],
+					},
+					deprecated: {
+						'report-uri': '/resources/csp-report',
+					},
+					other: {
+						'upgrade-insecure-requests': false,
+					},
+				},
+			},
+			xFrameOptions: 'DENY',
+			crossOriginOpenerPolicy: true,
+			originAgentCluster: true,
+			xXssProtection: true,
+		},
+	})
 	next()
 })
 
