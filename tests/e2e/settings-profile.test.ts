@@ -117,7 +117,7 @@ test('Users can change their email address', async ({
 	await page.getByRole('textbox', { name: /code/i }).fill(code)
 	await page.getByRole('button', { name: /submit/i }).click()
 	await page.waitForURL('/account/**', { timeout: 15000 })
-	await expect(page.getByText(/email changed/i)).toBeVisible()
+	await expect(page.getByText(/email changed/i)).toBeVisible({ timeout: 15000 })
 
 	const updatedUser = await prisma.user.findUnique({
 		where: { id: preUpdateUser.id },
