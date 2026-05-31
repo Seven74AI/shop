@@ -127,6 +127,7 @@ export default function AdminLayout() {
 }
 
 export function ErrorBoundary() {
+	const { t } = useTranslation()
 	return (
 		<GeneralErrorBoundary
 			statusHandlers={{
