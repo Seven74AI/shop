@@ -60,6 +60,7 @@ test('Users can register and use passkeys', async ({
 
 	// Logout
 	await page.getByRole('link', { name: 'User menu' }).click()
+	await page.getByRole('menuitem', { name: /logout/i }).waitFor({ state: 'visible' })
 	await page.getByRole('menuitem', { name: /logout/i }).click()
 	await expect(page).toHaveURL(`/`)
 
@@ -109,6 +110,7 @@ test('Users can register and use passkeys', async ({
 
 	// Logout again to test deleted passkey
 	await page.getByRole('link', { name: 'User menu' }).click()
+	await page.getByRole('menuitem', { name: /logout/i }).waitFor({ state: 'visible' })
 	await page.getByRole('menuitem', { name: /logout/i }).click()
 	await expect(page).toHaveURL(`/`)
 
