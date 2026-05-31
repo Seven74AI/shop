@@ -21,6 +21,7 @@ async function getDynamicRouteMetadata(): Promise<RouteMetadata[]> {
 		const products = await prisma.product.findMany({
 			where: { status: 'ACTIVE' },
 			select: { slug: true, updatedAt: true },
+			take: 50000,
 		})
 
 		for (const product of products) {

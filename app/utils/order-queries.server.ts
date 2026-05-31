@@ -118,6 +118,7 @@ export async function getUserOrders(userId: string) {
 	return prisma.order.findMany({
 		where: { userId },
 		orderBy: { createdAt: 'desc' },
+		take: 100,
 		include: {
 			items: {
 				include: {

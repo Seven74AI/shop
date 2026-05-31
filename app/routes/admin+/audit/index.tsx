@@ -97,6 +97,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		select: { entityType: true },
 		distinct: ['entityType'],
 		orderBy: { entityType: 'asc' },
+		take: 50,
 	})
 
 	const uniqueEntityTypes = entityTypes.map((e) => e.entityType)

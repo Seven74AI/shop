@@ -52,6 +52,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			},
 		},
 		orderBy: { displayOrder: 'asc' },
+		take: 200,
 	})
 
 	return { attributes }

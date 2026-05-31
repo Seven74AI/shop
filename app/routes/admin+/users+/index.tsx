@@ -51,6 +51,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			},
 		},
 		orderBy: { createdAt: 'desc' },
+		take: 100,
 	})
 
 	// Get all roles for filter
