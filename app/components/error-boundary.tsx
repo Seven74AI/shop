@@ -1,4 +1,3 @@
-import { captureException } from '@sentry/react-router'
 import { useEffect, type ReactElement } from 'react'
 import {
 	type ErrorResponse,
@@ -31,32 +30,35 @@ export function GeneralErrorBoundary({
 	const isResponse = isRouteErrorResponse(error)
 
 	useEffect(() => {
-		if (isResponse) {
-			// Log route error responses with context
-			captureException(error, {
-				tags: {
-					context: 'error-boundary',
-					errorType: 'route-error-response',
-					status: error.status,
-				},
-				extra: {
-					status: error.status,
-					data: error.data,
-					params,
-				},
-			})
-		} else {
-			// Log unexpected errors
-			captureException(error, {
-				tags: {
-					context: 'error-boundary',
-					errorType: 'unexpected-error',
-				},
-				extra: {
-					params,
-				},
-			})
-		}
+		// Only load Sentry on the client when SENTRY_DSN is configured.
+		// Dynamic import avoids bundling the 80KB+ Sentry client SDK into
+		// every page — it only loads when an error boundary actually fires.
+		if (typeof window === 'undefined' || !window.ENV?.SENTRY_DSN) return
+
+		void import('@sentry/react-router').then(({ captureException }) => {
+			if (isResponse) {
+				captureException(error, {
+					tags: {
+						context: 'error-boundary',
+						errorType: 'route-error-response',
+						status: error.status,
+					},
+					extra: {
+						status: error.status,
+						data: error.data,
+						params,
+					},
+				})
+			} else {
+				captureException(error, {
+					tags: {
+						context: 'error-boundary',
+						errorType: 'unexpected-error',
+					},
+					extra: { params },
+				})
+			}
+		})
 	}, [error, isResponse, params])
 
 	return (

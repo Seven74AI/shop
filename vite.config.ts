@@ -35,6 +35,22 @@ export default defineConfig((config) => ({
 
 		rollupOptions: {
 			external: [/node:.*/, 'fsevents'],
+			output: {
+				manualChunks(id) {
+					// Isolate zod into its own chunk for tree-shaking and caching
+					if (id.includes('node_modules/zod/') || id.includes('node_modules/@conform-to/zod/')) {
+						return 'vendor-zod'
+					}
+					// Isolate Remix/React Router core
+					if (id.includes('node_modules/@react-router/') || id.includes('node_modules/react-router/')) {
+						return 'vendor-router'
+					}
+					// Note: @radix-ui components are NOT manually chunked —
+					// letting Vite split them per-route so admin-only components
+					// (select, alert-dialog, checkbox, toggle, switch, collapsible)
+					// don't bloat the initial bundle.
+				},
+			},
 		},
 
 		assetsInlineLimit: (source: string) => {
