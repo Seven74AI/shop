@@ -588,25 +588,5 @@ function MethodForm({
 	)
 }
 
-export default function NewShippingMethod({ loaderData, actionData }: Route.ComponentProps) {
-	return (
-		<div className="space-y-8 animate-slide-top">
-			<div>
-				<h1 className="text-2xl font-normal tracking-tight text-foreground">
-					Create New Shipping Method
-				</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Define a shipping method with rates and configuration
-				</p>
-			</div>
-
-			<MethodForm
-				zones={loaderData.zones}
-				carriers={loaderData.carriers}
-				defaultZoneId={loaderData.defaultZoneId}
-				actionData={actionData}
-			/>
-		</div>
-	)
-}
-
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./new.lazy')

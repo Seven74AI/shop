@@ -195,21 +195,5 @@ function EditFlagForm({
 	)
 }
 
-export default function EditFeatureFlag({ loaderData, actionData }: Route.ComponentProps) {
-	const { flag } = loaderData
-
-	return (
-		<div className="space-y-8 animate-slide-top">
-			<div>
-				<h1 className="text-2xl font-normal tracking-tight text-foreground">
-					Edit Feature Flag
-				</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Modify settings for <code className="font-mono">{flag.key}</code>
-				</p>
-			</div>
-
-			<EditFlagForm flag={flag} actionData={actionData} />
-		</div>
-	)
-}
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./$flagKey_.edit.lazy')

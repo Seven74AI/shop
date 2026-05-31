@@ -1,0 +1,157 @@
+import { getFormProps, getInputProps, useForm } from '@conform-to/react'
+import { getZodConstraint, parseWithZod } from '@conform-to/zod/v4'
+import { data, Link, redirect, redirectDocument, useActionData, useLoaderData } from 'react-router'
+import { Button } from '#app/components/ui/button.tsx'
+import { Field, ErrorList } from '#app/components/forms.tsx'
+import { StatusButton } from '#app/components/ui/status-button.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
+import { useIsPending } from '#app/utils/misc.tsx'
+import { formatPrice } from '#app/utils/price.ts'
+import { CouponCodeSchema, couponErrorMessages } from '#app/schemas/coupon.ts'
+import { validateCoupon } from '#app/utils/coupon.server.ts'
+import { type Route } from './+types/review.ts'
+import type { loader, action } from './review.ts'
+
+
+
+export default function CheckoutReview() {
+	const loaderData = useLoaderData<typeof loader>()
+	const actionData = useActionData<typeof action>()
+	const { t, locale } = useTranslation()
+	const isPending = useIsPending()
+
+	const [form, fields] = useForm({
+		id: 'coupon-form',
+		constraint: getZodConstraint(CouponCodeSchema),
+		lastResult: actionData && 'result' in actionData ? actionData.result : undefined,
+		onValidate({ formData }) {
+			return parseWithZod(formData, { schema: CouponCodeSchema })
+		},
+		defaultValue: {
+			couponCode: loaderData?.couponCode || '',
+		},
+	})
+
+	if (!loaderData) {
+		return <div>{t('shop.checkout.review.loading')}</div>
+	}
+
+	const { cart, currency, subtotal, vatEstimate } = loaderData
+
+	return (
+		<div className="space-y-6">
+			<div className="rounded-lg border bg-card p-6">
+				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.review.title')}</h2>
+
+				<div className="space-y-4">
+					{cart.items.map((item) => {
+						const price = item.variant?.price ?? item.product.price
+						const image = item.product.images[0]
+
+						return (
+							<div key={item.id} className="flex items-center gap-4">
+								{image && (
+									<img
+										src={`/images/${image.objectKey}`}
+										alt={image.altText || item.product.name}
+										className="h-20 w-20 rounded object-cover"
+									/>
+								)}
+								<div className="flex-1">
+									<h3 className="font-medium">{item.product.name}</h3>
+									{item.variant && (
+										<p className="text-sm text-muted-foreground">
+											SKU: {item.variant.sku}
+										</p>
+									)}
+									<p className="text-sm text-muted-foreground">
+										{t('shop.checkout.review.quantity', { count: item.quantity })}
+									</p>
+								</div>
+								<div className="text-right">
+									<p className="font-medium">
+										{formatPrice((price ?? 0) * item.quantity, currency)}
+									</p>
+								</div>
+							</div>
+						)
+					})}
+				</div>
+
+				<div className="mt-6 border-t pt-4 space-y-2">
+					<div className="flex justify-between text-lg font-semibold">
+						<span>{t('shop.checkout.review.subtotal')}</span>
+						<span>{formatPrice(subtotal, currency, locale)}</span>
+					</div>
+					{vatEstimate && vatEstimate.totalVatCents > 0 && (
+						<>
+							{vatEstimate.breakdown.map((line) => (
+								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
+									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
+									<span>{formatPrice(line.vatCents, currency, locale)}</span>
+								</div>
+							))}
+							<div className="flex justify-between text-sm text-muted-foreground">
+								<span>{t('shop.checkout.review.estimatedVatTotal')}</span>
+								<span>{formatPrice(vatEstimate.totalVatCents, currency, locale)}</span>
+							</div>
+							<div className="border-t pt-2 flex justify-between text-lg font-bold">
+								<span>{t('shop.checkout.review.estimatedTotal')}</span>
+								<span>{formatPrice(subtotal + vatEstimate.totalVatCents, currency, locale)}</span>
+							</div>
+						</>
+					)}
+					{(!vatEstimate || vatEstimate.totalVatCents === 0) && (
+						<p className="text-sm text-muted-foreground italic">
+							{t('shop.checkout.review.vatPending')}
+						</p>
+					)}
+				</div>
+			</div>
+
+			{/* Coupon Code Section */}
+			<div className="rounded-lg border bg-card p-6">
+				<form method="POST" {...getFormProps(form)} noValidate>
+					<Field
+						labelProps={{
+							htmlFor: fields.couponCode.id,
+							children: t('shop.checkout.review.couponCode') as string || 'Coupon Code',
+						}}
+						inputProps={{
+							...getInputProps(fields.couponCode, { type: 'text' }),
+							placeholder: t('shop.checkout.review.couponPlaceholder') as string || 'Enter coupon code',
+							autoComplete: 'off',
+						}}
+						errors={fields.couponCode.errors}
+					/>
+					<ErrorList errors={form.errors} id={form.errorId} />
+					<div className="flex justify-end mt-4">
+						<StatusButton
+							type="submit"
+							status={isPending ? 'pending' : 'idle'}
+							disabled={isPending}
+						>
+							{t('shop.checkout.review.applyCoupon') as string || 'Apply'}
+						</StatusButton>
+					</div>
+				</form>
+			</div>
+
+			<div className="flex flex-col gap-4">
+				<div className="flex justify-between">
+					<Button variant="outline" asChild>
+						<Link to="/shop/cart">{t('shop.checkout.review.backToCart')}</Link>
+					</Button>
+					<Button asChild>
+						<Link to={`/shop/checkout/shipping${loaderData.couponCode ? `?couponCode=${encodeURIComponent(loaderData.couponCode)}` : ''}`}>
+							{t('shop.checkout.review.continueToShipping')}
+						</Link>
+					</Button>
+				</div>
+				<p className="text-center text-xs text-muted-foreground">
+					{t('shop.checkout.review.cgvNotice')}
+				</p>
+			</div>
+		</div>
+	)
+}

@@ -133,132 +133,6 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 	{ name: 'description', content: `Edit category: ${loaderData?.category.name}` },
 ]
 
-export default function EditCategory({ loaderData, actionData }: Route.ComponentProps) {
-	const { category, categories } = loaderData
-	const isPending = useIsPending()
-	const isUncategorized = category.id === UNCATEGORIZED_CATEGORY_ID
-
-	const [form, fields] = useForm({
-		id: 'category-edit-form',
-		constraint: getZodConstraint(CategorySchema),
-		lastResult: actionData?.result,
-		onValidate({ formData }) {
-			return parseWithZod(formData, { schema: CategorySchema })
-		},
-		defaultValue: {
-			id: category.id,
-			name: category.name,
-			slug: category.slug,
-			description: category.description || '',
-			parentId: category.parent?.id || '',
-		},
-		shouldRevalidate: 'onBlur',
-	})
-
-	return (
-		<div className="space-y-8 animate-slide-top">
-			<div className="flex items-center justify-between">
-				<div>
-					<div className="flex items-center gap-3 mb-2">
-						<h1 className="text-3xl font-bold tracking-tight">Edit Category</h1>
-						{isUncategorized && (
-							<Badge variant="warning">System Category</Badge>
-						)}
-					</div>
-					<p className="text-muted-foreground">
-						Update category: {category.name}
-						{isUncategorized && (
-							<span className="block mt-1 text-sm text-amber-600 dark:text-amber-400">
-								⚠️ This is a system category. Products without a category will be assigned to this one.
-							</span>
-						)}
-					</p>
-				</div>
-				<Button asChild variant="outline" className="transition-all duration-200 hover:shadow-sm">
-					<Link to={`/admin/categories/${category.slug}`}>Cancel</Link>
-				</Button>
-			</div>
-
-			<FormProvider context={form.context}>
-				<Form method="POST" className="space-y-8" {...getFormProps(form)}>
-					<input type="hidden" name="id" value={category.id} />
-					
-					<Card className="transition-shadow duration-200 hover:shadow-md">
-						<CardHeader>
-							<h2 className="text-xl">Category Information</h2>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							<div className="grid gap-6 md:grid-cols-2">
-								<div className="space-y-3">
-									<Label htmlFor={fields.name.id} className="text-sm font-medium">Category Name *</Label>
-									<Input
-										{...getInputProps(fields.name, { type: 'text' })}
-										placeholder="Enter category name"
-										className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-										onBlur={(e) => {
-											const nameValue = e.currentTarget.value
-											if (nameValue && !fields.slug.dirty && !isUncategorized) {
-												form.update({
-													name: 'slug',
-													value: slugify(nameValue),
-												})
-											}
-										}}
-									/>
-									<ErrorList errors={fields.name.errors} />
-								</div>
-
-								<div className="space-y-3">
-									<Label htmlFor={fields.slug.id} className="text-sm font-medium">Slug *</Label>
-									<Input
-										{...getInputProps(fields.slug, { type: 'text' })}
-										placeholder="category-slug"
-										className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-									/>
-									<ErrorList errors={fields.slug.errors} />
-									{isUncategorized && (
-										<p className="text-xs text-amber-600 dark:text-amber-400">
-											⚠️ This is a system category. Consider keeping the slug as "uncategorized" for consistency.
-										</p>
-									)}
-								</div>
-							</div>
-
-							<div className="space-y-3">
-								<Label htmlFor={fields.description.id} className="text-sm font-medium">Description</Label>
-								<Textarea
-									{...getTextareaProps(fields.description)}
-									placeholder="Enter category description"
-									rows={3}
-									className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-								/>
-								<ErrorList errors={fields.description.errors} />
-							</div>
-
-							<div className="space-y-3">
-								<Label htmlFor={fields.parentId.id} className="text-sm font-medium">Parent Category</Label>
-								<CategorySelect
-									field={fields.parentId}
-									categories={categories}
-								/>
-								<ErrorList errors={fields.parentId.errors} />
-							</div>
-						</CardContent>
-					</Card>
-
-					<div className="flex items-center justify-end space-x-4">
-						<Button type="button" variant="outline" asChild className="transition-all duration-200 hover:shadow-sm">
-							<Link to={`/admin/categories/${category.slug}`}>Cancel</Link>
-						</Button>
-						<Button type="submit" disabled={isPending} className="transition-all duration-200 hover:shadow-md">
-							{isPending ? 'Saving...' : 'Save Changes'}
-						</Button>
-					</div>
-				</Form>
-			</FormProvider>
-		</div>
-	)
-}
 
 function CategorySelect({
 	field,
@@ -290,3 +164,6 @@ function CategorySelect({
 		</Select>
 	)
 }
+
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./$categorySlug_.edit.lazy')

@@ -244,17 +244,5 @@ function CategorySelect({
 	)
 }
 
-export default function NewCategory({ loaderData, actionData }: Route.ComponentProps) {
-	return (
-		<div className="space-y-8 animate-slide-top">
-			<div>
-				<h1 className="text-2xl font-normal tracking-tight text-foreground">Create New Category</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Add a new category to organize your products
-				</p>
-			</div>
-
-			<CategoryForm categories={loaderData.categories} actionData={actionData} />
-		</div>
-	)
-}
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./new.lazy')
