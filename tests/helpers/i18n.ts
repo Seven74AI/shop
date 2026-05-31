@@ -18,13 +18,13 @@ import { type TranslationDict, type Locale } from '#app/utils/i18n.server.ts'
  * Use `createMockTranslations()` to get locale-specific dicts.
  */
 export const MOCK_EN_TRANSLATIONS: TranslationDict = {
-	'site.title': 'Epic Notes',
+	'site.title': 'Epic Shop',
 	'site.description': "Your own captain's log",
 	'nav.home': 'Home',
 	'nav.shop': 'Shop',
 	'nav.login': 'Log In',
 	'nav.cart': 'Cart',
-	'footer.copyright': '© {year} Epic Notes. All rights reserved.',
+	'footer.copyright': '© {year} Epic Shop. All rights reserved.',
 	'footer.locale.label': 'Language',
 	'footer.locale.en': 'English',
 	'footer.locale.fr': 'Français',
@@ -39,13 +39,13 @@ export const MOCK_EN_TRANSLATIONS: TranslationDict = {
 }
 
 export const MOCK_FR_TRANSLATIONS: TranslationDict = {
-	'site.title': 'Epic Notes',
+	'site.title': 'Epic Shop',
 	'site.description': 'Votre journal de bord',
 	'nav.home': 'Accueil',
 	'nav.shop': 'Boutique',
 	'nav.login': 'Connexion',
 	'nav.cart': 'Panier',
-	'footer.copyright': '© {year} Epic Notes. Tous droits réservés.',
+	'footer.copyright': '© {year} Epic Shop. Tous droits réservés.',
 	'footer.locale.label': 'Langue',
 	'footer.locale.en': 'English',
 	'footer.locale.fr': 'Français',
