@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link, useFetcher } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -50,7 +51,7 @@ export const meta: Route.MetaFunction = () => [
 	{ name: 'description', content: 'Manage feature flags for progressive rollout' },
 ]
 
-function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][number] }) {
+function FlagRow({ flag, t }: { flag: Route.ComponentProps['loaderData']['flags'][number]; t: ReturnType<typeof import('#app/utils/i18n.tsx').useTranslation>['t'] }) {
 	const toggleFetcher = useFetcher()
 
 	// Parse audience for display
@@ -86,17 +87,17 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 							<Link
 								to={`/admin/feature-flags/${flag.key}/edit`}
 								className="font-mono font-medium text-primary hover:underline transition-colors duration-200"
-								aria-label={`Edit ${flag.key}`}
+								aria-label={t('admin.flags.edit', { key: flag.key })}
 							>
 								{flag.key}
 							</Link>
 							{isEnabled ? (
 								<Badge variant="default" className="text-xs bg-green-600 hover:bg-green-600">
-									Enabled
+									{t('admin.flags.status.enabled')}
 								</Badge>
 							) : (
 								<Badge variant="secondary" className="text-xs">
-									Disabled
+									{t('admin.flags.status.disabled')}
 								</Badge>
 							)}
 						</div>
@@ -115,11 +116,11 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 					)}
 					{hasAudience && (
 						<Badge variant="outline" className="text-xs">
-							Audience
+							{t('admin.flags.audience')}
 						</Badge>
 					)}
 					{!hasRollout && !hasAudience && (
-						<span className="text-sm text-muted-foreground">Global</span>
+						<span className="text-sm text-muted-foreground">{t('admin.flags.global')}</span>
 					)}
 				</div>
 			</TableCell>
@@ -132,14 +133,14 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 							variant={isEnabled ? 'default' : 'secondary'}
 							size="sm"
 							className="transition-colors duration-200"
-							aria-label={`${isEnabled ? 'Disable' : 'Enable'} ${flag.key}`}
+							aria-label={isEnabled ? t('admin.flags.disable', { key: flag.key }) : t('admin.flags.enable', { key: flag.key })}
 							disabled={toggleFetcher.state !== 'idle'}
 						>
-							{isEnabled ? 'Enabled' : 'Disabled'}
+							{isEnabled ? t('admin.flags.status.enabled') : t('admin.flags.status.disabled')}
 						</Button>
 					</toggleFetcher.Form>
 					<Button asChild variant="ghost" size="sm" className="transition-colors duration-200">
-						<Link to={`/admin/feature-flags/${flag.key}/edit`} aria-label={`Edit ${flag.key}`}>
+						<Link to={`/admin/feature-flags/${flag.key}/edit`} aria-label={t('admin.flags.edit', { key: flag.key })}>
 							<Icon name="pencil-1" className="h-4 w-4" aria-hidden="true" />
 						</Link>
 					</Button>
@@ -149,21 +150,20 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 								variant="ghost"
 								size="sm"
 								className="text-destructive hover:text-destructive transition-colors duration-200"
-								aria-label={`Delete ${flag.key}`}
+								aria-label={t('admin.flags.delete', { key: flag.key })}
 							>
 								<Icon name="trash" className="h-4 w-4" aria-hidden="true" />
 							</Button>
 						</AlertDialogTrigger>
 						<AlertDialogContent>
 							<AlertDialogHeader>
-								<AlertDialogTitle>Delete Feature Flag</AlertDialogTitle>
+								<AlertDialogTitle>{t('admin.flags.deleteTitle')}</AlertDialogTitle>
 								<AlertDialogDescription>
-									Are you sure you want to delete the flag "{flag.key}"? This action cannot be
-									undone. Any routes gated behind this flag will immediately become accessible.
+									{t('admin.flags.deleteDescription', { key: flag.key })}
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogCancel>{t('admin.flags.cancel')}</AlertDialogCancel>
 								<toggleFetcher.Form
 									method="POST"
 									action={`/admin/feature-flags/${flag.key}/delete`}
@@ -173,7 +173,7 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 										disabled={toggleFetcher.state !== 'idle'}
 										className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
 									>
-										{toggleFetcher.state === 'idle' ? 'Delete Flag' : 'Deleting...'}
+										{toggleFetcher.state === 'idle' ? t('admin.flags.deleteAction') : t('admin.flags.deleting')}
 									</AlertDialogAction>
 								</toggleFetcher.Form>
 							</AlertDialogFooter>
@@ -186,6 +186,7 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 }
 
 export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	const { flags } = loaderData
 	const [searchTerm, setSearchTerm] = useState('')
 	const [filterStatus, setFilterStatus] = useState<'all' | 'enabled' | 'disabled'>('all')
@@ -217,20 +218,19 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-normal tracking-tight text-foreground">
-						Feature Flags
+						{t('admin.flags.title')}
 					</h1>
 					<p className="text-sm text-muted-foreground mt-1">
-						Manage feature flags for progressive rollout ({flags.length} flag
-						{flags.length === 1 ? '' : 's'})
+						{t('admin.flags.manageDescription', { count: flags.length, plural: flags.length === 1 ? '' : 's' })}
 						{searchTerm || filterStatus !== 'all' ? (
-							<span className="ml-2">• {filteredFlags.length} shown</span>
+							<span className="ml-2">• {t('admin.flags.shown', { count: filteredFlags.length })}</span>
 						) : null}
 					</p>
 				</div>
 				<Button asChild className="h-9 rounded-lg font-medium">
 					<Link to="/admin/feature-flags/new">
 						<Icon name="plus" className="mr-2 h-4 w-4" />
-						Add Flag
+						{t('admin.flags.addFlag')}
 					</Link>
 				</Button>
 			</div>
@@ -244,7 +244,7 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 							className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
 						/>
 						<Input
-							placeholder="Search flags by key or description..."
+							placeholder={t('admin.flags.searchPlaceholder')}
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
 							className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
@@ -257,12 +257,12 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 							className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
 							aria-label="Filter by status"
 						>
-							<SelectValue placeholder="Filter by status" />
+							<SelectValue placeholder={t('admin.flags.filter.all')} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All Flags</SelectItem>
-							<SelectItem value="enabled">Enabled Only</SelectItem>
-							<SelectItem value="disabled">Disabled Only</SelectItem>
+							<SelectItem value="all">{t('admin.flags.filter.all')}</SelectItem>
+							<SelectItem value="enabled">{t('admin.flags.filter.enabled')}</SelectItem>
+							<SelectItem value="disabled">{t('admin.flags.filter.disabled')}</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
@@ -273,14 +273,14 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 				<Table>
 					<TableHeader>
 						<TableRow className="border-b">
-							<TableHead className="font-semibold">Flag</TableHead>
-							<TableHead className="font-semibold hidden md:table-cell">Targeting</TableHead>
-							<TableHead className="text-right font-semibold">Actions</TableHead>
+							<TableHead className="font-semibold">{t('admin.flags.table.flag')}</TableHead>
+							<TableHead className="font-semibold hidden md:table-cell">{t('admin.flags.table.targeting')}</TableHead>
+							<TableHead className="text-right font-semibold">{t('admin.flags.table.actions')}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{filteredFlags.map((flag) => (
-							<FlagRow key={flag.key} flag={flag} />
+							<FlagRow key={flag.key} flag={flag} t={t} />
 						))}
 					</TableBody>
 				</Table>
@@ -291,9 +291,9 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 					<div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
 						<Icon name="settings" className="h-12 w-12 text-muted-foreground" />
 					</div>
-					<h2 className="text-xl font-semibold mb-2">No feature flags yet</h2>
+					<h2 className="text-xl font-semibold mb-2">{t('admin.flags.empty.title')}</h2>
 					<p className="text-muted-foreground mb-8 max-w-md mx-auto">
-						Create your first feature flag to control progressive rollouts and feature gating.
+						{t('admin.flags.empty.description')}
 					</p>
 					<Button asChild size="lg" className="h-9 rounded-lg font-medium">
 						<Link to="/admin/feature-flags/new">
@@ -310,14 +310,14 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 					<div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
 						<Icon name="magnifying-glass" className="h-12 w-12 text-muted-foreground" />
 					</div>
-					<h2 className="text-xl font-semibold mb-2">No flags found</h2>
+					<h2 className="text-xl font-semibold mb-2">{t('admin.flags.noResults.title')}</h2>
 					<p className="text-muted-foreground mb-8 max-w-md mx-auto">
 						{searchTerm ? (
 							<>
-								No flags match your search for "<strong>{searchTerm}</strong>".
+								{t('admin.flags.noResults.searchMatch', { search: searchTerm })}
 							</>
 						) : (
-							<>No flags match the selected filter.</>
+							<>{t('admin.flags.noResults.filterMatch')}</>
 						)}
 					</p>
 					<div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -329,7 +329,7 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 							}}
 							className="h-9 rounded-lg font-medium"
 						>
-							Clear filters
+							{t('admin.flags.clearFilters')}
 						</Button>
 						<Button asChild className="h-9 rounded-lg font-medium">
 							<Link to="/admin/feature-flags/new">

@@ -14,7 +14,7 @@ export const BreadcrumbHandle = z.object({ breadcrumb: z.union([z.string(), z.an
 export type BreadcrumbHandle = z.infer<typeof BreadcrumbHandle>
 
 export const handle: BreadcrumbHandle = {
-	breadcrumb: 'Settings',
+	breadcrumb: 'Settings', // dynamic: resolved to t('account.layout.settings') in breadcrumb
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -62,6 +62,16 @@ export default function AccountLayout() {
 	const { t } = useTranslation()
 	const location = useLocation()
 	const matches = useMatches()
+
+	// Map breadcrumb handle values to i18n keys
+	const breadcrumbI18nMap: Record<string, string> = {
+		'Security': 'account.breadcrumb.security',
+		'Addresses': 'account.breadcrumb.addresses',
+		'Privacy & Data': 'account.breadcrumb.privacy',
+		'Two-Factor Authentication': 'account.breadcrumb.2fa',
+		'Settings': 'account.breadcrumb.settings',
+	}
+
 	const breadcrumbs = matches
 		.map((m) => {
 			const result = BreadcrumbHandleMatch.safeParse(m)
@@ -69,8 +79,9 @@ export default function AccountLayout() {
 			// Skip the parent account.tsx route's breadcrumb ("Settings") - we use "Account" as root instead
 			if (m.pathname === '/account' && m.id?.includes('routes/account')) return null
 			const breadcrumbValue = result.data.handle.breadcrumb
+			const rawText = typeof breadcrumbValue === 'string' ? breadcrumbValue : String(breadcrumbValue)
 			return {
-				text: typeof breadcrumbValue === 'string' ? breadcrumbValue : String(breadcrumbValue),
+				text: breadcrumbI18nMap[rawText] ? t(breadcrumbI18nMap[rawText] as Parameters<typeof t>[0]) : rawText,
 				path: m.pathname,
 			}
 		})
@@ -87,7 +98,7 @@ export default function AccountLayout() {
 
 	return (
 		<div className="min-h-screen" style={{ backgroundColor: '#FFFFFF' }}>
-			<h1 className="sr-only">Account Settings</h1>
+			<h1 className="sr-only">{t('account.layout.settings')}</h1>
 			<div className="max-w-7xl mx-auto px-4 py-8">
 				{/* Breadcrumb */}
 				{pathname === '/account' ? (

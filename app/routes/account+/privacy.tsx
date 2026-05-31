@@ -7,10 +7,11 @@ import { prisma } from '#app/utils/db.server.ts'
 import { useDoubleCheck } from '#app/utils/misc.tsx'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { type BreadcrumbHandle } from '../account.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/privacy.ts'
 
 export const handle: BreadcrumbHandle = {
-	breadcrumb: 'Privacy & Data',
+	breadcrumb: 'Privacy & Data', // dynamic: resolved to t('account.breadcrumb.privacy') in breadcrumb
 }
 
 const deleteDataActionIntent = 'delete-data'
@@ -85,6 +86,7 @@ function SettingItem({
 }
 
 function DeleteData() {
+	const { t } = useTranslation()
 	const dc = useDoubleCheck()
 	const fetcher = useFetcher<typeof deleteDataAction>()
 
@@ -106,11 +108,11 @@ function DeleteData() {
 						className="h-auto p-0 hover:bg-transparent"
 						style={{ color: '#DC2626' }}
 					>
-						{dc.doubleCheck ? `Are you sure?` : `Delete Your Account`}
+						{dc.doubleCheck ? t('account.privacy.deleteConfirm') : t('account.privacy.deleteAccount')}
 					</StatusButton>
 				</fetcher.Form>
 				<div className="text-sm mt-1" style={{ color: '#DC2626' }}>
-					Permanently delete your account and all associated data
+					{t('account.privacy.deleteDescription')}
 				</div>
 			</div>
 		</div>
@@ -118,21 +120,22 @@ function DeleteData() {
 }
 
 export default function PrivacyPage() {
+	const { t } = useTranslation()
 	return (
 		<div className="space-y-6">
 			<Card className="p-8">
 				<h2 className="mb-2" style={{ fontSize: '16px', lineHeight: '1.5em', fontWeight: 400, color: '#0A0A0A' }}>
-					Privacy & Data
+					{t('account.privacy.title')}
 				</h2>
 				<p className="text-sm mb-6" style={{ color: '#717182' }}>
-					Manage your data and privacy settings
+					{t('account.privacy.description')}
 				</p>
 
 				<div className="space-y-2">
 					<SettingItem 
 						icon={<Icon name="download" className="w-5 h-5" />}
-						title="Download Your Data"
-						description="Request an export of all your account data"
+						title={t('account.privacy.downloadData')}
+						description={t('account.privacy.downloadDescription')}
 						to="/resources/download-user-data"
 						reloadDocument
 						download="my-epic-notes-data.json"
@@ -142,10 +145,10 @@ export default function PrivacyPage() {
 
 			<Card className="p-8" style={{ borderColor: 'rgba(220,38,38,0.5)', backgroundColor: 'rgba(220,38,38,0.05)' }}>
 				<h2 className="mb-2" style={{ fontSize: '16px', lineHeight: '1.5em', fontWeight: 400, color: '#DC2626' }}>
-					Danger Zone
+					{t('account.privacy.dangerZone')}
 				</h2>
 				<p className="text-sm mb-6" style={{ color: 'rgba(220,38,38,0.8)' }}>
-					Irreversible actions that will permanently affect your account
+					{t('account.privacy.dangerZoneDescription')}
 				</p>
 
 				<div className="space-y-2">
