@@ -56,6 +56,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			{ parentId: 'asc' },
 			{ name: 'asc' },
 		],
+		take: 500,
 	})
 
 	// Organize categories hierarchically

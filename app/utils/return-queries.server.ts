@@ -72,6 +72,7 @@ export async function getReturnRequestsByUserId(userId: string) {
 			},
 		},
 		orderBy: { createdAt: 'desc' },
+		take: 50,
 		...returnRequestInclude,
 	})
 }
@@ -79,6 +80,7 @@ export async function getReturnRequestsByUserId(userId: string) {
 export async function getReturnRequestsByOrderId(orderId: string) {
 	return prisma.returnRequest.findMany({
 		where: { orderId },
+		take: 20,
 		...returnRequestInclude,
 	})
 }
@@ -150,5 +152,6 @@ export async function getAllReturnRequests() {
 			},
 		},
 		orderBy: { requestedAt: 'desc' },
+		take: 100,
 	})
 }

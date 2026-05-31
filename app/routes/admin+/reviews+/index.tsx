@@ -54,6 +54,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 				},
 			},
 			orderBy: { createdAt: 'desc' },
+			take: 100,
 		}),
 		prisma.product.findMany({
 			select: { id: true, name: true },
