@@ -52,7 +52,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			await expect(
 				page.getByRole('heading', { name: 'Feature Flags', exact: true }),
@@ -75,7 +75,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags/new')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			await expect(
 				page.getByRole('heading', { name: /new feature flag/i }),
@@ -139,7 +139,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		)
 
 		// Ensure the page fully loads before checking content
-		await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {
+		await page.waitForLoadState('domcontentloaded'); // was networkidle with timeout 20000, switched for lazy-loading compat
 			// networkidle may never fire on SPAs; fall through to explicit waits
 		})
 
@@ -201,7 +201,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			// Wait for the data table to render (React Router .data loader may be async)
 			await expect(
@@ -251,7 +251,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			// Wait for the row containing our flag to appear
 			const deleteRow = page.getByRole('row', {
@@ -313,7 +313,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			// Search for 'alpha'
 			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
@@ -330,7 +330,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			// Wait for the data table to render
 			await expect(
@@ -355,7 +355,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			// Filter by enabled
 			await page.getByLabel(/filter by status/i).waitFor({ state: 'visible' })
@@ -381,7 +381,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		}) => {
 			await login({ asAdmin: true })
 			await page.goto('/admin/feature-flags')
-			await page.waitForLoadState('networkidle')
+			await page.waitForLoadState('domcontentloaded')
 
 			// Search for something that doesn't exist
 			await page.getByPlaceholder(/search flags/i).waitFor({ state: 'visible' })
@@ -467,7 +467,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		await page.goto('/admin/feature-flags')
 
 		// Wait for the data table to render
-		await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+		await page.waitForLoadState('domcontentloaded')
 		await expect(
 			page.getByRole('heading', { name: /feature flags/i }).first(),
 		).toBeVisible({ timeout: 15000 })

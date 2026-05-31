@@ -56,22 +56,21 @@ test.describe('Admin Order Management', () => {
 		await page.goto('/admin/orders')
 		// requireUserWithRole throws a 403 response, which React Router renders as an error page
 		// Wait for the error page to load
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		
 		// The error response data contains { error: 'Unauthorized', requiredRole: 'admin', message: ... }
 		// Check for error content that indicates unauthorized access
-		// The ErrorBoundary shows the translated unauthorized message as a heading
-		await expect(page.getByRole('heading', { name: /you must be logged in to access this page/i })).toBeVisible({ timeout: 5000 })
+		// The ErrorBoundary shows "Unauthorized" as a heading
+		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({ timeout: 5000 })
 	})
 
 	test('should display admin order list page', async ({ page, navigate: _navigate, login }) => {
 		await login({ asAdmin: true })
 
 		await page.goto('/admin/orders')
-		await page.waitForLoadState('domcontentloaded')
 
 		await expect(page).toHaveURL(/\/admin\/orders/)
-		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible()
 	})
 
 	test('should display all orders in the list', async ({ page, navigate: _navigate, login }) => {
@@ -123,14 +122,14 @@ test.describe('Admin Order Management', () => {
 		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 		
 		// Wait for the orders table to load
-		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
 		// Check that both orders are displayed - use text matching instead of row name
-		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 15000 })
-		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
 		// Use .first() to handle strict mode violation when multiple elements match
-		await expect(page.getByText('customer1@example.com').first()).toBeVisible({ timeout: 15000 })
-		await expect(page.getByText('customer2@example.com').first()).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText('customer1@example.com').first()).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText('customer2@example.com').first()).toBeVisible({ timeout: 10000 })
 	})
 
 	test('should filter orders by status', async ({ page, navigate: _navigate, login }) => {
@@ -186,8 +185,8 @@ test.describe('Admin Order Management', () => {
 		await page.getByRole('option', { name: /confirmed/i }).click()
 
 		// Should show only CONFIRMED orders - wait for filter to apply via assertions
-		await expect(page.getByRole('row', { name: new RegExp(orderNumber1, 'i') })).toBeVisible({ timeout: 15000 })
-		await expect(page.getByRole('row', { name: new RegExp(orderNumber2, 'i') })).not.toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('row', { name: new RegExp(orderNumber1, 'i') })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('row', { name: new RegExp(orderNumber2, 'i') })).not.toBeVisible({ timeout: 5000 })
 	})
 
 	test('should search orders by order number', async ({ page, navigate: _navigate, login }) => {
@@ -236,11 +235,11 @@ test.describe('Admin Order Management', () => {
 		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 		
 		// Wait for orders table to load
-		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
 		// Verify both orders are visible initially
-		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 15000 })
-		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
 
 		// Search by order number — server-side via Form GET submission
 		const searchInput = page.getByPlaceholder(/search orders/i)
@@ -248,12 +247,12 @@ test.describe('Admin Order Management', () => {
 		// Press Enter to submit the search Form (server-side filtering)
 		await searchInput.press('Enter')
 		// Wait for navigation to complete
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		// Wait for search to complete - assert expected results
 		// Should show only matching order
-		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 15000 })
-		await expect(page.getByText(orderNumber2)).not.toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber2)).not.toBeVisible({ timeout: 5000 })
 	})
 
 	test('should search orders by email', async ({ page, navigate: _navigate, login }) => {
@@ -294,10 +293,10 @@ test.describe('Admin Order Management', () => {
 		// Press Enter to submit the search Form
 		await searchInput.press('Enter')
 		// Wait for navigation to complete
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		// Should show matching order (header + one row)
-		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 15000 })
+		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
 	})
 
 	test('should display empty state when search has no matches', async ({ page, navigate: _navigate, login }) => {
@@ -321,7 +320,7 @@ test.describe('Admin Order Management', () => {
 		})
 
 		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
-		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
 		const searchInput = page
 			.getByRole('textbox', { name: /search/i })
@@ -330,11 +329,11 @@ test.describe('Admin Order Management', () => {
 		await searchInput.fill(`empty-state-${currentPrefix}`)
 		// Press Enter to submit the search Form (server-side filtering)
 		await searchInput.press('Enter')
-		await page.waitForLoadState('networkidle')
-		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 15000 })
+		await page.waitForLoadState('domcontentloaded')
+		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
 
 		// Wait for server to finish processing the search before direct DB writes
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		await prisma.order.deleteMany({
 			where: { stripeCheckoutSessionId: { startsWith: currentPrefix } },
@@ -348,8 +347,8 @@ test.describe('Admin Order Management', () => {
 		await searchInputAfterReload.fill(`empty-state-${currentPrefix}`)
 		// Press Enter to submit the search Form
 		await searchInputAfterReload.press('Enter')
-		await page.waitForLoadState('networkidle')
-		await expect(page.getByText(/no orders match your search criteria/i)).toBeVisible({ timeout: 15000 })
+		await page.waitForLoadState('domcontentloaded')
+		await expect(page.getByText(/no orders match your search criteria/i)).toBeVisible({ timeout: 10000 })
 	})
 
 	test('should link to order detail page from order list', async ({ page, navigate: _navigate, login }) => {
@@ -383,18 +382,18 @@ test.describe('Admin Order Management', () => {
 		await page.waitForLoadState('domcontentloaded')
 
 		// Wait for the order to appear in the list - wait for the order number text first
-		await expect(page.getByText(orderNumber)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(orderNumber)).toBeVisible({ timeout: 10000 })
 		
 		// Click on order number link - there are 2 links (text and icon), use first one
 		// Use getByRole with the order number as the accessible name
 		const orderLink = page.getByRole('link', { name: orderNumber }).first()
 		
 		// Ensure link is visible before clicking
-		await expect(orderLink).toBeVisible({ timeout: 10000 })
+		await expect(orderLink).toBeVisible({ timeout: 5000 })
 		
 		// Wait for navigation while clicking
 		await Promise.all([
-			page.waitForURL(new RegExp(`/admin/orders/${orderNumber}`), { timeout: 15000 }),
+			page.waitForURL(new RegExp(`/admin/orders/${orderNumber}`), { timeout: 10000 }),
 			orderLink.click()
 		])
 

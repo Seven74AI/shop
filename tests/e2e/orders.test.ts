@@ -133,7 +133,7 @@ test.describe('Order History', () => {
 
 		// Navigate to account orders (authenticated users are redirected from /shop/orders anyway)
 		await page.goto('/account/orders')
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		// Verify orders are displayed (newest first)
 		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })

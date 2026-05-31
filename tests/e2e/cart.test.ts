@@ -59,7 +59,7 @@ test.describe('Shopping Cart', () => {
 		for (let attempt = 0; attempt < 8; attempt++) {
 			try {
 				await page.goto('/', { timeout: 5000 })
-				await page.waitForLoadState('networkidle')
+				await page.waitForLoadState('domcontentloaded')
 				break
 			} catch {
 				await page.waitForTimeout(1500)
@@ -72,7 +72,7 @@ test.describe('Shopping Cart', () => {
 		await expect(addButton).toBeVisible({ timeout: 10000 })
 		await addButton.click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		
 		// Verify cart page displays the item
 		await expect(page.getByRole('heading', { name: /shopping cart/i })).toBeVisible({ timeout: 10000 })
@@ -91,7 +91,7 @@ test.describe('Shopping Cart', () => {
 		for (let attempt = 0; attempt < 8; attempt++) {
 			try {
 				await page.goto('/', { timeout: 5000 })
-				await page.waitForLoadState('networkidle')
+				await page.waitForLoadState('domcontentloaded')
 				break
 			} catch {
 				await page.waitForTimeout(1500)
@@ -107,7 +107,7 @@ test.describe('Shopping Cart', () => {
 
 		// Navigate to cart page (may already be there)
 		await page.goto('/shop/cart')
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		
 		// Update quantity - use label for quantity input
 		const quantityInput = page.getByLabel(/quantity/i).first()
