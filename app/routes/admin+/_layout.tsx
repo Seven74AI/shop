@@ -13,6 +13,7 @@ import {
 import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { Toggle } from '#app/components/ui/toggle.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { type Route } from './+types/_layout.ts'
 
@@ -82,6 +83,7 @@ function AdminBreadcrumbs() {
 
 export default function AdminLayout() {
 	const [isCollapsed, setIsCollapsed] = useState(false)
+	const { t } = useTranslation()
 
 	// Listen for sidebar state changes
 	useEffect(() => {
@@ -105,7 +107,7 @@ export default function AdminLayout() {
 							const event = new CustomEvent('toggle-sidebar')
 							window.dispatchEvent(event)
 						}}
-						aria-label="Toggle sidebar"
+						aria-label={t('admin.toggleSidebar')}
 						size="sm"
 						className="h-8 w-8 px-2"
 					>
@@ -131,14 +133,14 @@ export function ErrorBoundary() {
 				403: ({ error }) => (
 					<div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
 						<Icon name="lock-closed" className="h-12 w-12 text-muted-foreground" />
-						<h2 className="text-xl font-semibold">Unauthorized</h2>
+						<h2 className="text-xl font-semibold">{t('error.unauthorized')}</h2>
 						<p className="text-muted-foreground text-center">
 							{typeof error.data === 'object' && error.data && 'message' in error.data
 								? String(error.data.message)
-								: 'You do not have permission to access this page.'}
+								: t('error.forbidden')}
 						</p>
 						<Button asChild>
-							<Link to="/">Back to Home</Link>
+							<Link to="/">{t('admin.backToHome')}</Link>
 						</Button>
 					</div>
 				),

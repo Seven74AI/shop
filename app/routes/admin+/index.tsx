@@ -1,3 +1,4 @@
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
@@ -30,12 +31,13 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 export default function AdminDashboard() {
+	const { t } = useTranslation()
 	return (
 		<div className="space-y-8 animate-slide-top">
 			<div>
-				<h1 className="text-2xl font-normal tracking-tight text-foreground">Admin Dashboard</h1>
+				<h1 className="text-2xl font-normal tracking-tight text-foreground">{t('admin.dashboard')}</h1>
 				<p className="text-sm text-muted-foreground mt-1">
-					Manage your e-commerce store from here
+					{t('admin.manageStore')}
 				</p>
 			</div>
 
@@ -48,18 +50,18 @@ export default function AdminDashboard() {
 								<Icon name="archive" className="h-6 w-6 text-primary" />
 							</div>
 							<div className="flex-1">
-								<h2 className="text-base font-normal text-foreground">Products</h2>
+								<h2 className="text-base font-normal text-foreground">{t('admin.nav.products')}</h2>
 								<p className="text-sm text-muted-foreground">
-									Manage your product catalog
+									{t('admin.manageCatalog')}
 								</p>
 							</div>
 						</div>
 						<div className="mt-4 space-y-2">
 							<Button asChild className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/products">View Products</a>
+								<a href="/admin/products">{t('admin.viewProducts')}</a>
 							</Button>
 							<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/products/new">Add New Product</a>
+								<a href="/admin/products/new">{t('admin.addProduct')}</a>
 							</Button>
 						</div>
 					</CardContent>
@@ -73,18 +75,18 @@ export default function AdminDashboard() {
 								<Icon name="tags" className="h-6 w-6 text-primary" />
 							</div>
 							<div className="flex-1">
-								<h2 className="text-base font-normal text-foreground">Categories</h2>
+								<h2 className="text-base font-normal text-foreground">{t('admin.nav.categories')}</h2>
 								<p className="text-sm text-muted-foreground">
-									Organize your products
+									{t('admin.organizeProducts')}
 								</p>
 							</div>
 						</div>
 						<div className="mt-4 space-y-2">
 							<Button asChild className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/categories">View Categories</a>
+								<a href="/admin/categories">{t('admin.viewCategories')}</a>
 							</Button>
 							<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/categories/new">Add New Category</a>
+								<a href="/admin/categories/new">{t('admin.addCategory')}</a>
 							</Button>
 						</div>
 					</CardContent>
@@ -98,18 +100,18 @@ export default function AdminDashboard() {
 								<Icon name="settings" className="h-6 w-6 text-primary" />
 							</div>
 							<div className="flex-1">
-								<h2 className="text-base font-normal text-foreground">Attributes</h2>
+								<h2 className="text-base font-normal text-foreground">{t('admin.nav.attributes')}</h2>
 								<p className="text-sm text-muted-foreground">
-									Configure product attributes
+									{t('admin.configureAttributes')}
 								</p>
 							</div>
 						</div>
 						<div className="mt-4 space-y-2">
 							<Button asChild className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/attributes">View Attributes</a>
+								<a href="/admin/attributes">{t('admin.viewAttributes')}</a>
 							</Button>
 							<Button asChild variant="outline" className="w-full h-9 rounded-lg font-medium">
-								<a href="/admin/attributes/new">Add New Attribute</a>
+								<a href="/admin/attributes/new">{t('admin.addAttribute')}</a>
 							</Button>
 						</div>
 					</CardContent>
@@ -118,24 +120,24 @@ export default function AdminDashboard() {
 
 			{/* Quick Actions */}
 			<div>
-				<h2 className="text-base font-normal text-foreground mb-4">Quick Actions</h2>
+				<h2 className="text-base font-normal text-foreground mb-4">{t('admin.quickActions')}</h2>
 				<div className="flex flex-wrap gap-4">
 					<Button asChild className="h-9 rounded-lg font-medium">
 						<a href="/admin/products/new">
 							<Icon name="plus" className="mr-2 h-4 w-4" />
-							Create Product
+							{t('admin.createProduct')}
 						</a>
 					</Button>
 					<Button asChild variant="outline" className="h-9 rounded-lg font-medium">
 						<a href="/admin/categories/new">
 							<Icon name="plus" className="mr-2 h-4 w-4" />
-							Create Category
+							{t('admin.createCategory')}
 						</a>
 					</Button>
 					<Button asChild variant="outline" className="h-9 rounded-lg font-medium">
 						<a href="/admin/attributes/new">
 							<Icon name="plus" className="mr-2 h-4 w-4" />
-							Create Attribute
+							{t('admin.createAttribute')}
 						</a>
 					</Button>
 				</div>
