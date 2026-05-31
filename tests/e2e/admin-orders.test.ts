@@ -56,7 +56,7 @@ test.describe('Admin Order Management', () => {
 		await page.goto('/admin/orders')
 		// requireUserWithRole throws a 403 response, which React Router renders as an error page
 		// Wait for the error page to load
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		
 		// The error response data contains { error: 'Unauthorized', requiredRole: 'admin', message: ... }
 		// Check for error content that indicates unauthorized access
@@ -119,7 +119,7 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
+		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 		
 		// Wait for the orders table to load
 		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
@@ -176,7 +176,7 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
+		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 
 		// Filter by CONFIRMED status
 		// The Select component uses aria-label="Filter by status"
@@ -232,7 +232,7 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
+		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 		
 		// Wait for orders table to load
 		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
@@ -247,7 +247,7 @@ test.describe('Admin Order Management', () => {
 		// Press Enter to submit the search Form (server-side filtering)
 		await searchInput.press('Enter')
 		// Wait for navigation to complete
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		// Wait for search to complete - assert expected results
 		// Should show only matching order
@@ -282,7 +282,7 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
+		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 
 		// Search by email — server-side via Form GET submission
 		const searchInput = page
@@ -293,7 +293,7 @@ test.describe('Admin Order Management', () => {
 		// Press Enter to submit the search Form
 		await searchInput.press('Enter')
 		// Wait for navigation to complete
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		// Should show matching order (header + one row)
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
@@ -319,7 +319,7 @@ test.describe('Admin Order Management', () => {
 			},
 		})
 
-		await page.goto('/admin/orders', { waitUntil: 'networkidle' })
+		await page.goto('/admin/orders', { waitUntil: 'domcontentloaded' })
 		await expect(page.getByRole('heading', { name: /orders/i })).toBeVisible({ timeout: 10000 })
 
 		const searchInput = page
@@ -329,17 +329,17 @@ test.describe('Admin Order Management', () => {
 		await searchInput.fill(`empty-state-${currentPrefix}`)
 		// Press Enter to submit the search Form (server-side filtering)
 		await searchInput.press('Enter')
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		await expect(page.getByRole('row')).toHaveCount(2, { timeout: 10000 })
 
 		// Wait for server to finish processing the search before direct DB writes
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		await prisma.order.deleteMany({
 			where: { stripeCheckoutSessionId: { startsWith: currentPrefix } },
 		})
 
-		await page.reload({ waitUntil: 'networkidle' })
+		await page.reload({ waitUntil: 'domcontentloaded' })
 		const searchInputAfterReload = page
 			.getByRole('textbox', { name: /search/i })
 			.or(page.getByPlaceholder(/search/i))
@@ -347,7 +347,7 @@ test.describe('Admin Order Management', () => {
 		await searchInputAfterReload.fill(`empty-state-${currentPrefix}`)
 		// Press Enter to submit the search Form
 		await searchInputAfterReload.press('Enter')
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		await expect(page.getByText(/no orders match your search criteria/i)).toBeVisible({ timeout: 10000 })
 	})
 
@@ -379,7 +379,7 @@ test.describe('Admin Order Management', () => {
 		})
 
 		await page.goto('/admin/orders')
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 
 		// Wait for the order to appear in the list - wait for the order number text first
 		await expect(page.getByText(orderNumber)).toBeVisible({ timeout: 10000 })

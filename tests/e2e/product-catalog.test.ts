@@ -74,7 +74,7 @@ test.describe('Product Catalog', () => {
 
 		await page.goto('/shop/products')
 		// Wait for products to load
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		// Use accessible query - product cards are links to product detail pages
 		// Find the link that contains the product name
 		const productLink = page.getByRole('link', { name: new RegExp(product.name, 'i') })
