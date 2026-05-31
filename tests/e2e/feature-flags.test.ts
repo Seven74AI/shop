@@ -139,9 +139,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		)
 
 		// Ensure the page fully loads before checking content
-		await page.waitForLoadState('domcontentloaded'); // was networkidle with timeout 20000, switched for lazy-loading compat
-			// networkidle may never fire on SPAs; fall through to explicit waits
-		})
+		await page.waitForLoadState('domcontentloaded')
 
 		// If redirected to login (session issue), fail with clear message
 		if (page.url().includes('/login')) {
