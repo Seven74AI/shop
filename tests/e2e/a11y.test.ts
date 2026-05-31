@@ -34,9 +34,10 @@ async function loginAndNavigateToAdminPage(
 ) {
 	await login({ asAdmin: true })
 	await page.goto(path)
-	await page.waitForLoadState('domcontentloaded')
-	await page.waitForSelector('main', { timeout: 15000 })
-	await page.waitForSelector('h1', { timeout: 15000 })
+	// Wait for lazy-loaded components to hydrate (react-router lazy loading)
+	await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {})
+	await page.waitForSelector('main', { timeout: 20000 })
+	await page.waitForSelector('h1', { timeout: 20000 })
 }
 
 test.describe('Accessibility', () => {
