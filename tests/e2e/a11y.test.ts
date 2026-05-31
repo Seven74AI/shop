@@ -34,14 +34,15 @@ async function loginAndNavigateToAdminPage(
 ) {
 	await login({ asAdmin: true })
 	await page.goto(path)
-	// Wait for DOM to be ready, then try networkidle for lazy-loaded components
+	// Wait for DOM to be ready. Skip networkidle — in dev mode, HMR WebSocket
+	// keeps a persistent connection so networkidle never fires, burning the
+	// test timeout budget (20s total) before lazy chunks can load.
 	await page.waitForLoadState('domcontentloaded')
-	// Best-effort networkidle — don't block if it times out (long-polling connections)
-	await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
-		console.warn(`networkidle timed out for ${path}, proceeding with domcontentloaded`)
-	})
-	await page.waitForSelector('main', { timeout: 20000 })
-	await page.waitForSelector('h1', { timeout: 20000 })
+	// Use locator with retry — Playwright polls until the element is visible
+	// or the test timeout (20s) is reached. This gives lazy-loaded admin
+	// components time to hydrate without burning budget on networkidle.
+	await expect(page.locator('main')).toBeVisible()
+	await expect(page.locator('h1')).toBeVisible()
 }
 
 test.describe('Accessibility', () => {
