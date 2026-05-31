@@ -6,6 +6,7 @@ import { Card, CardContent } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/success.ts'
+import type { action } from './success.ts'
 
 
 
@@ -18,7 +19,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 	const message = loaderData?.message ?? 'Your order is being processed. Please wait a moment.'
 
 	const revalidator = useRevalidator()
-	const syncFetcher = useFetcher<Route.ActionData>()
+	const syncFetcher = useFetcher<typeof action>()
 	const [showSyncButton, setShowSyncButton] = useState(false)
 	const [hasTriggeredFallback, setHasTriggeredFallback] = useState(false)
 	const [pageLoadTime] = useState(() => Date.now())

@@ -10,12 +10,13 @@ import { formatPrice } from '#app/utils/price.ts'
 import { CouponCodeSchema, couponErrorMessages } from '#app/schemas/coupon.ts'
 import { validateCoupon } from '#app/utils/coupon.server.ts'
 import { type Route } from './+types/review.ts'
+import type { loader, action } from './review.ts'
 
 
 
 export default function CheckoutReview() {
-	const loaderData = useLoaderData<Route.LoaderData>()
-	const actionData = useActionData<Route.ActionData>()
+	const loaderData = useLoaderData<typeof loader>()
+	const actionData = useActionData<typeof action>()
 	const { t, locale } = useTranslation()
 	const isPending = useIsPending()
 
@@ -43,7 +44,7 @@ export default function CheckoutReview() {
 				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.review.title')}</h2>
 
 				<div className="space-y-4">
-					{cart.items.map((item: { variant?: { price: number }; product: { price: number } }) => {
+					{cart.items.map((item) => {
 						const price = item.variant?.price ?? item.product.price
 						const image = item.product.images[0]
 
@@ -84,7 +85,7 @@ export default function CheckoutReview() {
 					</div>
 					{vatEstimate && vatEstimate.totalVatCents > 0 && (
 						<>
-							{vatEstimate.breakdown.map((line: { kind: string; rate: number }) => (
+							{vatEstimate.breakdown.map((line) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
 									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
 									<span>{formatPrice(line.vatCents, currency, locale)}</span>

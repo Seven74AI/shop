@@ -17,6 +17,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { type Route } from './+types/shipping.ts'
+import type { loader, action } from './shipping.ts'
 
 const ShippingFormSchema = z.object({
 	addressId: z.preprocess(
@@ -124,8 +125,8 @@ const ShippingFormSchema = z.object({
 
 export default function CheckoutShipping() {
 	const { locale } = useTranslation()
-	const loaderData = useLoaderData<Route.LoaderData>()
-	const actionData = useActionData<Route.ActionData>()
+	const loaderData = useLoaderData<typeof loader>()
+	const actionData = useActionData<typeof action>()
 	const { t } = useTranslation()
 	const isPending = useIsPending()
 	
@@ -144,7 +145,7 @@ export default function CheckoutShipping() {
 	const [useNewAddress, setUseNewAddress] = useState(!defaultShippingAddress)
 	const [saveAddressChecked, setSaveAddressChecked] = useState(false)
 
-	const selectedAddress = savedAddresses.find((a: { id: string }) => a.id === selectedAddressId)
+	const selectedAddress = savedAddresses.find((a) => a.id === selectedAddressId)
 
 	const [form, fields] = useForm({
 		id: 'shipping-form',
@@ -236,7 +237,7 @@ export default function CheckoutShipping() {
 								<SelectValue placeholder={t('shop.checkout.shipping.selectAddress')} />
 							</SelectTrigger>
 							<SelectContent>
-								{savedAddresses.map((address: { id: string }) => (
+								{savedAddresses.map((address) => (
 									<SelectItem key={address.id} value={address.id}>
 										{address.label || address.name}
 										{address.isDefaultShipping && t('shop.checkout.shipping.default')}
@@ -433,7 +434,7 @@ export default function CheckoutShipping() {
 				<h2 className="text-xl font-semibold mb-4">Order Summary</h2>
 				<div className="border rounded-lg p-6 space-y-4">
 					<div className="space-y-3">
-						{cart.items.map((item: { variant?: { price: number }; product: { price: number } }) => {
+						{cart.items.map((item) => {
 							const price = item.variant?.price ?? item.product.price
 							const itemTotal = (price ?? 0) * item.quantity
 							return (

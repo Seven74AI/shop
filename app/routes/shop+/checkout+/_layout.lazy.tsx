@@ -2,11 +2,12 @@ import { Outlet, useLoaderData } from 'react-router'
 import { CheckoutSteps, type CheckoutStep } from '#app/components/checkout/checkout-steps.tsx'
 import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/_layout.ts'
+import type { loader } from './_layout.ts'
 
 
 
 export default function CheckoutLayout() {
-	const loaderData = useLoaderData<Route.LoaderData>()
+	const loaderData = useLoaderData<typeof loader>()
 	const { t } = useTranslation()
 	const currentStep = loaderData?.currentStep || 'review'
 
