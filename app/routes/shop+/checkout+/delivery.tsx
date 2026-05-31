@@ -177,4 +177,4 @@ export async function action({ request }: Route.ActionArgs) {
 export const meta: Route.MetaFunction = () => [{ title: 'Delivery | Checkout' }]
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./delivery.lazy')
+export const lazy = () => import('./__delivery.lazy')

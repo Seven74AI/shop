@@ -113,4 +113,4 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$reviewId.lazy')
+export const lazy = () => import('./__$reviewId.lazy')

@@ -157,4 +157,4 @@ function DeleteProductButton({ product }: { product: Route.ComponentProps['loade
  */
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$productSlug.lazy')
+export const lazy = () => import('./__$productSlug.lazy')

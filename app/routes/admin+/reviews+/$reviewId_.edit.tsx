@@ -131,4 +131,4 @@ function StarRatingInput({ name, defaultValue }: { name: string; defaultValue: n
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$reviewId_.edit.lazy')
+export const lazy = () => import('./__$reviewId_.edit.lazy')

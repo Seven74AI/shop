@@ -55,4 +55,4 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 // Lazy-load checkout layout component for code splitting
-export const lazy = () => import('./_layout.lazy')
+export const lazy = () => import('./___layout.lazy')

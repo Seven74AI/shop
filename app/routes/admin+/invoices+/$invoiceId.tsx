@@ -95,4 +95,4 @@ const statusBadge = (status: string) => {
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$invoiceId.lazy')
+export const lazy = () => import('./__$invoiceId.lazy')

@@ -221,4 +221,4 @@ function MethodRow({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./index.lazy')
+export const lazy = () => import('./__index.lazy')

@@ -589,4 +589,4 @@ function MethodForm({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./new.lazy')
+export const lazy = () => import('./__new.lazy')

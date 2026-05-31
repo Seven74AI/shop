@@ -243,4 +243,4 @@ function ZoneForm({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$zoneId_.edit.lazy')
+export const lazy = () => import('./__$zoneId_.edit.lazy')

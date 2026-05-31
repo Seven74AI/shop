@@ -36,4 +36,4 @@ export const meta: MetaFunction = ({ data }) => [
 ]
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$auditLogId.lazy')
+export const lazy = () => import('./__$auditLogId.lazy')

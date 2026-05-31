@@ -166,4 +166,4 @@ function CategorySelect({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$categorySlug_.edit.lazy')
+export const lazy = () => import('./__$categorySlug_.edit.lazy')

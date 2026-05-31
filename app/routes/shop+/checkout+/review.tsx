@@ -83,4 +83,4 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./review.lazy')
+export const lazy = () => import('./__review.lazy')

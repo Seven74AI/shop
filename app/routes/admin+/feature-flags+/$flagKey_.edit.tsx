@@ -196,4 +196,4 @@ function EditFlagForm({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$flagKey_.edit.lazy')
+export const lazy = () => import('./__$flagKey_.edit.lazy')

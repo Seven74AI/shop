@@ -186,4 +186,4 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./index.lazy')
+export const lazy = () => import('./__index.lazy')

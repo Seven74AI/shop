@@ -233,4 +233,4 @@ function RoleCheckbox({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$userId_.edit.lazy')
+export const lazy = () => import('./__$userId_.edit.lazy')

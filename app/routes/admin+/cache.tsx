@@ -120,4 +120,4 @@ function CacheKeyRow({
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./cache.lazy')
+export const lazy = () => import('./__cache.lazy')

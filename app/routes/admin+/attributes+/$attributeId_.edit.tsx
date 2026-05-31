@@ -168,4 +168,4 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 ]
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$attributeId_.edit.lazy')
+export const lazy = () => import('./__$attributeId_.edit.lazy')

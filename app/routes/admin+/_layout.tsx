@@ -12,4 +12,4 @@ export const meta: Route.MetaFunction = () => [
 ]
 
 // Lazy-load admin layout component for code splitting
-export const lazy = () => import('./_layout.lazy')
+export const lazy = () => import('./___layout.lazy')

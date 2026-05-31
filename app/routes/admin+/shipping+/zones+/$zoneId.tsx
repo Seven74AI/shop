@@ -58,4 +58,4 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 ]
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./$zoneId.lazy')
+export const lazy = () => import('./__$zoneId.lazy')

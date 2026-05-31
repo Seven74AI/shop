@@ -229,4 +229,4 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 // Lazy-load admin route component for code splitting
-export const lazy = () => import('./shipping.lazy')
+export const lazy = () => import('./__shipping.lazy')
