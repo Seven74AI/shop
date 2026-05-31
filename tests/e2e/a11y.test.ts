@@ -34,8 +34,12 @@ async function loginAndNavigateToAdminPage(
 ) {
 	await login({ asAdmin: true })
 	await page.goto(path)
-	// Wait for lazy-loaded components to hydrate (react-router lazy loading)
-	await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {})
+	// Wait for DOM to be ready, then try networkidle for lazy-loaded components
+	await page.waitForLoadState('domcontentloaded')
+	// Best-effort networkidle — don't block if it times out (long-polling connections)
+	await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
+		console.warn(`networkidle timed out for ${path}, proceeding with domcontentloaded`)
+	})
 	await page.waitForSelector('main', { timeout: 20000 })
 	await page.waitForSelector('h1', { timeout: 20000 })
 }
@@ -377,30 +381,32 @@ test.describe('Accessibility', () => {
 				},
 			})
 
-			// Create test order for shop pages
-			shopTestOrder = await prisma.order.create({
-				data: {
-					orderNumber: await generateOrderNumber(),
-					userId: shopTestUser.id,
-					email: shopTestUser.email,
-					subtotal: 10000, // in cents
-					total: 10000, // in cents
-					shippingName: 'Shop Test User',
-					shippingStreet: '123 Test St',
-					shippingCity: 'Test City',
-					shippingState: 'TS',
-					shippingPostal: '12345',
-					shippingCountry: 'US',
-					stripeCheckoutSessionId: `cs_test_shop_${Date.now()}`,
-					status: 'CONFIRMED',
-					items: {
-						create: {
-							productId: shopTestProduct.id,
-							quantity: 1,
-							price: 10000, // in cents
+			// Create test order for shop pages (with retry for orderNumber collisions)
+			shopTestOrder = await retryGenerateOrder(async () => {
+				return await prisma.order.create({
+					data: {
+						orderNumber: await generateOrderNumber(),
+						userId: shopTestUser.id,
+						email: shopTestUser.email,
+						subtotal: 10000, // in cents
+						total: 10000, // in cents
+						shippingName: 'Shop Test User',
+						shippingStreet: '123 Test St',
+						shippingCity: 'Test City',
+						shippingState: 'TS',
+						shippingPostal: '12345',
+						shippingCountry: 'US',
+						stripeCheckoutSessionId: `cs_test_shop_${Date.now()}`,
+						status: 'CONFIRMED',
+						items: {
+							create: {
+								productId: shopTestProduct.id,
+								quantity: 1,
+								price: 10000, // in cents
+							},
 						},
 					},
-				},
+				})
 			})
 		})
 
