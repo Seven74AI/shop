@@ -2,6 +2,7 @@ import { Img } from 'openimg/react'
 import { useRef } from 'react'
 import { Link, Form } from 'react-router'
 import { getUserImgSrc } from '#app/utils/misc.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { userHasRole, useUser } from '#app/utils/user.ts'
 import { Button } from './ui/button'
 import {
@@ -15,6 +16,7 @@ import { Icon } from './ui/icon'
 
 export function UserDropdown() {
 	const user = useUser()
+	const { t } = useTranslation()
 	const isAdmin = userHasRole(user, 'admin');
 	const formRef = useRef<HTMLFormElement>(null)
 	return (
@@ -26,7 +28,7 @@ export function UserDropdown() {
 						// this is for progressive enhancement
 						onClick={(e) => e.preventDefault()}
 						className="flex items-center gap-2"
-						aria-label="User menu"
+						aria-label={t('nav.userMenu')}
 					>
 						<Img
 							className="size-8 rounded-full object-cover"
@@ -47,28 +49,28 @@ export function UserDropdown() {
 					<DropdownMenuItem asChild>
 						<Link prefetch="intent" to={`/users/${user.username}`}>
 							<Icon className="text-body-md" name="avatar">
-								Profile
+								{t('nav.profile')}
 							</Icon>
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link prefetch="intent" to="/account">
 							<Icon className="text-body-md" name="user">
-								My Account
+								{t('nav.myAccount')}
 							</Icon>
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link prefetch="intent" to="/account/orders">
 							<Icon className="text-body-md" name="package">
-								My Orders
+								{t('nav.myOrders')}
 							</Icon>
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link prefetch="intent" to="/shop/cart">
 							<Icon className="text-body-md" name="shopping-cart">
-								Cart
+								{t('nav.cart')}
 							</Icon>
 						</Link>
 					</DropdownMenuItem>
@@ -76,7 +78,7 @@ export function UserDropdown() {
 						<DropdownMenuItem asChild>
 							<Link prefetch="intent" to={`/admin`}>
 								<Icon className="text-body-md" name="layout-dashboard">
-									Admin
+									{t('nav.admin')}
 								</Icon>
 							</Link>
 						</DropdownMenuItem>
@@ -84,7 +86,7 @@ export function UserDropdown() {
 					<DropdownMenuItem asChild>
 						<Link prefetch="intent" to={`/users/${user.username}/notes`}>
 							<Icon className="text-body-md" name="pencil-2">
-								Notes
+								{t('nav.notes')}
 							</Icon>
 						</Link>
 					</DropdownMenuItem>
@@ -92,7 +94,7 @@ export function UserDropdown() {
 						<DropdownMenuItem asChild>
 							<button type="submit" className="w-full">
 								<Icon className="text-body-md" name="log-out">
-									Logout
+									{t('nav.logout')}
 								</Icon>
 							</button>
 						</DropdownMenuItem>

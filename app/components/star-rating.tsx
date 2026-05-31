@@ -3,6 +3,8 @@
  * Inline SVG stars with partial fill, distribution bar chart.
  */
 
+import { useTranslation } from '#app/utils/i18n.tsx'
+
 let globalCounter = 0
 
 // ─── Public Components ───────────────────────────────────────────────────
@@ -58,8 +60,9 @@ export function StarRatingCompact({
 	averageRating: number | null
 	totalCount?: number
 }) {
+	const { t } = useTranslation()
 	if (averageRating == null || totalCount == null || totalCount === 0) {
-		return <span className="text-muted-foreground text-xs">No reviews</span>
+		return <span className="text-muted-foreground text-xs">{t('reviews.noReviews')}</span>
 	}
 
 	return (
@@ -186,8 +189,9 @@ function RatingDistribution({
 	distribution: [number, number, number, number, number]
 	totalCount: number
 }) {
+	const { t } = useTranslation()
 	return (
-		<div className="space-y-1 text-sm" aria-label="Rating distribution">
+		<div className="space-y-1 text-sm" aria-label={t('reviews.ratingDistribution')}>
 			{[5, 4, 3, 2, 1].map((star) => {
 				const count = distribution[star - 1] ?? 0
 				const pct = totalCount > 0 ? (count / totalCount) * 100 : 0

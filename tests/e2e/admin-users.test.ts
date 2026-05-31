@@ -93,7 +93,7 @@ test.describe('Admin User Management', () => {
 		// requireUserWithRole throws a 403 response, which React Router renders as an error page
 
 		// Check for error content that indicates unauthorized access
-		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({
+		await expect(page.getByRole('heading', { name: /you must be logged in to access this page/i })).toBeVisible({
 			timeout: 5000,
 		})
 	})
@@ -379,7 +379,7 @@ test.describe('Admin User Edit', () => {
 
 		await navigate(`/admin/users/${testUser.id}/edit` as any)
 
-		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({
+		await expect(page.getByRole('heading', { name: /you must be logged in to access this page/i })).toBeVisible({
 			timeout: 5000,
 		})
 	})
