@@ -6,7 +6,7 @@ import { type Route } from './+types/_layout.ts'
 
 
 export default function CheckoutLayout() {
-	const loaderData = useLoaderData<typeof loader>()
+	const loaderData = useLoaderData<Route.LoaderData>()
 	const { t } = useTranslation()
 	const currentStep = loaderData?.currentStep || 'review'
 
