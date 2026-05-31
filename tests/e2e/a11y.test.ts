@@ -38,13 +38,13 @@ async function loginAndNavigateToAdminPage(
 	// keeps a persistent connection so networkidle never fires, burning the
 	// test timeout budget (20s total) before lazy chunks can load.
 	await page.waitForLoadState('domcontentloaded')
-	// Lazy-loaded layout (_layout.lazy.tsx) must load first — the <main>
-	// element lives inside it. Then the lazy page component loads inside
-	// <Outlet />. Each chunk download + React render can take 2-8s in CI.
-	// Wait generously with retry-based locators.
+	// Give lazy chunks time to start loading and rendering. The admin layout
+	// is itself lazy-loaded (_layout.lazy) and each page component is lazy.
+	// In CI, chunk download + React render takes 1-5 seconds per chunk.
+	await page.waitForTimeout(3000)
+	// Then wait for the lazy layout to render <main> and the lazy page
+	// component to render the first heading.
 	await expect(page.locator('main')).toBeVisible({ timeout: 30000 })
-	// The h1 is inside the lazy page component (e.g., index.lazy.tsx),
-	// which loads AFTER the layout. Allow extra time for the second chunk.
 	await expect(page.locator('h1')).toBeVisible({ timeout: 30000 })
 }
 
