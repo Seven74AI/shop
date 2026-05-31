@@ -14,6 +14,7 @@ import { useIsPending } from '#app/utils/misc.tsx'
 import { formatPrice } from '#app/utils/price.ts'
 import { getShippingCost, getShippingMethodsForCountry } from '#app/utils/shipping.server.ts'
 import { type Route } from './+types/delivery.ts'
+import type { loader } from './delivery.ts'
 
 const DeliveryFormSchema = z.object({
 	shippingMethodId: z.preprocess(
@@ -33,7 +34,7 @@ const DeliveryFormSchema = z.object({
 
 
 export default function CheckoutDelivery() {
-	const loaderData = useLoaderData<Route.LoaderData>()
+	const loaderData = useLoaderData<typeof loader>()
 	const { t, locale } = useTranslation()
 	const isPending = useIsPending()
 
@@ -72,7 +73,7 @@ export default function CheckoutDelivery() {
 		
 		const subtotal = loaderData.subtotal
 		if (selectedShippingMethodId && shippingMethods.length > 0) {
-			const method = shippingMethods.find((m: { id: string }) => m.id === selectedShippingMethodId)
+			const method = shippingMethods.find((m) => m.id === selectedShippingMethodId)
 			if (method) {
 				// Calculate shipping cost based on method rate type
 				let cost = 0
@@ -152,7 +153,7 @@ export default function CheckoutDelivery() {
 							</div>
 						) : (
 							<div className="space-y-3">
-								{shippingMethods.map((method: { id: string; name: string }) => {
+								{shippingMethods.map((method) => {
 									let methodCost = 0
 									if (method.rateType === 'FLAT') {
 										methodCost = method.flatRate ?? 0

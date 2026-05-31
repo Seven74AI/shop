@@ -19,10 +19,11 @@ import {
 } from '#app/utils/order-stock.server.ts'
 import { formatPrice } from '#app/utils/price.ts'
 import { type Route } from './+types/payment.ts'
+import type { loader, action } from './payment.ts'
 
 export default function CheckoutPayment() {
-	const loaderData = useLoaderData<Route.LoaderData>()
-	const actionData = useActionData<Route.ActionData>()
+	const loaderData = useLoaderData<typeof loader>()
+	const actionData = useActionData<typeof action>()
 	const { t, locale } = useTranslation()
 
 	// Auto-submit to create Stripe session on mount
@@ -156,7 +157,7 @@ export default function CheckoutPayment() {
 					</div>
 					{vatCalculation && vatCalculation.totalVatCents > 0 && (
 						<>
-							{vatCalculation.breakdown.map((line: { kind: string; rate: number }) => (
+							{vatCalculation.breakdown.map((line) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
 									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
 									<span>{formatPrice(line.vatCents, currency, locale)}</span>

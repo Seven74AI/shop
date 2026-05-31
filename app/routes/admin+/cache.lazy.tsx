@@ -13,6 +13,7 @@ import { Spacer } from '#app/components/spacer.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { useDebounce, useDoubleCheck } from '#app/utils/misc.tsx'
 import { type Route } from './+types/cache.ts'
+import type { action } from './cache.ts'
 
 
 
@@ -132,7 +133,7 @@ function CacheKeyRow({
 	instance?: string
 	type: 'sqlite' | 'lru'
 }) {
-	const fetcher = useFetcher<Route.ActionData>()
+	const fetcher = useFetcher<typeof action>()
 	const dc = useDoubleCheck()
 	const encodedKey = encodeURIComponent(cacheKey)
 	const valuePage = `/admin/cache/${type}/${encodedKey}?instance=${instance}`
