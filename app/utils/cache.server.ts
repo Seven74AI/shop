@@ -48,7 +48,7 @@ function createDatabase(tryAgain = true): DatabaseSync {
 			)
 		`)
 	} catch (error: unknown) {
-		fs.unlinkSync(CACHE_DATABASE_PATH)
+		try { fs.unlinkSync(CACHE_DATABASE_PATH) } catch {}
 		if (tryAgain) {
 			Sentry.captureException(error, {
 				tags: { context: 'cache-database-creation' },
