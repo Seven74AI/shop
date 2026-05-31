@@ -20,8 +20,6 @@ import {
 import { formatPrice } from '#app/utils/price.ts'
 import { type Route } from './+types/payment.ts'
 
-const PaymentFormSchema
-
 export default function CheckoutPayment() {
 	const loaderData = useLoaderData<Route.LoaderData>()
 	const actionData = useActionData<Route.ActionData>()
