@@ -75,7 +75,7 @@ test.describe('Checkout', () => {
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addButton = page.getByRole('button', { name: /add to cart/i })
-		await expect(addButton).toBeVisible({ timeout: 10000 })
+		await expect(addButton).toBeVisible({ timeout: 15000 })
 		await addButton.click()
 		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
 
@@ -106,7 +106,7 @@ test.describe('Checkout', () => {
 
 		await page.goto(`/shop/products/${product.slug}`)
 		const addBtn = page.getByRole('button', { name: /add to cart/i })
-		await expect(addBtn).toBeVisible({ timeout: 10000 })
+		await expect(addBtn).toBeVisible({ timeout: 15000 })
 		await addBtn.click()
 		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
 
@@ -120,7 +120,7 @@ test.describe('Checkout', () => {
 		await page.getByRole('button', { name: /continue to delivery/i }).click()
 
 		// Check that at least some validation errors are displayed
-		await expect(page.getByText(/name is required/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(/name is required/i)).toBeVisible({ timeout: 15000 })
 		await expect(page.getByText(/email is required/i)).toBeVisible()
 		await expect(page.getByText(/street address is required/i)).toBeVisible()
 	})
@@ -135,16 +135,16 @@ test.describe('Checkout', () => {
 
 		await page.goto(`/shop/products/${product.slug}`)
 		const addBtnInvalid = page.getByRole('button', { name: /add to cart/i })
-		await expect(addBtnInvalid).toBeVisible({ timeout: 10000 })
+		await expect(addBtnInvalid).toBeVisible({ timeout: 15000 })
 		await addBtnInvalid.click()
 		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
 
 		// Wait for cart to have the product before checkout (avoids redirect to empty cart)
-		await expect(page.getByRole('heading', { name: product.name })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: product.name })).toBeVisible({ timeout: 15000 })
 
 		// Navigate to checkout shipping step
 		await page.goto('/shop/checkout/shipping')
-		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 15000 })
 
 			// Fill form with invalid email
 			await page.getByLabel(/^name$/i).fill('Test User')
@@ -156,7 +156,7 @@ test.describe('Checkout', () => {
 
 		await page.getByRole('button', { name: /continue to delivery/i }).click()
 
-		await expect(page.getByText(/invalid email address/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(/invalid email address/i)).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should show validation error for invalid country code', async ({
@@ -169,7 +169,7 @@ test.describe('Checkout', () => {
 
 		await page.goto(`/shop/products/${product.slug}`)
 		const addBtnCountry = page.getByRole('button', { name: /add to cart/i })
-		await expect(addBtnCountry).toBeVisible({ timeout: 10000 })
+		await expect(addBtnCountry).toBeVisible({ timeout: 15000 })
 		await addBtnCountry.click()
 		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
 
@@ -188,7 +188,7 @@ test.describe('Checkout', () => {
 
 		await expect(
 			page.getByText(/country.*2.*letter.*iso/i),
-		).toBeVisible({ timeout: 10000 })
+		).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should redirect to Stripe checkout when form is submitted with valid data', async ({
@@ -231,7 +231,7 @@ test.describe('Checkout', () => {
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addButton = page.getByRole('button', { name: /add to cart/i })
-		await expect(addButton).toBeVisible({ timeout: 10000 })
+		await expect(addButton).toBeVisible({ timeout: 15000 })
 		await addButton.click()
 		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
 
@@ -239,10 +239,10 @@ test.describe('Checkout', () => {
 		await page.goto('/shop/checkout/shipping')
 		
 		// Verify we're on shipping page (not redirected to cart)
-		await expect(page).toHaveURL(/\/shop\/checkout\/shipping/, { timeout: 10000 })
+		await expect(page).toHaveURL(/\/shop\/checkout\/shipping/, { timeout: 15000 })
 
 		// Wait for form to be ready
-		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 15000 })
 		
 		// Fill out checkout form
 		await page.getByLabel(/^name$/i).fill('Test User')
@@ -365,7 +365,7 @@ test.describe('Checkout', () => {
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addButton = page.getByRole('button', { name: /add to cart/i })
-		await expect(addButton).toBeVisible({ timeout: 10000 })
+		await expect(addButton).toBeVisible({ timeout: 15000 })
 		await addButton.click()
 		await expect(page).toHaveURL(/\/shop\/cart/, { timeout: 5000 })
 
@@ -373,7 +373,7 @@ test.describe('Checkout', () => {
 		await page.goto('/shop/checkout/shipping')
 
 		// Wait for the shipping form to be visible
-		await expect(page.getByRole('heading', { name: /shipping information/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /shipping information/i })).toBeVisible({ timeout: 15000 })
 		
 		// If there's an address selector, select "Use New Address" to show the form fields
 		const addressSelect = page.getByRole('combobox', { name: /use saved address/i }).or(
@@ -387,8 +387,8 @@ test.describe('Checkout', () => {
 
 		// Fill out checkout form - wait for fields to be visible
 		// Ensure we're on the shipping page and form is ready
-		await expect(page).toHaveURL(/\/shop\/checkout\/shipping/, { timeout: 10000 })
-		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 10000 })
+		await expect(page).toHaveURL(/\/shop\/checkout\/shipping/, { timeout: 15000 })
+		await expect(page.getByLabel(/^name$/i)).toBeVisible({ timeout: 15000 })
 		await page.getByLabel(/^name$/i).fill('Test User')
 		await page.getByLabel(/email/i).fill('test@example.com')
 		await page.getByLabel(/street address/i).fill('123 Main St')

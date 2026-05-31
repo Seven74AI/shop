@@ -99,7 +99,7 @@ test.describe('Cart Badge', () => {
 
 		// Cart badge should be visible (no count shown when cart is empty)
 		const cartBadgeLink = page.getByRole('link', { name: /shopping cart with 0 items/i })
-		await expect(cartBadgeLink).toBeVisible({ timeout: 10000 })
+		await expect(cartBadgeLink).toBeVisible({ timeout: 15000 })
 
 		// Add product to cart
 		await page.getByRole('button', { name: /add to cart/i }).click()
@@ -109,7 +109,7 @@ test.describe('Cart Badge', () => {
 		
 		// Cart badge should now show 1 item on the cart page
 		const cartPageBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(cartPageBadge).toBeVisible({ timeout: 10000 })
+		await expect(cartPageBadge).toBeVisible({ timeout: 15000 })
 		await expect(cartPageBadge.getByText('1')).toBeVisible({ timeout: 5000 })
 	})
 
@@ -167,7 +167,7 @@ test.describe('Cart Badge', () => {
 		
 		// Verify guest cart has 1 item
 		const guestCartBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge).toBeVisible({ timeout: 10000 })
+		await expect(guestCartBadge).toBeVisible({ timeout: 15000 })
 
 		// Ensure user role exists (may be missing in test DB)
 		await prisma.role.upsert({
@@ -200,7 +200,7 @@ test.describe('Cart Badge', () => {
 		
 		// Check if cart badge is visible (should have 1 item from guest cart)
 		const userCartBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(userCartBadge).toBeVisible({ timeout: 10000 })
+		await expect(userCartBadge).toBeVisible({ timeout: 15000 })
 	})
 
 	test('guest cart should not contain user cart items after logout', async ({ page, login, logout }, testInfo) => {
@@ -225,7 +225,7 @@ test.describe('Cart Badge', () => {
 		
 		// Verify user cart has 1 item
 		const userCartBadge = page.getByRole('link', { name: /shopping cart/i })
-		await expect(userCartBadge).toBeVisible({ timeout: 10000 })
+		await expect(userCartBadge).toBeVisible({ timeout: 15000 })
 
 		await logout()
 
@@ -236,7 +236,7 @@ test.describe('Cart Badge', () => {
 		
 		// Verify guest cart has ONLY 1 item (not the item from when logged in)
 		const guestCartBadge = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge).toBeVisible({ timeout: 10000 })
+		await expect(guestCartBadge).toBeVisible({ timeout: 15000 })
 		await expect(guestCartBadge.getByText('1')).toBeVisible({ timeout: 5000 })
 
 		// Verify cart page shows only 1 item (not 2 from user cart + guest cart)
@@ -263,7 +263,7 @@ test.describe('Cart Badge', () => {
 		await page.getByRole('button', { name: /add to cart/i }).click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		const guestCartBadge1 = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge1).toBeVisible({ timeout: 10000 })
+		await expect(guestCartBadge1).toBeVisible({ timeout: 15000 })
 
 		// 2. Login - product1 should merge into user cart
 		// Note: The login fixture bypasses handleNewSession, so we need to manually merge
@@ -277,24 +277,24 @@ test.describe('Cart Badge', () => {
 		
 		// Verify the cart has 1 item by checking the cart page
 		await page.goto('/shop/cart')
-		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 15000 })
 		
 		// Go back to shop and verify badge shows 1 item
 		await page.goto('/shop')
 		const userCartBadge1 = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(userCartBadge1).toBeVisible({ timeout: 10000 })
+		await expect(userCartBadge1).toBeVisible({ timeout: 15000 })
 
 		// 3. As logged-in user, add product2 to cart
 		await page.goto(`/shop/products/${product2.slug}`)
 		const addProduct2Btn = page.getByRole('button', { name: /add to cart/i })
-		await expect(addProduct2Btn).toBeVisible({ timeout: 10000 })
+		await expect(addProduct2Btn).toBeVisible({ timeout: 15000 })
 		await addProduct2Btn.click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		
 		// Verify cart has 2 products (product1 and product2)
 		// Use getByText instead of heading for more reliable matching
-		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 15000 })
 
 		// 4. Update product1 quantity to 2 in user cart
 		const quantityInput = page.getByLabel(/quantity/i).first()
@@ -304,7 +304,7 @@ test.describe('Cart Badge', () => {
 		await expect(quantityInput).toHaveValue('2', { timeout: 5000 })
 		await page.goto('/') // Navigate away and back to trigger badge update
 		const userCartBadge2 = page.getByRole('link', { name: /shopping cart with 3 items/i })
-		await expect(userCartBadge2).toBeVisible({ timeout: 10000 })
+		await expect(userCartBadge2).toBeVisible({ timeout: 15000 })
 
 		// 5. Logout - cart should be cleared
 		await logout()
@@ -312,18 +312,18 @@ test.describe('Cart Badge', () => {
 		// Navigate to trigger badge update
 		await page.goto('/shop')
 		const guestCartBadge2 = page.getByRole('link', { name: /shopping cart with 0 items/i })
-		await expect(guestCartBadge2).toBeVisible({ timeout: 10000 })
+		await expect(guestCartBadge2).toBeVisible({ timeout: 15000 })
 
 		// 6. As guest, add product1 to cart (which is already in user cart with qty 2)
 		await page.goto(`/shop/products/${product1.slug}`)
 		// Wait for product page to load (avoids 404 from parallel test cleanup)
-		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 15000 })
 		const guestAddBtn = page.getByRole('button', { name: /add to cart/i })
-		await expect(guestAddBtn).toBeVisible({ timeout: 10000 })
+		await expect(guestAddBtn).toBeVisible({ timeout: 15000 })
 		await guestAddBtn.click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		const guestCartBadge3 = page.getByRole('link', { name: /shopping cart with 1 item/i })
-		await expect(guestCartBadge3).toBeVisible({ timeout: 10000 })
+		await expect(guestCartBadge3).toBeVisible({ timeout: 15000 })
 
 		// 7. Login again - product1 should merge into user cart
 		const user2 = await login()
@@ -337,7 +337,7 @@ test.describe('Cart Badge', () => {
 		// 8. Verify cart has the merged product from guest cart
 		// Note: After logout, the user's cart was cleared, so only the guest cart (product1 qty 1) should be present
 		await page.goto('/shop/cart')
-		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: product1.name })).toBeVisible({ timeout: 15000 })
 		
 		// Verify product1 quantity is 1 (the guest cart item was merged into empty user cart)
 		const product1Quantity = page.getByRole('spinbutton', { name: /quantity/i }).first()

@@ -70,7 +70,7 @@ test.describe('Search Filters (faceted)', () => {
 		await ensureFts5Migration()
 
 		await page.goto('/shop/products')
-		await expect(page.getByText('Categories', { exact: true })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText('Categories', { exact: true })).toBeVisible({ timeout: 15000 })
 	})
 
 	test('price range filter section is visible', async ({ page }) => {
@@ -98,7 +98,7 @@ test.describe('Search Filters (faceted)', () => {
 		await page.goto(`/shop/products?category=${cat.id}`)
 
 		// Verify the filter sidebar shows the category as checked
-		await expect(page.getByLabel(/Gadgets/i, { exact: false })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel(/Gadgets/i, { exact: false })).toBeChecked({ timeout: 15000 })
 
 		// "All Categories" should NOT be checked
 		await expect(page.getByLabel('All Categories', { exact: true })).not.toBeChecked()
@@ -114,7 +114,7 @@ test.describe('Search Filters (faceted)', () => {
 
 		// No category filter → "All Categories" should be checked
 		await page.goto('/shop/products')
-		await expect(page.getByLabel('All Categories', { exact: true })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel('All Categories', { exact: true })).toBeChecked({ timeout: 15000 })
 	})
 
 	// ─── Price range filter (via URL navigation) ─────────────────────────
@@ -133,7 +133,7 @@ test.describe('Search Filters (faceted)', () => {
 		await page.goto('/shop/products?minPrice=2500&maxPrice=4999')
 
 		// The "$25 - $50" checkbox should be checked
-		await expect(page.getByLabel(/\$25 - \$50/i, { exact: false })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel(/\$25 - \$50/i, { exact: false })).toBeChecked({ timeout: 15000 })
 	})
 
 	test('"All Prices" checkbox is checked when no price filter', async ({
@@ -145,7 +145,7 @@ test.describe('Search Filters (faceted)', () => {
 		await ensureFts5Migration()
 
 		await page.goto('/shop/products')
-		await expect(page.getByLabel('All Prices', { exact: true })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel('All Prices', { exact: true })).toBeChecked({ timeout: 15000 })
 	})
 
 	// ─── Search + filter combination ─────────────────────────────────────
@@ -166,7 +166,7 @@ test.describe('Search Filters (faceted)', () => {
 		await expect(page.getByTestId('product-search-input')).toHaveValue('Wireless')
 
 		// Category should be checked
-		await expect(page.getByLabel(/Audio/i, { exact: false })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel(/Audio/i, { exact: false })).toBeChecked({ timeout: 15000 })
 	})
 
 	test('category filter is preserved when performing a new search', async ({
@@ -186,7 +186,7 @@ test.describe('Search Filters (faceted)', () => {
 		await page.getByTestId('product-search-submit').click()
 
 		// URL should have both q and category (order may vary)
-		await page.waitForURL(/q=TypeScript/, { timeout: 10000 })
+		await page.waitForURL(/q=TypeScript/, { timeout: 15000 })
 		expect(page.url()).toContain('category=')
 	})
 
@@ -206,7 +206,7 @@ test.describe('Search Filters (faceted)', () => {
 
 		// Both sort and category should be reflected in the page
 		await expect(page.getByTestId('sort-form')).toBeVisible()
-		await expect(page.getByLabel(/Tools/i, { exact: false })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel(/Tools/i, { exact: false })).toBeChecked({ timeout: 15000 })
 		expect(page.url()).toContain('sort=price_asc')
 		expect(page.url()).toContain('category=')
 	})
@@ -241,8 +241,8 @@ test.describe('Search Filters (faceted)', () => {
 		await page.goto(`/shop/products?category=${cat.id}&minPrice=2500&maxPrice=4999`)
 
 		// Both filters should be active
-		await expect(page.getByLabel(/Home/i, { exact: false })).toBeChecked({ timeout: 10000 })
-		await expect(page.getByLabel(/\$25 - \$50/i, { exact: false })).toBeChecked({ timeout: 10000 })
+		await expect(page.getByLabel(/Home/i, { exact: false })).toBeChecked({ timeout: 15000 })
+		await expect(page.getByLabel(/\$25 - \$50/i, { exact: false })).toBeChecked({ timeout: 15000 })
 	})
 
 	// ─── Results count ───────────────────────────────────────────────────

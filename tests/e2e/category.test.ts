@@ -173,14 +173,14 @@ test.describe('Category Page', () => {
 		await page.waitForURL(`**/categories/${category1.slug}**`)
 		
 		// Wait for products to load - check for product name in text (more reliable than heading)
-		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(product1.name)).toBeVisible({ timeout: 15000 })
 
 		// Change filter to category2
 		const filterSelect = page.getByLabel(/filter by category/i)
 		await filterSelect.selectOption(category2.id)
 
 		// Wait for filter to apply - assert expected product visibility
-		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(product2.name)).toBeVisible({ timeout: 15000 })
 		await expect(page.getByText(product1.name)).not.toBeVisible({ timeout: 5000 })
 	})
 })

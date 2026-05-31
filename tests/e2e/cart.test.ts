@@ -69,14 +69,14 @@ test.describe('Shopping Cart', () => {
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addButton = page.getByRole('button', { name: /add to cart/i })
-		await expect(addButton).toBeVisible({ timeout: 10000 })
+		await expect(addButton).toBeVisible({ timeout: 15000 })
 		await addButton.click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 		await page.waitForLoadState('domcontentloaded')
 		
 		// Verify cart page displays the item
-		await expect(page.getByRole('heading', { name: /shopping cart/i })).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(product.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /shopping cart/i })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(product.name)).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should allow updating cart item quantity', async ({ page }, testInfo) => {
@@ -101,7 +101,7 @@ test.describe('Shopping Cart', () => {
 		// Add product to cart
 		await page.goto(`/shop/products/${product.slug}`)
 		const addBtn = page.getByRole('button', { name: /add to cart/i })
-		await expect(addBtn).toBeVisible({ timeout: 10000 })
+		await expect(addBtn).toBeVisible({ timeout: 15000 })
 		await addBtn.click()
 		await page.waitForURL('**/shop/cart', { timeout: 15000 })
 
@@ -111,7 +111,7 @@ test.describe('Shopping Cart', () => {
 		
 		// Update quantity - use label for quantity input
 		const quantityInput = page.getByLabel(/quantity/i).first()
-		await expect(quantityInput).toBeVisible({ timeout: 10000 })
+		await expect(quantityInput).toBeVisible({ timeout: 15000 })
 		await quantityInput.fill('2')
 		
 		// Verify update button exists

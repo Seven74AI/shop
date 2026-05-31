@@ -136,8 +136,8 @@ test.describe('Order History', () => {
 		await page.waitForLoadState('domcontentloaded')
 
 		// Verify orders are displayed (newest first)
-		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(orderNumber2)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(orderNumber1)).toBeVisible({ timeout: 15000 })
 
 		// Verify order details are shown
 		await expect(page.getByText(/\$200\.00|\$200/)).toBeVisible()

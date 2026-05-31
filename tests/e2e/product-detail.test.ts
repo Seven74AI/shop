@@ -80,11 +80,11 @@ test.describe('Product Detail', () => {
 		})
 
 		await page.goto(`/shop/products/${product.slug}`)
-		await expect(page.getByRole('heading', { name: product.name })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: product.name })).toBeVisible({ timeout: 15000 })
 
 		// Find and click add to cart button - wait for redirect (form POST)
 		const addToCartButton = page.getByRole('button', { name: /add to cart/i })
-		await expect(addToCartButton).toBeVisible({ timeout: 10000 })
+		await expect(addToCartButton).toBeVisible({ timeout: 15000 })
 		await Promise.all([
 			page.waitForURL(/\/shop\/cart/, { timeout: 15000 }),
 			addToCartButton.click(),

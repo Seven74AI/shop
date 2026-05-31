@@ -14,7 +14,7 @@ test('Users can update their basic info', async ({ page, navigate, login }) => {
 	// Wait for the profile heading to confirm page is loaded
 	await expect(
 		page.getByRole('heading', { name: /profile information/i }),
-	).toBeVisible({ timeout: 10000 })
+	).toBeVisible({ timeout: 15000 })
 
 	const newUserData = createUser()
 

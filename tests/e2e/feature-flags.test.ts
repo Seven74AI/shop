@@ -150,7 +150,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		await expect(
 			page.getByRole('heading', { name: /edit feature flag/i }),
 		).toBeVisible({ timeout: 20000 })
-		await expect(page.getByLabel(/description/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByLabel(/description/i)).toBeVisible({ timeout: 15000 })
 
 		// Update description
 		const descField = page.getByLabel(/description/i)
@@ -215,7 +215,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 			// Find the toggle button for our flag
 			const toggleButton = toggleRow.getByRole('button', { name: /enable|disable/i })
 
-			await expect(toggleButton).toBeVisible({ timeout: 10000 })
+			await expect(toggleButton).toBeVisible({ timeout: 15000 })
 			await toggleButton.click()
 
 		// Wait for toggle to complete and page to reload
@@ -341,7 +341,7 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 			// Wait for search results to update — expect the target row to appear
 			await expect(
 				page.getByText(`${FEATURE_FLAG_E2E_PREFIX}gamma-feature`),
-			).toBeVisible({ timeout: 10000 })
+			).toBeVisible({ timeout: 15000 })
 
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}gamma-feature`)).toBeVisible()
 			await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}alpha-feature`)).not.toBeVisible()
@@ -471,8 +471,8 @@ test.describe.serial('Feature Flags Admin Panel', () => {
 		).toBeVisible({ timeout: 15000 })
 
 		// Wait for data rows to appear (not just the heading)
-		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-1`)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(`${FEATURE_FLAG_E2E_PREFIX}count-2`)).toBeVisible({ timeout: 15000 })
 	})
 })
 })

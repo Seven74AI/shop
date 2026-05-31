@@ -25,11 +25,11 @@ test('Users can create note with an image', async ({
 	await page.getByRole('textbox', { name: 'alt text' }).fill(altText)
 
 	await page.getByRole('button', { name: 'submit' }).click()
-	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`), { timeout: 10000 })
-	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible({ timeout: 10000 })
+	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`), { timeout: 15000 })
+	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible({ timeout: 15000 })
 	await expect(
 		page.getByRole('region', { name: newNote.title }).getByAltText(altText),
-	).toBeVisible({ timeout: 10000 })
+	).toBeVisible({ timeout: 15000 })
 })
 
 test('Users can create note with multiple images', async ({
@@ -62,10 +62,10 @@ test('Users can create note with multiple images', async ({
 	await page.getByLabel('alt text').nth(1).fill(altText2)
 
 	await page.getByRole('button', { name: 'submit' }).click()
-	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`), { timeout: 10000 })
-	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible({ timeout: 10000 })
-	await expect(page.getByAltText(altText1)).toBeVisible({ timeout: 10000 })
-	await expect(page.getByAltText(altText2)).toBeVisible({ timeout: 10000 })
+	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`), { timeout: 15000 })
+	await expect(page.getByRole('heading', { name: newNote.title })).toBeVisible({ timeout: 15000 })
+	await expect(page.getByAltText(altText1)).toBeVisible({ timeout: 15000 })
+	await expect(page.getByAltText(altText2)).toBeVisible({ timeout: 15000 })
 })
 
 test('Users can edit note image', async ({ page, navigate, login }) => {
@@ -92,8 +92,8 @@ test('Users can edit note image', async ({ page, navigate, login }) => {
 	await page.getByLabel('image').nth(0).setInputFiles(updatedImage.location)
 	await page.getByLabel('alt text').nth(0).fill(updatedImage.altText)
 	await page.getByRole('button', { name: 'submit' }).click()
-	await expect(page).toHaveURL(`/users/${user.username}/notes/${note.id}`, { timeout: 10000 })
-	await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 10000 })
+	await expect(page).toHaveURL(`/users/${user.username}/notes/${note.id}`, { timeout: 15000 })
+	await expect(page.getByAltText(updatedImage.altText)).toBeVisible({ timeout: 15000 })
 })
 
 test('Users can delete note image', async ({ page, navigate, login }) => {

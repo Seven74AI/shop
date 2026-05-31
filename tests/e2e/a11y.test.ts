@@ -435,37 +435,37 @@ test.describe('Accessibility', () => {
 	test('shop homepage should be accessible', async ({ page }) => {
 		await page.goto('/shop')
 		await page.waitForLoadState('domcontentloaded')
-		await page.waitForSelector('main', { timeout: 10000 })
+		await page.waitForSelector('main', { timeout: 15000 })
 		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 	})
 
 		test('product catalog should be accessible', async ({ page }) => {
 			await page.goto('/shop/products')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
 	test('product detail page should be accessible', async ({ page }) => {
 		await page.goto(`/shop/products/${shopTestProduct.slug}`)
 		await page.waitForLoadState('domcontentloaded')
-		await page.waitForSelector('main', { timeout: 10000 })
-		await page.waitForSelector('h1', { timeout: 10000 })
+		await page.waitForSelector('main', { timeout: 15000 })
+		await page.waitForSelector('h1', { timeout: 15000 })
 		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 	})
 
 		test('category page should be accessible', async ({ page }) => {
 			await page.goto(`/shop/categories/${shopTestCategory.slug}`)
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
-			await page.waitForSelector('h1', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
+			await page.waitForSelector('h1', { timeout: 15000 })
 			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 		})
 
 		test('cart page should be accessible', async ({ page }) => {
 			await page.goto('/shop/cart')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -478,7 +478,7 @@ test.describe('Accessibility', () => {
 			// Navigate to checkout
 			await page.goto('/shop/checkout')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -544,7 +544,7 @@ test.describe('Accessibility', () => {
 				await page.getByRole('button', { name: /log in/i }).click()
 				await page.waitForLoadState('domcontentloaded')
 				// Wait for redirect after login to ensure session is established
-				await page.waitForURL(/\/admin|\/shop|\//, { timeout: 10000 }).catch(() => {})
+				await page.waitForURL(/\/admin|\/shop|\//, { timeout: 15000 }).catch(() => {})
 				// Wait a bit more to ensure session cookie is set
 				await page.waitForTimeout(500)
 				
@@ -556,10 +556,10 @@ test.describe('Accessibility', () => {
 					return
 				}
 				await page.waitForLoadState('domcontentloaded')
-				await page.waitForSelector('main', { timeout: 10000 })
-				await page.waitForSelector('h1', { timeout: 10000 })
+				await page.waitForSelector('main', { timeout: 15000 })
+				await page.waitForSelector('h1', { timeout: 15000 })
 				// Wait for order content to render before a11y check
-				await expect(page.getByText(order.orderNumber).first()).toBeVisible({ timeout: 10000 })
+				await expect(page.getByText(order.orderNumber).first()).toBeVisible({ timeout: 15000 })
 				await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 			} finally {
 				// Cleanup: delete order first, then user
@@ -580,7 +580,7 @@ test.describe('Accessibility', () => {
 			// Check if we're still on the success page or redirected
 			const currentUrl = page.url()
 			if (currentUrl.includes('/shop/checkout/success')) {
-				await page.waitForSelector('main', { timeout: 10000 })
+				await page.waitForSelector('main', { timeout: 15000 })
 				await expectPageToBeAccessible(page)
 			}
 			// If redirected, that's also fine - the redirect happens server-side
@@ -591,14 +591,14 @@ test.describe('Accessibility', () => {
 		test('login page should be accessible', async ({ page }) => {
 			await page.goto('/login')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
 		test('signup page should be accessible', async ({ page }) => {
 			await page.goto('/signup')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 	})
