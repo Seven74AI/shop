@@ -38,7 +38,7 @@ describe('StarRating', () => {
 
 		// Should have a distribution chart with aria-label
 		expect(
-			screen.getByLabelText('Rating distribution'),
+			screen.getByLabelText('reviews.ratingDistribution'),
 		).toBeDefined()
 	})
 
@@ -56,7 +56,7 @@ describe('StarRating', () => {
 
 		// Should NOT have distribution chart
 		expect(
-			screen.queryByLabelText('Rating distribution'),
+			screen.queryByLabelText('reviews.ratingDistribution'),
 		).toBeNull()
 	})
 
@@ -121,7 +121,7 @@ describe('StarRatingCompact', () => {
 			/>,
 		)
 
-		expect(screen.getByText('No reviews')).toBeDefined()
+		expect(screen.getByText('reviews.noReviews')).toBeDefined()
 	})
 
 	it('renders "No reviews" when totalCount is 0', () => {
@@ -132,6 +132,6 @@ describe('StarRatingCompact', () => {
 			/>,
 		)
 
-		expect(screen.getByText('No reviews')).toBeDefined()
+		expect(screen.getByText('reviews.noReviews')).toBeDefined()
 	})
 })

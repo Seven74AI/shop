@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Form, useSearchParams } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import {
 	Select,
 	SelectContent,
@@ -26,6 +27,7 @@ interface SortSelectProps {
  */
 export function SortSelect({ activeSort }: SortSelectProps) {
 	const [searchParams] = useSearchParams()
+	const { t } = useTranslation()
 	const formRef = useRef<HTMLFormElement>(null)
 	const sortInputRef = useRef<HTMLInputElement>(null)
 
@@ -66,9 +68,9 @@ export function SortSelect({ activeSort }: SortSelectProps) {
 			>
 				<SelectTrigger
 					className="w-[180px]"
-					aria-label="Sort products"
+					aria-label={t('sort.label')}
 				>
-					<SelectValue placeholder="Sort by..." />
+					<SelectValue placeholder={t('sort.placeholder')} />
 				</SelectTrigger>
 				<SelectContent>
 					{SORT_OPTIONS.map((option) => (

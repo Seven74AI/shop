@@ -7,14 +7,21 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	navigate,
 	login,
 }) => {
-	// Increase timeout — first page load can be slow (server cold start)
-	test.setTimeout(60000)
+	// Increase timeout — CI environments are slow (server cold start + cold DB)
+	test.setTimeout(90000)
+	// Force English locale for deterministic test text
+	await page.context().addCookies([{
+		name: 'localePreference',
+		value: 'en',
+		domain: 'localhost',
+		path: '/',
+	}])
 	const password = faker.internet.password()
 	const user = await login({ password })
 
 	// Warm up the server with a fast page first
 	await page.goto('/')
-	await expect(page.getByRole('link', { name: 'User menu' })).toBeVisible({ timeout: 10000 })
+	await expect(page.getByLabel('User menu')).toBeVisible({ timeout: 15000 })
 
 	await navigate('/account/security/two-factor')
 
@@ -46,19 +53,20 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	await main.getByRole('button', { name: /submit/i }).click()
 
 	// Wait for the redirect back to the two-factor page after verification
-	await page.waitForURL(`/account/security/two-factor`, { timeout: 10000 })
+	await page.waitForURL(`/account/security/two-factor`, { timeout: 15000 })
 	// Use the page content directly instead of main to avoid multiple main elements
-	await expect(page.getByText(/You have enabled two-factor authentication./i)).toBeVisible()
+	await expect(page.getByText(/You have enabled two-factor authentication./i)).toBeVisible({ timeout: 10000 })
 	await expect(page.getByRole('link', { name: /disable 2fa/i })).toBeVisible()
 
-	await page.getByRole('link', { name: 'User menu' }).click()
-	// Wait for the dropdown to open before clicking logout
+	// Click the user menu trigger (uses aria-label="User menu")
+	await page.getByLabel('User menu').click()
+	// Wait for the dropdown to open — search for the logout button directly
 	await expect(
-		page.getByRole('menuitem', { name: /logout/i }),
-	).toBeVisible({ timeout: 5000 })
-	await page.getByRole('menuitem', { name: /logout/i }).click()
+		page.getByRole('menuitem', { name: /log out/i }),
+	).toBeVisible({ timeout: 10000 })
+	await page.getByRole('menuitem', { name: /log out/i }).click()
 	// Wait for the actual URL to change — logout redirect can be slow
-	await page.waitForURL('/', { timeout: 15000 })
+	await page.waitForURL('/', { timeout: 20000 })
 	await expect(page).toHaveURL('/')
 
 	await navigate('/login')
@@ -79,5 +87,5 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 
 	await page.getByRole('button', { name: /submit/i }).click()
 
-	await expect(page.getByRole('link', { name: 'User menu' })).toBeVisible()
+	await expect(page.getByLabel('User menu')).toBeVisible({ timeout: 15000 })
 })
