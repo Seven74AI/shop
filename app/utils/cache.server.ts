@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import {
@@ -20,7 +21,7 @@ import { z } from 'zod'
 import { getInstanceInfo, getInstanceInfoSync } from './litefs.server.ts'
 import { cachifiedTimingReporter, type Timings } from './timing.server.ts'
 
-const CACHE_DATABASE_PATH = process.env.CACHE_DATABASE_PATH || './other/cache.db'
+let CACHE_DATABASE_PATH = process.env.CACHE_DATABASE_PATH || './other/cache.db'
 
 const cacheDb = remember('cacheDb', createDatabase)
 
@@ -55,6 +56,13 @@ function createDatabase(tryAgain = true): DatabaseSync {
 				extra: { cachePath: CACHE_DATABASE_PATH },
 			})
 			return createDatabase(false)
+		}
+		// Fallback: try /tmp if primary path fails (CI disk I/O issues)
+		const fallbackPath = path.join(os.tmpdir(), 'shop-cache.db')
+		if (CACHE_DATABASE_PATH !== fallbackPath) {
+			console.warn(`Cache DB failed at ${CACHE_DATABASE_PATH}, falling back to ${fallbackPath}`)
+			CACHE_DATABASE_PATH = fallbackPath
+			return createDatabase(true)
 		}
 		throw error
 	}

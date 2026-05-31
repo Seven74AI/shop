@@ -3,6 +3,8 @@ import { execaCommand } from 'execa'
 import fsExtra from 'fs-extra'
 import 'dotenv/config'
 import '#app/utils/env.server.ts'
+// Set cache DB path for tests to avoid disk I/O issues on CI runners
+process.env.CACHE_DATABASE_PATH = path.join(process.cwd(), 'tests', 'cache.db')
 import '#app/utils/cache.server.ts'
 
 export const BASE_DATABASE_PATH = path.join(
