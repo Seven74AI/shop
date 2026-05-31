@@ -38,7 +38,7 @@ export async function generateOrderNumber(
 
 		const base = `ORD-${String(nextNumber).padStart(6, '0')}`
 		// In test mode, append a random suffix to prevent cross-worker collisions
-		return isTest ? `${base}-${randomBytes(2).toString('hex')}` : base
+		return isTest ? `${base}-${randomBytes(4).toString('hex')}` : base
 	}
 
 	// For SQLite, we use BEGIN IMMEDIATE to get an exclusive lock
@@ -65,7 +65,7 @@ export async function generateOrderNumber(
 			}
 
 			const base = `ORD-${String(nextNumber).padStart(6, '0')}`
-			return isTest ? `${base}-${randomBytes(2).toString('hex')}` : base
+			return isTest ? `${base}-${randomBytes(4).toString('hex')}` : base
 		},
 		{
 			// Use maxWait to prevent indefinite waits
