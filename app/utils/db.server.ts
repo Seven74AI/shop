@@ -9,6 +9,7 @@ export const prisma = remember('prisma', () => {
 
 	const adapter = new PrismaBetterSqlite3({
 		url: process.env.DATABASE_URL ?? 'file:./prisma/data.db',
+		timeout: 5000, // PRAGMA busy_timeout — handles parallel worker SQLite contention
 	})
 
 	const client = new PrismaClient({
