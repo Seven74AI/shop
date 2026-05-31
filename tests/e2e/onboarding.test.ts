@@ -94,7 +94,7 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 
 	await page.getByLabel(/^confirm password/i).fill(onboardingData.password)
 
-	await page.waitForLoadState('networkidle') // ensure js is fully loaded.
+	await page.waitForLoadState('domcontentloaded')
 
 	await page.getByLabel(/terms/i).check()
 
