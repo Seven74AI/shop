@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Form, useSearchParams, useSubmit } from 'react-router'
 import { useDebounce, useIsPending } from '#app/utils/misc.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { Icon } from './ui/icon.tsx'
 import { Input } from './ui/input.tsx'
 import { Label } from './ui/label.tsx'
@@ -15,6 +16,7 @@ export function SearchBar({
 	autoFocus?: boolean
 	autoSubmit?: boolean
 }) {
+	const { t } = useTranslation()
 	const id = useId()
 	const [searchParams] = useSearchParams()
 	const submit = useSubmit()
@@ -43,7 +45,7 @@ export function SearchBar({
 					name="search"
 					id={id}
 					defaultValue={searchParams.get('search') ?? ''}
-					placeholder="Search"
+					placeholder={t('search.placeholder')}
 					className="w-full"
 					autoFocus={autoFocus}
 				/>

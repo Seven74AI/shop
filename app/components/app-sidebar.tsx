@@ -186,7 +186,7 @@ export function AppSidebar() {
 								<Icon name="settings" className="size-4" aria-hidden="true" />
 							</div>
 							<div className="grid text-left text-sm leading-tight">
-								<span className="truncate font-semibold">Epic Shop</span>
+								<span className="truncate font-semibold">{t('sidebar.brand')}</span>
 								<span className="truncate text-xs text-sidebar-foreground/70">{t('admin.nav.enterprise')}</span>
 							</div>
 						</div>

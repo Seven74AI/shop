@@ -43,7 +43,7 @@ import {
 	getLocale,
 	getTranslations,
 } from './utils/i18n.server.ts'
-import { TranslationProvider, useTranslation } from './utils/i18n.tsx'
+import { TranslationProvider, useTranslation, createT } from './utils/i18n.tsx'
 import { combineHeaders, getDomainUrl, getImgSrc } from './utils/misc.tsx'
 import { useNonce } from './utils/nonce-provider.ts'
 import { type Theme, getTheme } from './utils/theme.server.ts'
@@ -72,9 +72,10 @@ export const links: Route.LinksFunction = () => {
 }
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const t = loaderData ? createT(loaderData.translations) : undefined
 	return [
 		{ title: loaderData ? 'Epic Shop' : 'Error | Epic Shop' },
-		{ name: 'description', content: "Your own captain's log" },
+		{ name: 'description', content: t ? t('site.description') : "Your own captain's log" },
 	]
 }
 
