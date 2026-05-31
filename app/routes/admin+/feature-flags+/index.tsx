@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link, useFetcher } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -50,7 +51,7 @@ export const meta: Route.MetaFunction = () => [
 	{ name: 'description', content: 'Manage feature flags for progressive rollout' },
 ]
 
-function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][number] }) {
+function FlagRow({ flag, t }: { flag: Route.ComponentProps['loaderData']['flags'][number]; t: ReturnType<typeof import('#app/utils/i18n.tsx').useTranslation>['t'] }) {
 	const toggleFetcher = useFetcher()
 
 	// Parse audience for display
@@ -86,17 +87,17 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 							<Link
 								to={`/admin/feature-flags/${flag.key}/edit`}
 								className="font-mono font-medium text-primary hover:underline transition-colors duration-200"
-								aria-label={`Edit ${flag.key}`}
+								aria-label={t('admin.flags.edit', { key: flag.key })}
 							>
 								{flag.key}
 							</Link>
 							{isEnabled ? (
 								<Badge variant="default" className="text-xs bg-green-600 hover:bg-green-600">
-									Enabled
+									{t('admin.flags.status.enabled')}
 								</Badge>
 							) : (
 								<Badge variant="secondary" className="text-xs">
-									Disabled
+									{t('admin.flags.status.disabled')}
 								</Badge>
 							)}
 						</div>
@@ -115,11 +116,11 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 					)}
 					{hasAudience && (
 						<Badge variant="outline" className="text-xs">
-							Audience
+							{t('admin.flags.audience')}
 						</Badge>
 					)}
 					{!hasRollout && !hasAudience && (
-						<span className="text-sm text-muted-foreground">Global</span>
+						<span className="text-sm text-muted-foreground">{t('admin.flags.global')}</span>
 					)}
 				</div>
 			</TableCell>
@@ -132,14 +133,14 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 							variant={isEnabled ? 'default' : 'secondary'}
 							size="sm"
 							className="transition-colors duration-200"
-							aria-label={`${isEnabled ? 'Disable' : 'Enable'} ${flag.key}`}
+							aria-label={isEnabled ? t('admin.flags.disable', { key: flag.key }) : t('admin.flags.enable', { key: flag.key })}
 							disabled={toggleFetcher.state !== 'idle'}
 						>
-							{isEnabled ? 'Enabled' : 'Disabled'}
+							{isEnabled ? t('admin.flags.status.enabled') : t('admin.flags.status.disabled')}
 						</Button>
 					</toggleFetcher.Form>
 					<Button asChild variant="ghost" size="sm" className="transition-colors duration-200">
-						<Link to={`/admin/feature-flags/${flag.key}/edit`} aria-label={`Edit ${flag.key}`}>
+						<Link to={`/admin/feature-flags/${flag.key}/edit`} aria-label={t('admin.flags.edit', { key: flag.key })}>
 							<Icon name="pencil-1" className="h-4 w-4" aria-hidden="true" />
 						</Link>
 					</Button>
@@ -149,21 +150,20 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 								variant="ghost"
 								size="sm"
 								className="text-destructive hover:text-destructive transition-colors duration-200"
-								aria-label={`Delete ${flag.key}`}
+								aria-label={t('admin.flags.delete', { key: flag.key })}
 							>
 								<Icon name="trash" className="h-4 w-4" aria-hidden="true" />
 							</Button>
 						</AlertDialogTrigger>
 						<AlertDialogContent>
 							<AlertDialogHeader>
-								<AlertDialogTitle>Delete Feature Flag</AlertDialogTitle>
+								<AlertDialogTitle>{t('admin.flags.deleteTitle')}</AlertDialogTitle>
 								<AlertDialogDescription>
-									Are you sure you want to delete the flag "{flag.key}"? This action cannot be
-									undone. Any routes gated behind this flag will immediately become accessible.
+									{t('admin.flags.deleteDescription', { key: flag.key })}
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogCancel>{t('admin.flags.cancel')}</AlertDialogCancel>
 								<toggleFetcher.Form
 									method="POST"
 									action={`/admin/feature-flags/${flag.key}/delete`}
@@ -173,7 +173,7 @@ function FlagRow({ flag }: { flag: Route.ComponentProps['loaderData']['flags'][n
 										disabled={toggleFetcher.state !== 'idle'}
 										className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
 									>
-										{toggleFetcher.state === 'idle' ? 'Delete Flag' : 'Deleting...'}
+										{toggleFetcher.state === 'idle' ? t('admin.flags.deleteAction') : t('admin.flags.deleting')}
 									</AlertDialogAction>
 								</toggleFetcher.Form>
 							</AlertDialogFooter>

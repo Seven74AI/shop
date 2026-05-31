@@ -2,6 +2,7 @@ import { useForm, getFormProps, getInputProps, getTextareaProps, FormProvider } 
 import { parseWithZod, getZodConstraint } from '@conform-to/zod/v4'
 import { parseFormData } from '@mjackson/form-data-parser'
 import { Form } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { ErrorList } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
@@ -72,7 +73,7 @@ export const meta: Route.MetaFunction = () => [
 	{ name: 'description', content: 'Create a new feature flag' },
 ]
 
-function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionData'] }) {
+function FlagForm({ actionData, t }: { actionData?: Route.ComponentProps['actionData']; t: ReturnType<typeof import('#app/utils/i18n.tsx').useTranslation>['t'] }) {
 	const isPending = useIsPending()
 
 	const [form, fields] = useForm({
@@ -97,12 +98,12 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 			<Form method="POST" className="space-y-8" {...getFormProps(form)}>
 				<Card className="rounded-[14px]">
 					<CardHeader>
-						<h2 className="text-base font-normal text-foreground">Flag Information</h2>
+						<h2 className="text-base font-normal text-foreground">{t('admin.flags.form.flagInfo')}</h2>
 					</CardHeader>
 					<CardContent className="space-y-6">
 						<div className="space-y-3">
 							<Label htmlFor={fields.key.id} className="text-sm font-medium">
-								Flag Key *
+								{t('admin.flags.form.flagKeyRequired')}
 							</Label>
 							<Input
 								{...getInputProps(fields.key, { type: 'text' })}
@@ -110,18 +111,18 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 								className="transition-all duration-200 focus:ring-2 focus:ring-primary/20 font-mono"
 							/>
 							<p className="text-xs text-muted-foreground">
-								Letters, numbers, underscores, and hyphens only. Used as the identifier in code.
+								{t('admin.flags.form.flagKeyHelp')}
 							</p>
 							<ErrorList errors={fields.key.errors} />
 						</div>
 
 						<div className="space-y-3">
 							<Label htmlFor={fields.description.id} className="text-sm font-medium">
-								Description
+								{t('admin.flags.form.description')}
 							</Label>
 							<Textarea
 								{...getTextareaProps(fields.description)}
-								placeholder="What does this flag control?"
+								placeholder={t('admin.flags.form.descriptionPlaceholder')}
 								rows={2}
 								className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
 							/>
@@ -131,7 +132,7 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 						<div className="grid gap-6 md:grid-cols-2">
 							<div className="space-y-3">
 								<Label htmlFor={fields.rolloutPercentage.id} className="text-sm font-medium">
-									Rollout Percentage
+									{t('admin.flags.form.rolloutPercentage')}
 								</Label>
 								<Input
 									{...getInputProps(fields.rolloutPercentage, { type: 'number' })}
@@ -139,14 +140,14 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 									className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
 								/>
 								<p className="text-xs text-muted-foreground">
-									0 = no rollout. 1–99 = hash-based percentage rollout. 100 = full rollout.
+									{t('admin.flags.form.rolloutHelp')}
 								</p>
 								<ErrorList errors={fields.rolloutPercentage.errors} />
 							</div>
 
 							<div className="space-y-3">
 								<Label htmlFor={fields.audience.id} className="text-sm font-medium">
-									Audience (JSON)
+									{t('admin.flags.form.audience')}
 								</Label>
 								<Input
 									{...getInputProps(fields.audience, { type: 'text' })}
@@ -154,7 +155,7 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 									className="transition-all duration-200 focus:ring-2 focus:ring-primary/20 font-mono text-sm"
 								/>
 								<p className="text-xs text-muted-foreground">
-									Optional. JSON with userIds, countries (ISO codes), and/or roles arrays.
+									{t('admin.flags.form.audienceHelp')}
 								</p>
 								<ErrorList errors={fields.audience.errors} />
 							</div>
@@ -166,7 +167,7 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 								className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary/20"
 							/>
 							<Label htmlFor={fields.enabled.id} className="text-sm font-medium cursor-pointer">
-								Enabled (flag is active immediately)
+								{t('admin.flags.form.enabledHelp')}
 							</Label>
 						</div>
 						<ErrorList errors={fields.enabled.errors} />
@@ -181,14 +182,14 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 						onClick={() => window.history.back()}
 						className="transition-all duration-200 hover:shadow-sm"
 					>
-						Cancel
+						{t('admin.flags.cancel')}
 					</Button>
 					<Button
 						type="submit"
 						disabled={isPending}
 						className="transition-all duration-200 hover:shadow-md"
 					>
-						{isPending ? 'Creating...' : 'Create Flag'}
+						{isPending ? t('admin.flags.form.creating') : t('admin.flags.form.createAction')}
 					</Button>
 				</div>
 			</Form>

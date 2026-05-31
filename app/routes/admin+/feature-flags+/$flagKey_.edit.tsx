@@ -3,6 +3,7 @@ import { parseWithZod, getZodConstraint } from '@conform-to/zod/v4'
 import { invariantResponse } from '@epic-web/invariant'
 import { parseFormData } from '@mjackson/form-data-parser'
 import { Form } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { ErrorList } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader } from '#app/components/ui/card.tsx'
@@ -71,9 +72,11 @@ export const meta: Route.MetaFunction = ({ data }) => [
 function EditFlagForm({
 	flag,
 	actionData,
+	t,
 }: {
 	flag: Route.ComponentProps['loaderData']['flag']
 	actionData?: Route.ComponentProps['actionData']
+	t: ReturnType<typeof import('#app/utils/i18n.tsx').useTranslation>['t']
 }) {
 	const isPending = useIsPending()
 
@@ -98,29 +101,29 @@ function EditFlagForm({
 			<Form method="POST" className="space-y-8" {...getFormProps(form)}>
 				<Card className="rounded-[14px]">
 					<CardHeader>
-						<h2 className="text-base font-normal text-foreground">Flag Information</h2>
+						<h2 className="text-base font-normal text-foreground">{t('admin.flags.form.flagInfo')}</h2>
 					</CardHeader>
 					<CardContent className="space-y-6">
 						{/* Key is read-only */}
 						<div className="space-y-3">
-							<Label className="text-sm font-medium">Flag Key</Label>
+							<Label className="text-sm font-medium">{t('admin.flags.form.flagKey')}</Label>
 							<Input
 								value={flag.key}
 								disabled
 								className="font-mono bg-muted"
 							/>
 							<p className="text-xs text-muted-foreground">
-								The key cannot be changed after creation.
+								{t('admin.flags.form.flagKeyImmutable')}
 							</p>
 						</div>
 
 						<div className="space-y-3">
 							<Label htmlFor={fields.description.id} className="text-sm font-medium">
-								Description
+								{t('admin.flags.form.description')}
 							</Label>
 							<Textarea
 								{...getTextareaProps(fields.description)}
-								placeholder="What does this flag control?"
+								placeholder={t('admin.flags.form.descriptionPlaceholder')}
 								rows={2}
 								className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
 							/>
@@ -130,7 +133,7 @@ function EditFlagForm({
 						<div className="grid gap-6 md:grid-cols-2">
 							<div className="space-y-3">
 								<Label htmlFor={fields.rolloutPercentage.id} className="text-sm font-medium">
-									Rollout Percentage
+									{t('admin.flags.form.rolloutPercentage')}
 								</Label>
 								<Input
 									{...getInputProps(fields.rolloutPercentage, { type: 'number' })}
@@ -138,14 +141,14 @@ function EditFlagForm({
 									className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
 								/>
 								<p className="text-xs text-muted-foreground">
-									0 = no rollout. 1–99 = hash-based percentage. 100 = full rollout.
+									{t('admin.flags.form.rolloutHelpEdit')}
 								</p>
 								<ErrorList errors={fields.rolloutPercentage.errors} />
 							</div>
 
 							<div className="space-y-3">
 								<Label htmlFor={fields.audience.id} className="text-sm font-medium">
-									Audience (JSON)
+									{t('admin.flags.form.audience')}
 								</Label>
 								<Input
 									{...getInputProps(fields.audience, { type: 'text' })}
@@ -153,7 +156,7 @@ function EditFlagForm({
 									className="transition-all duration-200 focus:ring-2 focus:ring-primary/20 font-mono text-sm"
 								/>
 								<p className="text-xs text-muted-foreground">
-									Optional. JSON with userIds, countries (ISO codes), and/or roles arrays.
+									{t('admin.flags.form.audienceHelp')}
 								</p>
 								<ErrorList errors={fields.audience.errors} />
 							</div>
@@ -165,7 +168,7 @@ function EditFlagForm({
 								className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary/20"
 							/>
 							<Label htmlFor={fields.enabled.id} className="text-sm font-medium cursor-pointer">
-								Enabled (flag is active)
+								{t('admin.flags.form.enabledHelpEdit')}
 							</Label>
 						</div>
 						<ErrorList errors={fields.enabled.errors} />
@@ -180,14 +183,14 @@ function EditFlagForm({
 						onClick={() => window.history.back()}
 						className="transition-all duration-200 hover:shadow-sm"
 					>
-						Cancel
+						{t('admin.flags.cancel')}
 					</Button>
 					<Button
 						type="submit"
 						disabled={isPending}
 						className="transition-all duration-200 hover:shadow-md"
 					>
-						{isPending ? 'Saving...' : 'Save Changes'}
+						{isPending ? t('admin.flags.form.saving') : t('admin.flags.form.saveAction')}
 					</Button>
 				</div>
 			</Form>
