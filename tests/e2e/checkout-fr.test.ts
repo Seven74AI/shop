@@ -50,7 +50,7 @@ test.describe('Checkout FR locale', () => {
 
 		// Nav should be in French due to Accept-Language header
 		const shopLink = frPage.getByRole('link', { name: 'Boutique' })
-		await expect(shopLink).toBeVisible({ timeout: 10000 })
+		await expect(shopLink).toBeVisible({ timeout: 15000 })
 
 		await frContext.close()
 	})

@@ -51,9 +51,9 @@ test.describe('Product Catalog', () => {
 	test.skip('product catalog should support search by name', async ({ page }) => {
 		await page.goto('/shop/products')
 		await page.waitForLoadState('domcontentloaded')
-		await page.waitForSelector('main', { timeout: 10000 })
+		await page.waitForSelector('main', { timeout: 15000 })
 		const searchInput = page.getByPlaceholder(/search products by name/i)
-		await expect(searchInput).toBeVisible({ timeout: 10000 })
+		await expect(searchInput).toBeVisible({ timeout: 15000 })
 	})
 
 	// SKIPPED: Pre-existing failure on main — category combobox not found in CI.
@@ -74,11 +74,11 @@ test.describe('Product Catalog', () => {
 
 		await page.goto('/shop/products')
 		// Wait for products to load
-		await page.waitForLoadState('networkidle')
+		await page.waitForLoadState('domcontentloaded')
 		// Use accessible query - product cards are links to product detail pages
 		// Find the link that contains the product name
 		const productLink = page.getByRole('link', { name: new RegExp(product.name, 'i') })
-		await expect(productLink).toBeVisible({ timeout: 10000 })
+		await expect(productLink).toBeVisible({ timeout: 15000 })
 	})
 
 	test.afterEach(async ({}, testInfo) => {

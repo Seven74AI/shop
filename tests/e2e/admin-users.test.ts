@@ -121,7 +121,7 @@ test.describe('Admin User Management', () => {
 
 		await navigate('/admin/users')
 		// Wait for the table to be visible
-		await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('table')).toBeVisible({ timeout: 15000 })
 
 		// Check that users are displayed by searching for each one
 		const searchInput = page.getByPlaceholder(/search users/i)
@@ -130,13 +130,13 @@ test.describe('Admin User Management', () => {
 		await searchInput.blur()
 		await expect(
 			page.getByText(new RegExp(`^${testUser1.email}$`, 'i')),
-		).toBeVisible({ timeout: 10000 })
+		).toBeVisible({ timeout: 15000 })
 
 		await searchInput.fill(testUser2.email)
 		await searchInput.blur()
 		await expect(
 			page.getByText(new RegExp(`^${testUser2.email}$`, 'i')),
-		).toBeVisible({ timeout: 10000 })
+		).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should display user email and username', async ({ page, navigate, login }) => {
@@ -186,11 +186,11 @@ test.describe('Admin User Management', () => {
 		await navigate('/admin/users')
 
 		// Wait for users list to load
-		await expect(page.getByRole('heading', { name: /users/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /users/i })).toBeVisible({ timeout: 15000 })
 
 		// Verify both users are visible initially - wait for state, not time
-		await expect(page.getByText(aliceName, { exact: false })).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(bobName, { exact: false })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(aliceName, { exact: false })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(bobName, { exact: false })).toBeVisible({ timeout: 15000 })
 
 		// Search for Alice by her unique suffix — ensures filter is truly applied
 		const searchInput = page.getByPlaceholder(/search users/i)
@@ -198,7 +198,7 @@ test.describe('Admin User Management', () => {
 		await searchInput.press('Enter') // Trigger form submission / state update
 
 		// Wait for Bob to disappear — this is the real confirmation filter was applied
-		await expect(page.getByText(bobName, { exact: false })).not.toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(bobName, { exact: false })).not.toBeVisible({ timeout: 15000 })
 
 		// Alice should still be visible
 		await expect(page.getByText(aliceName, { exact: false })).toBeVisible()
@@ -232,18 +232,18 @@ test.describe('Admin User Management', () => {
 		await navigate(('/admin/users/' + testUser.id) as any)
 
 		// Wait for page to load and heading to appear
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Check that user details are displayed - use accessible queries
 		// The user details are in a card with "Profile Details" heading
-		await expect(page.getByRole('heading', { name: /profile details/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /profile details/i })).toBeVisible({ timeout: 15000 })
 		
 		// Email appears in both header and profile details - use first() to handle multiple matches
-		await expect(page.getByText(testUser.email).first()).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(testUser.username).first()).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(testUser.email).first()).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(testUser.username).first()).toBeVisible({ timeout: 15000 })
 		// Name is optional, so only check if it exists
 		if (testUser.name) {
-			await expect(page.getByText(testUser.name).first()).toBeVisible({ timeout: 10000 })
+			await expect(page.getByText(testUser.name).first()).toBeVisible({ timeout: 15000 })
 		}
 	})
 
@@ -255,12 +255,12 @@ test.describe('Admin User Management', () => {
 		await navigate(('/admin/users/' + testUser.id) as any)
 
 		// Wait for page to load and heading to appear
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Check that statistics section is displayed using role-based locators
-		await expect(page.getByText(/total orders/i).first()).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(/active sessions/i).first()).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(/total sessions/i).first()).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(/total orders/i).first()).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(/active sessions/i).first()).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(/total sessions/i).first()).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should display user orders in detail page', async ({ page, navigate, login }) => {
@@ -321,7 +321,7 @@ test.describe('Admin User Management', () => {
 		await navigate(('/admin/users/' + testUser.id) as any)
 
 		// Check that order is displayed - explicit wait for async load
-		await expect(page.getByText(order.orderNumber)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(order.orderNumber)).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should return 404 for non-existent user', async ({ page, navigate, login }) => {
@@ -392,7 +392,7 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 
 		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/edit`))
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for form fields to be visible instead of checking for form role
 		// This is more reliable when tests run in parallel
@@ -400,8 +400,8 @@ test.describe('Admin User Edit', () => {
 		const emailInput = page.getByLabel(/^email/i)
 		const usernameInput = page.getByLabel(/^username/i)
 		
-		await expect(emailInput).toBeVisible({ timeout: 10000 })
-		await expect(usernameInput).toBeVisible({ timeout: 10000 })
+		await expect(emailInput).toBeVisible({ timeout: 15000 })
+		await expect(usernameInput).toBeVisible({ timeout: 15000 })
 
 		if (testUser.name) {
 			await expect(nameInput).toHaveValue(testUser.name)
@@ -419,11 +419,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// Verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 
 		// Wait for form fields to be visible
 		const nameInput = page.getByLabel(/^name$/i)
-		await expect(nameInput).toBeVisible({ timeout: 10000 })
+		await expect(nameInput).toBeVisible({ timeout: 15000 })
 
 		// Update name - ensure it's at least 3 characters (validation requirement)
 		const updatedName = faker.person.fullName()
@@ -442,13 +442,13 @@ test.describe('Admin User Edit', () => {
 		// Wait for page to fully load
 		
 		// Verify we're on the user detail page - check URL first
-		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 10000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 15000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Verify the updated name appears on the page - test from user's perspective
 		// The heading shows name || username, so if name was set, it should appear in heading
 		const heading = page.getByRole('heading', { level: 1 })
-		await expect(heading).toContainText(validName, { timeout: 10000 })
+		await expect(heading).toContainText(validName, { timeout: 15000 })
 	})
 
 	test('should update user email', async ({ page, navigate: _navigate, login }) => {
@@ -459,11 +459,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for email field to be visible
 		const emailInput = page.getByLabel(/^email/i)
-		await expect(emailInput).toBeVisible({ timeout: 10000 })
+		await expect(emailInput).toBeVisible({ timeout: 15000 })
 
 		// Generate a new unique email
 		const newEmail = faker.internet.email({ provider: 'example.com' })
@@ -479,10 +479,10 @@ test.describe('Admin User Edit', () => {
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Verify email appears on the page - use first() to handle multiple matches (header + detail)
-		await expect(page.getByText(newEmail, { exact: false }).first()).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(newEmail, { exact: false }).first()).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should update user username', async ({ page, navigate: _navigate, login }) => {
@@ -493,11 +493,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for username field to be visible
 		const usernameInput = page.getByLabel(/^username/i)
-		await expect(usernameInput).toBeVisible({ timeout: 10000 })
+		await expect(usernameInput).toBeVisible({ timeout: 15000 })
 
 		// Update username - createTestUser ensures it's within 20 char limit
 		const { username: newUsername } = await createUser()
@@ -513,10 +513,10 @@ test.describe('Admin User Edit', () => {
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Verify username appears on the page - check heading or detail section
-		await expect(page.getByText(newUsername, { exact: false }).first()).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(newUsername, { exact: false }).first()).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should add role to user', async ({ page, navigate: _navigate, login }) => {
@@ -531,7 +531,7 @@ test.describe('Admin User Edit', () => {
 
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		// Wait for form to be ready - check for a form field or button
-		await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible({ timeout: 15000 })
 
 		// Check the role checkbox
 		await page.getByLabel(testRole.name).check()
@@ -555,10 +555,10 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for role checkbox to be visible
-		await expect(page.getByLabel(testRole.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByLabel(testRole.name)).toBeVisible({ timeout: 15000 })
 
 		// Uncheck the role checkbox
 		await page.getByLabel(testRole.name).uncheck()
@@ -566,7 +566,7 @@ test.describe('Admin User Edit', () => {
 
 		// Should redirect to user detail page
 		await page.waitForURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 20000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		// Role should not be visible - wait for it to disappear
 		await expect(page.getByText(testRole.name)).not.toBeVisible({ timeout: 5000 })
 	})
@@ -587,13 +587,13 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for role checkboxes to be visible - use getByRole for checkbox with name from label
 		const role1Checkbox = page.getByRole('checkbox', { name: role1.name })
 		const role2Checkbox = page.getByRole('checkbox', { name: role2.name })
-		await expect(role1Checkbox).toBeVisible({ timeout: 10000 })
-		await expect(role2Checkbox).toBeVisible({ timeout: 10000 })
+		await expect(role1Checkbox).toBeVisible({ timeout: 15000 })
+		await expect(role2Checkbox).toBeVisible({ timeout: 15000 })
 
 		// Check role2 and keep role1 checked
 		await role2Checkbox.check()
@@ -601,9 +601,9 @@ test.describe('Admin User Edit', () => {
 
 		// Should redirect to user detail page
 		await page.waitForURL(new RegExp(`/admin/users/${testUser.id}/?$`), { timeout: 20000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(role1.name)).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText(role2.name)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(role1.name)).toBeVisible({ timeout: 15000 })
+		await expect(page.getByText(role2.name)).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should show validation error for duplicate email', async ({ page, navigate: _navigate, login }) => {
@@ -615,11 +615,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for email field to be visible
 		const emailInput = page.getByLabel(/^email/i)
-		await expect(emailInput).toBeVisible({ timeout: 10000 })
+		await expect(emailInput).toBeVisible({ timeout: 15000 })
 
 		// Try to use existing user's email
 		await emailInput.fill(existingUser.email)
@@ -631,8 +631,8 @@ test.describe('Admin User Edit', () => {
 		
 		// Should stay on edit page and show validation error (no redirect)
 		// Verify we're still on edit page (not redirected)
-		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/edit`), { timeout: 10000 })
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/edit`), { timeout: 15000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Check for validation error - errors appear near the input field or in ErrorList
 		// The error message is "A user already exists with this email"
@@ -640,7 +640,7 @@ test.describe('Admin User Edit', () => {
 			.or(page.getByText(/email.*already exists/i))
 			.or(page.getByRole('alert'))
 		
-		await expect(errorText.first()).toBeVisible({ timeout: 10000 })
+		await expect(errorText.first()).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should show validation error for duplicate username', async ({ page, navigate: _navigate, login }) => {
@@ -652,11 +652,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// First verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for username field to be visible
 		const usernameInput = page.getByLabel(/^username/i)
-		await expect(usernameInput).toBeVisible({ timeout: 10000 })
+		await expect(usernameInput).toBeVisible({ timeout: 15000 })
 
 		// Try to use existing user's username
 		await usernameInput.fill(existingUser.username)
@@ -668,8 +668,8 @@ test.describe('Admin User Edit', () => {
 
 		// Should stay on edit page and show validation error (no redirect)
 		// Verify we're still on edit page (not redirected)
-		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/edit`), { timeout: 10000 })
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page).toHaveURL(new RegExp(`/admin/users/${testUser.id}/edit`), { timeout: 15000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Check for validation error - errors appear near the input field or in ErrorList
 		// The error message is "A user already exists with this username"
@@ -677,7 +677,7 @@ test.describe('Admin User Edit', () => {
 			.or(page.getByText(/username.*already exists/i))
 			.or(page.getByRole('alert'))
 		
-		await expect(errorText.first()).toBeVisible({ timeout: 10000 })
+		await expect(errorText.first()).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should show validation error for invalid email format', async ({ page, navigate: _navigate, login }) => {
@@ -687,14 +687,14 @@ test.describe('Admin User Edit', () => {
 
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		// Wait for form fields to be visible - more reliable than checking form role
-		await expect(page.getByLabel(/^email/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByLabel(/^email/i)).toBeVisible({ timeout: 15000 })
 
 		// Enter invalid email
 		await page.getByLabel(/^email/i).fill('invalid-email')
 		await page.getByRole('button', { name: /save changes/i }).click()
 
 		// Should stay on edit page and show validation error (no redirect)
-		await expect(page.getByText(/email.*invalid|invalid.*email/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(/email.*invalid|invalid.*email/i)).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should show validation error for invalid username format', async ({ page, navigate: _navigate, login }) => {
@@ -704,14 +704,14 @@ test.describe('Admin User Edit', () => {
 
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		// Wait for form to be ready - check for username field
-		await expect(page.getByLabel(/^username/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByLabel(/^username/i)).toBeVisible({ timeout: 15000 })
 
 		// Enter invalid username (with special characters)
 		await page.getByLabel(/^username/i).fill('invalid@username')
 		await page.getByRole('button', { name: /save changes/i }).click()
 
 		// Should stay on edit page and show validation error (no redirect)
-		await expect(page.getByText(/username.*can only include|invalid.*username/i)).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText(/username.*can only include|invalid.*username/i)).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should redirect to user detail page after successful update', async ({ page, navigate: _navigate, login }) => {
@@ -722,11 +722,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// Verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for name field to be visible
 		const nameInput = page.getByLabel(/^name$/i)
-		await expect(nameInput).toBeVisible({ timeout: 10000 })
+		await expect(nameInput).toBeVisible({ timeout: 15000 })
 
 		// Update name - ensure it meets validation (3-40 characters)
 		const updatedName = faker.person.fullName()
@@ -745,12 +745,12 @@ test.describe('Admin User Edit', () => {
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Verify the name appears on the page - test from user's perspective
 		// The heading shows name || username, so check if name appears
 		const heading = page.getByRole('heading', { level: 1 })
-		await expect(heading).toContainText(validName, { timeout: 10000 })
+		await expect(heading).toContainText(validName, { timeout: 15000 })
 	})
 
 	test('should show toast notification on success', async ({ page, navigate: _navigate, login }) => {
@@ -761,11 +761,11 @@ test.describe('Admin User Edit', () => {
 		await page.goto(`/admin/users/${testUser.id}/edit`)
 		
 		// Verify we're on the edit page
-		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { name: /edit user/i })).toBeVisible({ timeout: 15000 })
 		
 		// Wait for name field to be visible
 		const nameInput = page.getByLabel(/^name$/i)
-		await expect(nameInput).toBeVisible({ timeout: 10000 })
+		await expect(nameInput).toBeVisible({ timeout: 15000 })
 
 		// Update name - ensure it meets validation (3-40 characters)
 		const updatedName = faker.person.fullName()
@@ -784,17 +784,17 @@ test.describe('Admin User Edit', () => {
 		
 		// Verify we're on the user detail page (not edit page)
 		await expect(page.getByRole('heading', { name: /edit user/i })).not.toBeVisible({ timeout: 5000 })
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 })
 		
 		// Verify the data was actually updated - test from user's perspective
 		const heading = page.getByRole('heading', { level: 1 })
-		await expect(heading).toContainText(validName, { timeout: 10000 })
+		await expect(heading).toContainText(validName, { timeout: 15000 })
 		
 		// Check for toast notification - wait for state, not time
 		// Toast might appear as alert role or text
 		const toast = page.getByText(/updated successfully|user updated/i)
 			.or(page.getByRole('alert'))
-		await expect(toast.first()).toBeVisible({ timeout: 10000 })
+		await expect(toast.first()).toBeVisible({ timeout: 15000 })
 	})
 
 	test('should return 404 for non-existent user', async ({ page, navigate, login }) => {

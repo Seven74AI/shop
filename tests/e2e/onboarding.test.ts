@@ -94,7 +94,7 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 
 	await page.getByLabel(/^confirm password/i).fill(onboardingData.password)
 
-	await page.waitForLoadState('networkidle') // ensure js is fully loaded.
+	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
 
 	await page.getByLabel(/terms/i).check()
 
@@ -179,7 +179,7 @@ test.skip('completes onboarding after GitHub OAuth given valid user details', as
 		name: /create an account/i,
 	})
 
-	await page.waitForLoadState('networkidle') // ensure js is fully loaded.
+	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
 	await page
 		.getByLabel(/do you agree to our terms of service and privacy policy/i)
 		.check()
@@ -323,7 +323,7 @@ test.skip('shows help texts on entering invalid details on onboarding page after
 
 	// we are all set up and ...
 
-	await page.waitForLoadState('networkidle') // ensure js is fully loaded.
+	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
 	await page
 		.getByLabel(/do you agree to our terms of service and privacy policy/i)
 		.check()

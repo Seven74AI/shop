@@ -34,13 +34,23 @@ async function loginAndNavigateToAdminPage(
 ) {
 	await login({ asAdmin: true })
 	await page.goto(path)
+	// Wait for DOM to be ready. Skip networkidle — in dev mode, HMR WebSocket
+	// keeps a persistent connection so networkidle never fires, burning the
+	// test timeout budget (20s total) before lazy chunks can load.
 	await page.waitForLoadState('domcontentloaded')
-	await page.waitForSelector('main', { timeout: 15000 })
-	await page.waitForSelector('h1', { timeout: 15000 })
+	// Give lazy chunks time to start loading and rendering. The admin layout
+	// is itself lazy-loaded (_layout.lazy) and each page component is lazy.
+	// In CI, chunk download + React render takes 1-5 seconds per chunk.
+	await page.waitForTimeout(3000)
+	// Then wait for the lazy layout to render <main> and the lazy page
+	// component to render the first heading.
+	await expect(page.locator('main')).toBeVisible({ timeout: 30000 })
+	await expect(page.locator('h1')).toBeVisible({ timeout: 30000 })
 }
 
 test.describe('Accessibility', () => {
 	test.describe('Admin Pages', () => {
+		test.slow() // Triple timeout to 60s for lazy-loaded admin components
 		// Setup test data for detail/edit pages
 		let testCategory: Awaited<ReturnType<typeof prisma.category.create>>
 		let testProduct: Awaited<ReturnType<typeof prisma.product.create>>
@@ -99,7 +109,8 @@ test.describe('Accessibility', () => {
 				},
 			})
 
-			testOrder = await prisma.order.create({
+			testOrder = await retryGenerateOrder(async () => {
+			return await prisma.order.create({
 				data: {
 					orderNumber: await generateOrderNumber(),
 					userId: testUser.id,
@@ -123,6 +134,7 @@ test.describe('Accessibility', () => {
 					},
 				},
 			})
+		})
 		})
 
 		test.afterAll(async () => {
@@ -328,6 +340,7 @@ test.describe('Accessibility', () => {
 	})
 
 		test.describe('Shop Pages', () => {
+		test.slow() // Triple timeout to 60s for lazy-loaded checkout components
 		let shopTestCategory: Awaited<ReturnType<typeof prisma.category.create>>
 		let shopTestProduct: Awaited<ReturnType<typeof prisma.product.create>>
 		let shopTestOrder: Awaited<ReturnType<typeof prisma.order.create>>
@@ -374,30 +387,32 @@ test.describe('Accessibility', () => {
 				},
 			})
 
-			// Create test order for shop pages
-			shopTestOrder = await prisma.order.create({
-				data: {
-					orderNumber: await generateOrderNumber(),
-					userId: shopTestUser.id,
-					email: shopTestUser.email,
-					subtotal: 10000, // in cents
-					total: 10000, // in cents
-					shippingName: 'Shop Test User',
-					shippingStreet: '123 Test St',
-					shippingCity: 'Test City',
-					shippingState: 'TS',
-					shippingPostal: '12345',
-					shippingCountry: 'US',
-					stripeCheckoutSessionId: `cs_test_shop_${Date.now()}`,
-					status: 'CONFIRMED',
-					items: {
-						create: {
-							productId: shopTestProduct.id,
-							quantity: 1,
-							price: 10000, // in cents
+			// Create test order for shop pages (with retry for orderNumber collisions)
+			shopTestOrder = await retryGenerateOrder(async () => {
+				return await prisma.order.create({
+					data: {
+						orderNumber: await generateOrderNumber(),
+						userId: shopTestUser.id,
+						email: shopTestUser.email,
+						subtotal: 10000, // in cents
+						total: 10000, // in cents
+						shippingName: 'Shop Test User',
+						shippingStreet: '123 Test St',
+						shippingCity: 'Test City',
+						shippingState: 'TS',
+						shippingPostal: '12345',
+						shippingCountry: 'US',
+						stripeCheckoutSessionId: `cs_test_shop_${Date.now()}`,
+						status: 'CONFIRMED',
+						items: {
+							create: {
+								productId: shopTestProduct.id,
+								quantity: 1,
+								price: 10000, // in cents
+							},
 						},
 					},
-				},
+				})
 			})
 		})
 
@@ -423,37 +438,37 @@ test.describe('Accessibility', () => {
 	test('shop homepage should be accessible', async ({ page }) => {
 		await page.goto('/shop')
 		await page.waitForLoadState('domcontentloaded')
-		await page.waitForSelector('main', { timeout: 10000 })
+		await page.waitForSelector('main', { timeout: 15000 })
 		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 	})
 
 		test('product catalog should be accessible', async ({ page }) => {
 			await page.goto('/shop/products')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 		})
 
 	test('product detail page should be accessible', async ({ page }) => {
 		await page.goto(`/shop/products/${shopTestProduct.slug}`)
 		await page.waitForLoadState('domcontentloaded')
-		await page.waitForSelector('main', { timeout: 10000 })
-		await page.waitForSelector('h1', { timeout: 10000 })
+		await page.waitForSelector('main', { timeout: 15000 })
+		await page.waitForSelector('h1', { timeout: 15000 })
 		await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 	})
 
 		test('category page should be accessible', async ({ page }) => {
 			await page.goto(`/shop/categories/${shopTestCategory.slug}`)
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
-			await page.waitForSelector('h1', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
+			await page.waitForSelector('h1', { timeout: 15000 })
 			await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 		})
 
 		test('cart page should be accessible', async ({ page }) => {
 			await page.goto('/shop/cart')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -466,7 +481,7 @@ test.describe('Accessibility', () => {
 			// Navigate to checkout
 			await page.goto('/shop/checkout')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
@@ -532,7 +547,7 @@ test.describe('Accessibility', () => {
 				await page.getByRole('button', { name: /log in/i }).click()
 				await page.waitForLoadState('domcontentloaded')
 				// Wait for redirect after login to ensure session is established
-				await page.waitForURL(/\/admin|\/shop|\//, { timeout: 10000 }).catch(() => {})
+				await page.waitForURL(/\/admin|\/shop|\//, { timeout: 15000 }).catch(() => {})
 				// Wait a bit more to ensure session cookie is set
 				await page.waitForTimeout(500)
 				
@@ -544,10 +559,10 @@ test.describe('Accessibility', () => {
 					return
 				}
 				await page.waitForLoadState('domcontentloaded')
-				await page.waitForSelector('main', { timeout: 10000 })
-				await page.waitForSelector('h1', { timeout: 10000 })
+				await page.waitForSelector('main', { timeout: 15000 })
+				await page.waitForSelector('h1', { timeout: 15000 })
 				// Wait for order content to render before a11y check
-				await expect(page.getByText(order.orderNumber).first()).toBeVisible({ timeout: 10000 })
+				await expect(page.getByText(order.orderNumber).first()).toBeVisible({ timeout: 15000 })
 				await expectPageToBeAccessible(page, { disableRules: ['color-contrast'] })
 			} finally {
 				// Cleanup: delete order first, then user
@@ -568,7 +583,7 @@ test.describe('Accessibility', () => {
 			// Check if we're still on the success page or redirected
 			const currentUrl = page.url()
 			if (currentUrl.includes('/shop/checkout/success')) {
-				await page.waitForSelector('main', { timeout: 10000 })
+				await page.waitForSelector('main', { timeout: 15000 })
 				await expectPageToBeAccessible(page)
 			}
 			// If redirected, that's also fine - the redirect happens server-side
@@ -579,14 +594,14 @@ test.describe('Accessibility', () => {
 		test('login page should be accessible', async ({ page }) => {
 			await page.goto('/login')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 
 		test('signup page should be accessible', async ({ page }) => {
 			await page.goto('/signup')
 			await page.waitForLoadState('domcontentloaded')
-			await page.waitForSelector('main', { timeout: 10000 })
+			await page.waitForSelector('main', { timeout: 15000 })
 			await expectPageToBeAccessible(page)
 		})
 	})
