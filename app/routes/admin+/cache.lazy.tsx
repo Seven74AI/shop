@@ -132,7 +132,7 @@ function CacheKeyRow({
 	instance?: string
 	type: 'sqlite' | 'lru'
 }) {
-	const fetcher = useFetcher<typeof action>()
+	const fetcher = useFetcher<Route.ActionData>()
 	const dc = useDoubleCheck()
 	const encodedKey = encodeURIComponent(cacheKey)
 	const valuePage = `/admin/cache/${type}/${encodedKey}?instance=${instance}`

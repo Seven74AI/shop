@@ -1,10 +1,11 @@
-import { Link, type LoaderFunctionArgs, type MetaFunction } from 'react-router'
+import { Link } from 'react-router'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
+import { type Route } from './+types/$auditLogId.ts'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent, CardHeader, CardTitle } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 
-export default function AuditDetail({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) {
+export default function AuditDetail({ loaderData }: { loaderData: Route.LoaderData }) {
 	const { entry } = loaderData
 
 	const changes = entry.changes as Record<string, { before: unknown; after: unknown }> | null

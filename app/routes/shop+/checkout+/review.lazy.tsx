@@ -14,8 +14,8 @@ import { type Route } from './+types/review.ts'
 
 
 export default function CheckoutReview() {
-	const loaderData = useLoaderData<typeof loader>()
-	const actionData = useActionData<typeof action>()
+	const loaderData = useLoaderData<Route.LoaderData>()
+	const actionData = useActionData<Route.ActionData>()
 	const { t, locale } = useTranslation()
 	const isPending = useIsPending()
 
@@ -43,7 +43,7 @@ export default function CheckoutReview() {
 				<h2 className="mb-4 text-xl font-semibold">{t('shop.checkout.review.title')}</h2>
 
 				<div className="space-y-4">
-					{cart.items.map((item) => {
+					{cart.items.map((item: { variant?: { price: number }; product: { price: number } }) => {
 						const price = item.variant?.price ?? item.product.price
 						const image = item.product.images[0]
 
@@ -84,7 +84,7 @@ export default function CheckoutReview() {
 					</div>
 					{vatEstimate && vatEstimate.totalVatCents > 0 && (
 						<>
-							{vatEstimate.breakdown.map((line) => (
+							{vatEstimate.breakdown.map((line: { kind: string; rate: number }) => (
 								<div key={`${line.kind}-${line.rate}`} className="flex justify-between text-sm text-muted-foreground">
 									<span>{t('shop.checkout.review.vatKind', { kind: line.kind, rate: (line.rate / 100).toFixed(1) })}</span>
 									<span>{formatPrice(line.vatCents, currency, locale)}</span>

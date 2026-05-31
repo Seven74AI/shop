@@ -18,7 +18,7 @@ export default function CheckoutSuccess({ loaderData }: Route.ComponentProps) {
 	const message = loaderData?.message ?? 'Your order is being processed. Please wait a moment.'
 
 	const revalidator = useRevalidator()
-	const syncFetcher = useFetcher<typeof action>()
+	const syncFetcher = useFetcher<Route.ActionData>()
 	const [showSyncButton, setShowSyncButton] = useState(false)
 	const [hasTriggeredFallback, setHasTriggeredFallback] = useState(false)
 	const [pageLoadTime] = useState(() => Date.now())
