@@ -8,6 +8,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { ReviewSubmissionSchema } from '#app/schemas/review.ts'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { submitReview } from '#app/utils/review.server.ts'
 
@@ -92,6 +93,7 @@ export default function ProductReviews({
 	actionData,
 }: Route.ComponentProps) {
 	const isPending = useIsPending()
+	const { t } = useTranslation()
 	const { product } = loaderData
 
 	const [form, fields] = useForm({
@@ -109,13 +111,13 @@ export default function ProductReviews({
 		return (
 			<main className="container mx-auto px-4 py-8 max-w-lg">
 				<div className="rounded-lg border bg-card p-6 text-center">
-					<h1 className="text-2xl font-bold mb-4">Review Submitted!</h1>
+					<h1 className="text-2xl font-bold mb-4">{t('reviews.submitted')}</h1>
 					<p className="text-muted-foreground mb-2">
-						Thank you for your review of{' '}
+						{t('reviews.thankYou')}{' '}
 						<span className="font-semibold">{product.name}</span>.
 					</p>
 					<p className="text-sm text-muted-foreground">
-						Your review will appear after admin approval.
+						{t('reviews.pendingApproval')}
 					</p>
 				</div>
 			</main>
@@ -124,9 +126,9 @@ export default function ProductReviews({
 
 	return (
 		<main className="container mx-auto px-4 py-8 max-w-lg">
-			<h1 className="text-3xl font-bold mb-2">Write a Review</h1>
+			<h1 className="text-3xl font-bold mb-2">{t('reviews.title')}</h1>
 			<p className="text-muted-foreground mb-8">
-				Share your experience with{' '}
+				{t('reviews.shareExperience')}{' '}
 				<span className="font-semibold">{product.name}</span>.
 			</p>
 
@@ -134,32 +136,31 @@ export default function ProductReviews({
 				<input type="hidden" name="intent" value="submit-review" />
 
 				<Field
-					labelProps={{ children: 'Rating' }}
+					labelProps={{ children: t('reviews.rating') }}
 					inputProps={{
 						...getInputProps(fields.rating, { type: 'number' }),
 						min: 1,
 						max: 5,
 						step: 1,
-						placeholder: '1-5 stars',
+						placeholder: t('reviews.ratingPlaceholder'),
 					}}
 					errors={fields.rating.errors}
 				/>
 
 				<Field
-					labelProps={{ children: 'Title' }}
+					labelProps={{ children: t('reviews.titleLabel') }}
 					inputProps={{
 						...getInputProps(fields.title, { type: 'text' }),
-						placeholder: 'Summarize your experience',
+						placeholder: t('reviews.titlePlaceholder'),
 					}}
 					errors={fields.title.errors}
 				/>
 
 				<TextareaField
-					labelProps={{ children: 'Review' }}
+					labelProps={{ children: t('reviews.reviewLabel') }}
 					textareaProps={{
 						...getInputProps(fields.body, { type: 'text' }),
-						placeholder:
-							'Tell others about your experience with this product...',
+						placeholder: t('reviews.reviewPlaceholder'),
 						rows: 6,
 					}}
 					errors={fields.body.errors}
@@ -176,7 +177,7 @@ export default function ProductReviews({
 						type="submit"
 						disabled={isPending}
 					>
-						Submit Review
+						{t('reviews.submit')}
 					</StatusButton>
 				</div>
 			</Form>
