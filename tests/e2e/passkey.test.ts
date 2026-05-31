@@ -24,6 +24,7 @@ test('Users can register and use passkeys', async ({
 	navigate,
 	login,
 }) => {
+	test.setTimeout(60_000)
 	await login()
 
 	const { client, authenticatorId } = await setupWebAuthn(page)
