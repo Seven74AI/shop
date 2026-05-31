@@ -36,9 +36,9 @@ describe('StarRating', () => {
 		// Should show the review count
 		expect(screen.getByText('(16 reviews)')).toBeDefined()
 
-		// Should have a distribution chart with aria-label
+		// Should have a distribution chart with aria-label (i18n key falls back to raw key when no TranslationProvider)
 		expect(
-			screen.getByLabelText('Rating distribution'),
+			screen.getByLabelText('reviews.ratingDistribution'),
 		).toBeDefined()
 	})
 
@@ -56,7 +56,7 @@ describe('StarRating', () => {
 
 		// Should NOT have distribution chart
 		expect(
-			screen.queryByLabelText('Rating distribution'),
+			screen.queryByLabelText('reviews.ratingDistribution'),
 		).toBeNull()
 	})
 
@@ -121,7 +121,8 @@ describe('StarRatingCompact', () => {
 			/>,
 		)
 
-		expect(screen.getByText('No reviews')).toBeDefined()
+		// i18n key falls back to raw key when no TranslationProvider
+		expect(screen.getByText('reviews.noReviews')).toBeDefined()
 	})
 
 	it('renders "No reviews" when totalCount is 0', () => {
@@ -132,6 +133,6 @@ describe('StarRatingCompact', () => {
 			/>,
 		)
 
-		expect(screen.getByText('No reviews')).toBeDefined()
+		expect(screen.getByText('reviews.noReviews')).toBeDefined()
 	})
 })
