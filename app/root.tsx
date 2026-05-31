@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react-router'
 import { OpenImgContextProvider } from 'openimg/react'
 import {
 	data,
@@ -37,6 +36,7 @@ import { getOrCreateCartFromRequest } from './utils/cart.server.ts'
 import { ClientHintCheck, getHints } from './utils/client-hints.tsx'
 import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
+import { captureRootError, captureRootMessage } from './utils/sentry-root.server.ts'
 import { pipeHeaders } from './utils/headers.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
 import {
@@ -111,11 +111,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		: null
 	if (userId && !user) {
 		// User is authenticated but not found in database - log and logout
-		Sentry.captureMessage('Authenticated user not found in database', {
-			level: 'warning',
-			tags: { context: 'root-loader' },
-			extra: { userId },
-		})
+		captureRootMessage('Authenticated user not found in database', 'root-loader', { userId })
 		await logout({ request, redirectTo: '/' })
 	}
 
@@ -126,9 +122,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0
 	} catch (error) {
 		// If cart creation fails, just default to 0
-		Sentry.captureException(error, {
-			tags: { context: 'root-cart-count' },
-		})
+		captureRootError(userId ?? 'guest', error, 'root-cart-count')
 	}
 
 	const { toast, headers: toastHeaders } = await getToast(request)

@@ -20,7 +20,15 @@ import { z } from 'zod'
 import { getInstanceInfo, getInstanceInfoSync } from './litefs.server.ts'
 import { cachifiedTimingReporter, type Timings } from './timing.server.ts'
 
-const CACHE_DATABASE_PATH = process.env.CACHE_DATABASE_PATH || './other/cache.db'
+const _rawCachePath = process.env.CACHE_DATABASE_PATH || './other/cache.db'
+
+// In test mode, multiple vitest workers share the same filesystem.
+// Appending the process PID to the database path prevents SQLITE_IOERR
+// (disk I/O error) from concurrent access to the same file.
+const CACHE_DATABASE_PATH =
+	process.env.NODE_ENV === 'test' && _rawCachePath.startsWith('/tmp')
+		? _rawCachePath.replace(/\.db$/, `-pid${process.pid}.db`)
+		: _rawCachePath
 
 const cacheDb = remember('cacheDb', createDatabase)
 

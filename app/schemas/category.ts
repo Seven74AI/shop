@@ -1,4 +1,4 @@
-import z from "zod"
+import { z } from 'zod'
 
 /**
  * ID for the uncategorized category
