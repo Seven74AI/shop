@@ -280,7 +280,7 @@ export default function FeatureFlagsList({ loaderData }: Route.ComponentProps) {
 					</TableHeader>
 					<TableBody>
 						{filteredFlags.map((flag) => (
-							<FlagRow key={flag.key} flag={flag} />
+							<FlagRow key={flag.key} flag={flag} t={t} />
 						))}
 					</TableBody>
 				</Table>

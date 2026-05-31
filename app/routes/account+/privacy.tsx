@@ -86,6 +86,7 @@ function SettingItem({
 }
 
 function DeleteData() {
+	const { t } = useTranslation()
 	const dc = useDoubleCheck()
 	const fetcher = useFetcher<typeof deleteDataAction>()
 
