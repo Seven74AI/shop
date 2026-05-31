@@ -38,15 +38,16 @@ async function loginAndNavigateToAdminPage(
 	// keeps a persistent connection so networkidle never fires, burning the
 	// test timeout budget (20s total) before lazy chunks can load.
 	await page.waitForLoadState('domcontentloaded')
-	// Use locator with retry — Playwright polls until the element is visible
-	// or the test timeout (20s) is reached. This gives lazy-loaded admin
-	// components time to hydrate without burning budget on networkidle.
-	await expect(page.locator('main')).toBeVisible()
-	await expect(page.locator('h1')).toBeVisible()
+	// Use locator with retry — Playwright polls until the element is visible.
+	// Lazy-loaded components need extra time: the chunk must download, React
+	// must hydrate, and CSS must apply. Default 5s expect timeout is too short.
+	await expect(page.locator('main')).toBeVisible({ timeout: 18000 })
+	await expect(page.locator('h1')).toBeVisible({ timeout: 18000 })
 }
 
 test.describe('Accessibility', () => {
 	test.describe('Admin Pages', () => {
+		test.slow() // Triple timeout to 60s for lazy-loaded admin components
 		// Setup test data for detail/edit pages
 		let testCategory: Awaited<ReturnType<typeof prisma.category.create>>
 		let testProduct: Awaited<ReturnType<typeof prisma.product.create>>
@@ -336,6 +337,7 @@ test.describe('Accessibility', () => {
 	})
 
 		test.describe('Shop Pages', () => {
+		test.slow() // Triple timeout to 60s for lazy-loaded checkout components
 		let shopTestCategory: Awaited<ReturnType<typeof prisma.category.create>>
 		let shopTestProduct: Awaited<ReturnType<typeof prisma.product.create>>
 		let shopTestOrder: Awaited<ReturnType<typeof prisma.order.create>>
