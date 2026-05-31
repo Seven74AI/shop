@@ -77,8 +77,48 @@ app.use(compression())
 app.disable('x-powered-by')
 
 app.use((_, res, next) => {
-	// The referrerPolicy breaks our redirectTo logic
-	helmet(res, { general: { referrerPolicy: false } })
+	helmet(res, {
+		general: {
+			referrerPolicy: 'strict-origin-when-cross-origin',
+		},
+		content: {
+			contentSecurityPolicy: {
+				useDefaults: true,
+				directives: {
+					fetch: {
+						'connect-src': [
+							"'self'",
+							'https://api.stripe.com',
+							process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
+						],
+						'frame-src': [
+							"'self'",
+							'https://*.stripe.com',
+						],
+						'img-src': [
+							"'self'",
+							'data:',
+							'https://*.stripe.com',
+						],
+						'style-src': [
+							"'self'",
+							"'unsafe-inline'",
+						],
+					},
+					deprecated: {
+						'report-uri': '/resources/csp-report',
+					},
+					other: {
+						'upgrade-insecure-requests': false,
+					},
+				},
+			},
+		xFrameOptions: 'DENY',
+		crossOriginOpenerPolicy: true,
+		originAgentCluster: true,
+		xXssProtection: true,
+		},
+	})
 	next()
 })
 
