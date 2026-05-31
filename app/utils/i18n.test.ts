@@ -283,7 +283,7 @@ describe('TranslationProvider', () => {
 		)
 
 		expect(screen.getByTestId('interpolated').textContent).toBe(
-			'© 2026 Epic Notes. All rights reserved.',
+			'© 2026 Epic Shop. All rights reserved.',
 		)
 	})
 
@@ -311,7 +311,7 @@ describe('TranslationProvider', () => {
 		)
 
 		expect(screen.getByTestId('interpolated').textContent).toBe(
-			'© 2026 Epic Notes. Tous droits réservés.',
+			'© 2026 Epic Shop. Tous droits réservés.',
 		)
 	})
 })

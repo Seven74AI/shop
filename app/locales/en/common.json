@@ -1,5 +1,6 @@
 {
-	"site.title": "Epic Notes",
+	"site.title": "Epic Shop",
+	"site.name": "Epic Shop",
 	"site.description": "Your own captain's log",
 	"nav.home": "Home",
 	"nav.shop": "Shop",
@@ -8,7 +9,7 @@
 	"nav.account": "Account",
 	"nav.admin": "Admin",
 	"nav.cart": "Cart",
-	"footer.copyright": "© {year} Epic Notes. All rights reserved.",
+	"footer.copyright": "© {year} Epic Shop. All rights reserved.",
 	"footer.locale.label": "Language",
 	"footer.locale.en": "English",
 	"footer.locale.fr": "Français",

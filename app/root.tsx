@@ -73,7 +73,7 @@ export const links: Route.LinksFunction = () => {
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
 	return [
-		{ title: loaderData ? 'Epic Notes' : 'Error | Epic Notes' },
+		{ title: loaderData ? 'Epic Shop' : 'Error | Epic Shop' },
 		{ name: 'description', content: "Your own captain's log" },
 	]
 }
@@ -345,7 +345,7 @@ function Logo() {
 				epic
 			</span>
 			<span className="font-bold transition group-hover:translate-x-1">
-				notes
+				shop
 			</span>
 		</Link>
 	)
