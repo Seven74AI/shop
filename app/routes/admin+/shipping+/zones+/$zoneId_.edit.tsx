@@ -242,22 +242,5 @@ function ZoneForm({
 	)
 }
 
-export default function EditShippingZone({ loaderData, actionData }: Route.ComponentProps) {
-	const { zone } = loaderData
-
-	return (
-		<div className="space-y-8 animate-slide-top">
-			<div>
-				<h1 className="text-2xl font-normal tracking-tight text-foreground">
-					Edit Shipping Zone
-				</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Update zone information and configuration
-				</p>
-			</div>
-
-			<ZoneForm zone={zone} actionData={actionData} />
-		</div>
-	)
-}
-
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./$zoneId_.edit.lazy')

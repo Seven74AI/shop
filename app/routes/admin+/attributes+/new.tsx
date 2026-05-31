@@ -177,26 +177,5 @@ function AttributeForm({ actionData }: { actionData?: Route.ComponentProps['acti
 	)
 }
 
-export default function NewVariantAttribute({ actionData }: Route.ComponentProps) {
-	return (
-		<div className="space-y-8 animate-slide-top">
-			{/* Header */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-normal tracking-tight text-foreground">Create New Attribute</h1>
-					<p className="text-sm text-muted-foreground mt-1">
-						Add a new attribute for product variants (e.g., Size, Color, Material)
-					</p>
-				</div>
-				<Button variant="outline" asChild>
-					<Link to="/admin/attributes">
-						<Icon name="arrow-left" className="h-4 w-4 mr-2" />
-						Back to Attributes
-					</Link>
-				</Button>
-			</div>
-
-			<AttributeForm actionData={actionData} />
-		</div>
-	)
-}
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./new.lazy')
