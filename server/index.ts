@@ -79,7 +79,7 @@ app.disable('x-powered-by')
 app.use((_, res, next) => {
 	helmet(res, {
 		general: {
-			referrerPolicy: 'strict-origin-when-cross-origin',
+			referrerPolicy: ['strict-origin-when-cross-origin'],
 		},
 		content: {
 			contentSecurityPolicy: {
