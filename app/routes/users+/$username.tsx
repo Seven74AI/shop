@@ -109,10 +109,10 @@ export default function ProfileRoute() {
 export const meta: Route.MetaFunction = ({ loaderData, params }) => {
 	const displayName = loaderData?.user.name ?? params.username
 	return [
-		{ title: `${displayName} | Epic Notes` },
+		{ title: `${displayName} | Epic Shop` },
 		{
 			name: 'description',
-			content: `Profile of ${displayName} on Epic Notes`,
+			content: `Profile of ${displayName} on Epic Shop`,
 		},
 	]
 }

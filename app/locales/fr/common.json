@@ -1,5 +1,5 @@
 {
-	"site.title": "Epic Notes",
+	"site.title": "Epic Shop",
 	"site.description": "Votre journal de bord",
 	"nav.home": "Accueil",
 	"nav.shop": "Boutique",
@@ -8,7 +8,7 @@
 	"nav.account": "Mon compte",
 	"nav.admin": "Admin",
 	"nav.cart": "Panier",
-	"footer.copyright": "© {year} Epic Notes. Tous droits réservés.",
+	"footer.copyright": "© {year} Epic Shop. Tous droits réservés.",
 	"footer.locale.label": "Langue",
 	"footer.locale.en": "English",
 	"footer.locale.fr": "Français",
