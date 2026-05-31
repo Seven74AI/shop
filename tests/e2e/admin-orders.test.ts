@@ -60,8 +60,8 @@ test.describe('Admin Order Management', () => {
 		
 		// The error response data contains { error: 'Unauthorized', requiredRole: 'admin', message: ... }
 		// Check for error content that indicates unauthorized access
-		// The ErrorBoundary shows "Unauthorized" as a heading
-		await expect(page.getByRole('heading', { name: /unauthorized/i })).toBeVisible({ timeout: 5000 })
+		// The ErrorBoundary shows the translated unauthorized message as a heading
+		await expect(page.getByRole('heading', { name: /you must be logged in to access this page/i })).toBeVisible({ timeout: 5000 })
 	})
 
 	test('should display admin order list page', async ({ page, navigate: _navigate, login }) => {
