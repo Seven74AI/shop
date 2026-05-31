@@ -8,6 +8,7 @@ import { prisma } from '#app/utils/db.server.ts'
 import { generateTOTP } from '#app/utils/totp.server.ts'
 import { type Route } from './+types/two-factor.index.ts'
 import { twoFAVerificationType } from './two-factor.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { twoFAVerifyVerificationType } from './two-factor.verify.tsx'
 
 
@@ -39,21 +40,22 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function TwoFactorRoute({ loaderData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	const enable2FAFetcher = useFetcher<typeof action>()
 
 	return (
 		<div className="space-y-8">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Two-Factor Authentication</h1>
+					<h1 className="text-3xl font-bold tracking-tight">{t('account.security.2fa.title')}</h1>
 					<p className="text-gray-600">
-						Add an extra layer of security to your account
+						{t('account.security.2faDescription')}
 					</p>
 				</div>
 				<Button variant="outline" asChild>
 					<Link to="/account">
 						<Icon name="arrow-left" className="h-4 w-4 mr-2" />
-						Back to Settings
+						{t('account.security.2fa.backToSettings')}
 					</Link>
 				</Button>
 			</div>
@@ -64,7 +66,7 @@ export default function TwoFactorRoute({ loaderData }: Route.ComponentProps) {
 						<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
 							<Icon name="shield" className="w-5 h-5 text-red-700" />
 						</div>
-						<CardTitle className="text-lg">2FA Status</CardTitle>
+						<CardTitle className="text-lg">{t('account.security.2fa.status')}</CardTitle>
 					</div>
 				</CardHeader>
 				<CardContent className="p-0 space-y-6">
@@ -73,14 +75,14 @@ export default function TwoFactorRoute({ loaderData }: Route.ComponentProps) {
 							<div className="flex items-center gap-2 text-gray-900">
 								<Icon name="check" className="text-green-600" />
 								<p className="text-lg">
-									You have enabled two-factor authentication.
+									{t('account.security.2fa.enabledMessage')}
 								</p>
 							</div>
 							<div className="flex justify-end pt-6 border-t">
 								<Button variant="destructive" asChild>
 									<Link to="disable">
 										<Icon name="lock-open-1" className="h-4 w-4 mr-2" />
-										Disable 2FA
+										{t('account.security.2fa.disable')}
 									</Link>
 								</Button>
 							</div>
@@ -90,17 +92,11 @@ export default function TwoFactorRoute({ loaderData }: Route.ComponentProps) {
 							<div className="flex items-center gap-2 text-gray-900">
 								<Icon name="lock-open-1" className="text-gray-600" />
 								<p>
-									You have not enabled two-factor authentication yet.
+									{t('account.security.2fa.disabledMessage')}
 								</p>
 							</div>
 							<p className="text-sm text-gray-600">
-								Two factor authentication adds an extra layer of security to your
-								account. You will need to enter a code from an authenticator app
-								like{' '}
-								<a className="underline text-gray-900" href="https://1password.com/">
-									1Password
-								</a>{' '}
-								to log in.
+								{t('account.security.2fa.explanation')}
 							</p>
 							<div className="flex justify-end pt-6 border-t">
 								<enable2FAFetcher.Form method="POST">
@@ -110,7 +106,7 @@ export default function TwoFactorRoute({ loaderData }: Route.ComponentProps) {
 										value="enable"
 										status={enable2FAFetcher.state === 'loading' ? 'pending' : 'idle'}
 									>
-										Enable 2FA
+										{t('account.security.2fa.enable')}
 									</StatusButton>
 								</enable2FAFetcher.Form>
 							</div>

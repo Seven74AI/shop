@@ -9,6 +9,7 @@ export const prisma = remember('prisma', () => {
 
 	const adapter = new PrismaBetterSqlite3({
 		url: process.env.DATABASE_URL ?? 'file:./prisma/data.db',
+		timeout: 5000, // PRAGMA busy_timeout — handles parallel worker SQLite contention
 	})
 
 	const client = new PrismaClient({
@@ -35,5 +36,7 @@ export const prisma = remember('prisma', () => {
 		log.info({ duration: e.duration, query: e.query }, `prisma:query - ${dur} - ${e.query}`)
 	})
 	void client.$connect()
+	// Set busy timeout to 5s to handle parallel worker SQLite contention
+	void client.$executeRaw`PRAGMA busy_timeout = 5000`
 	return client
 })

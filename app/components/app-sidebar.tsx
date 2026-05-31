@@ -4,117 +4,120 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#app/components/ui/collapsible.tsx'
 import { Icon, type IconName } from '#app/components/ui/icon.tsx'
 import { cn } from '#app/utils/misc.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { useOptionalUser } from '#app/utils/user.ts'
 
-// Navigation data structure
-const navData = {
-	navMain: [
-		{
-			title: 'Platform',
-			items: [
-				{
-					title: 'Dashboard',
-					url: '/admin',
-					icon: 'layout-dashboard' as IconName,
-					isActive: true,
-				},
-				{
-					title: 'Users',
-					url: '/admin/users',
-					icon: 'user' as IconName,
-				},
-				{
-					title: 'Orders',
-					url: '/admin/orders',
-					icon: 'file-text' as IconName,
-				},
-				{
-					title: 'Shipping',
-					url: '/admin/shipping/zones',
-					icon: 'shopping-cart' as IconName,
-					hasSubmenu: true,
-					items: [
-						{ title: 'Shipping Zones', url: '/admin/shipping/zones' },
-						{ title: 'Shipping Methods', url: '/admin/shipping/methods' },
-					],
-				},
-				{
-					title: 'Products',
-					url: '/admin/products',
-					icon: 'package' as IconName,
-					hasSubmenu: true,
-					items: [
-						{ title: 'All Products', url: '/admin/products' },
-						{ title: 'Add Product', url: '/admin/products/new' },
-					],
-				},
-				{
-					title: 'Categories',
-					url: '/admin/categories',
-					icon: 'folder' as IconName,
-					hasSubmenu: true,
-					items: [
-						{ title: 'All Categories', url: '/admin/categories' },
-						{ title: 'Add Category', url: '/admin/categories/new' },
-					],
-				},
-		{
-			title: 'Attributes',
-			url: '/admin/attributes',
-			icon: 'sliders' as IconName,
-			hasSubmenu: true,
-			items: [
-				{ title: 'All Attributes', url: '/admin/attributes' },
-				{ title: 'Add Attribute', url: '/admin/attributes/new' },
-			],
-		},
-		{
-			title: 'Metrics',
-			url: '/admin/metrics',
-			icon: 'chart' as IconName,
-		},
-		{
-			title: 'Reviews',
-			url: '/admin/reviews',
-			icon: 'star' as IconName,
-		},
-		{
-			title: 'Returns',
-			url: '/admin/returns',
-			icon: 'arrow-left' as IconName,
-		},
-		{
-			title: 'Feature Flags',
-			url: '/admin/feature-flags',
-			icon: 'settings' as IconName,
-			hasSubmenu: true,
-			items: [
-				{ title: 'All Flags', url: '/admin/feature-flags' },
-				{ title: 'Add Flag', url: '/admin/feature-flags/new' },
-			],
-		},
-	],
-		},
-		{
-			title: 'System',
-			items: [
-		{
-			title: 'Audit Log',
-			url: '/admin/audit',
-			icon: 'book-open' as IconName,
-		},
-		{
-			title: 'View Store',
-			url: '/',
-			icon: 'store' as IconName,
-		},
-			],
-		},
-	],
+// Navigation data structure — uses t() for i18n
+function getNavData(t: ReturnType<typeof useTranslation>['t']) {
+	return {
+		navMain: [
+			{
+				title: t('admin.nav.platform'),
+				items: [
+					{
+						title: t('admin.nav.dashboard'),
+						url: '/admin',
+						icon: 'layout-dashboard' as IconName,
+						isActive: true,
+					},
+					{
+						title: t('admin.nav.users'),
+						url: '/admin/users',
+						icon: 'user' as IconName,
+					},
+					{
+						title: t('admin.nav.orders'),
+						url: '/admin/orders',
+						icon: 'file-text' as IconName,
+					},
+					{
+						title: t('admin.nav.shipping'),
+						url: '/admin/shipping/zones',
+						icon: 'shopping-cart' as IconName,
+						hasSubmenu: true,
+						items: [
+							{ title: t('admin.nav.shippingZones'), url: '/admin/shipping/zones' },
+							{ title: t('admin.nav.shippingMethods'), url: '/admin/shipping/methods' },
+						],
+					},
+					{
+						title: t('admin.nav.products'),
+						url: '/admin/products',
+						icon: 'package' as IconName,
+						hasSubmenu: true,
+						items: [
+							{ title: t('admin.nav.allProducts'), url: '/admin/products' },
+							{ title: t('admin.nav.addProduct'), url: '/admin/products/new' },
+						],
+					},
+					{
+						title: t('admin.nav.categories'),
+						url: '/admin/categories',
+						icon: 'folder' as IconName,
+						hasSubmenu: true,
+						items: [
+							{ title: t('admin.nav.allCategories'), url: '/admin/categories' },
+							{ title: t('admin.nav.addCategory'), url: '/admin/categories/new' },
+						],
+					},
+					{
+						title: t('admin.nav.attributes'),
+						url: '/admin/attributes',
+						icon: 'sliders' as IconName,
+						hasSubmenu: true,
+						items: [
+							{ title: t('admin.nav.allAttributes'), url: '/admin/attributes' },
+							{ title: t('admin.nav.addAttribute'), url: '/admin/attributes/new' },
+						],
+					},
+					{
+						title: t('admin.nav.metrics'),
+						url: '/admin/metrics',
+						icon: 'chart' as IconName,
+					},
+					{
+						title: t('admin.nav.reviews'),
+						url: '/admin/reviews',
+						icon: 'star' as IconName,
+					},
+					{
+						title: t('admin.nav.returns'),
+						url: '/admin/returns',
+						icon: 'arrow-left' as IconName,
+					},
+					{
+						title: t('admin.nav.featureFlags'),
+						url: '/admin/feature-flags',
+						icon: 'settings' as IconName,
+						hasSubmenu: true,
+						items: [
+							{ title: t('admin.nav.allFlags'), url: '/admin/feature-flags' },
+							{ title: t('admin.nav.addFlag'), url: '/admin/feature-flags/new' },
+						],
+					},
+				],
+			},
+			{
+				title: t('admin.nav.system'),
+				items: [
+					{
+						title: t('admin.nav.auditLog'),
+						url: '/admin/audit',
+						icon: 'book-open' as IconName,
+					},
+					{
+						title: t('admin.nav.viewStore'),
+						url: '/',
+						icon: 'store' as IconName,
+					},
+				],
+			},
+		],
+	}
 }
 
 // Custom SidebarRail component that works with our toggle system
-function CustomSidebarRail({ isCollapsed }: { isCollapsed: boolean }) {
+function CustomSidebarRail({ isCollapsed, t }: { isCollapsed: boolean; t: ReturnType<typeof useTranslation>['t'] }) {
 	const handleToggle = () => {
 		const event = new CustomEvent('toggle-sidebar')
 		window.dispatchEvent(event)
@@ -123,32 +126,33 @@ function CustomSidebarRail({ isCollapsed }: { isCollapsed: boolean }) {
 	return (
 		<button
 			onClick={handleToggle}
-			aria-label="Toggle Sidebar"
-			title="Toggle Sidebar"
+			aria-label={t('admin.nav.toggleSidebar')}
+			title={t('admin.nav.toggleSidebar')}
 			className={cn(
 				"absolute inset-y-0 z-20 w-8 -right-4 transition-all ease-linear",
 				"after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] after:-translate-x-1/2 after:bg-sidebar-border after:transition-all after:duration-200",
 				"hover:after:bg-sidebar-accent-foreground/20",
 				"cursor-w-resize",
 				isCollapsed && "cursor-e-resize",
-				"block", // Always show the rail
-				"bg-transparent hover:bg-sidebar-accent/10" // Add subtle background on hover
+				"block",
+				"bg-transparent hover:bg-sidebar-accent/10"
 			)}
 		/>
 	)
 }
 
 export function AppSidebar() {
+	const { t } = useTranslation()
 	const location = useLocation()
 	const user = useOptionalUser()
 	const [isCollapsed, setIsCollapsed] = useState(false)
 
-	// Listen for toggle events from the header
+	const navData = getNavData(t)
+
 	useEffect(() => {
 		const handleToggle = () => {
 			const newState = !isCollapsed
 			setIsCollapsed(newState)
-			// Dispatch state change event to update header icon
 			const event = new CustomEvent('sidebar-state-change', {
 				detail: { isCollapsed: newState }
 			})
@@ -159,7 +163,6 @@ export function AppSidebar() {
 		return () => window.removeEventListener('toggle-sidebar', handleToggle)
 	}, [isCollapsed])
 
-	// Dispatch initial state
 	useEffect(() => {
 		const event = new CustomEvent('sidebar-state-change', {
 			detail: { isCollapsed }
@@ -184,7 +187,7 @@ export function AppSidebar() {
 							</div>
 							<div className="grid text-left text-sm leading-tight">
 								<span className="truncate font-semibold">Epic Shop</span>
-								<span className="truncate text-xs text-sidebar-foreground/70">Enterprise</span>
+								<span className="truncate text-xs text-sidebar-foreground/70">{t('admin.nav.enterprise')}</span>
 							</div>
 						</div>
 						<div className="flex items-center gap-2">
@@ -231,7 +234,7 @@ export function AppSidebar() {
 																variant="ghost"
 																size="sm"
 																className="h-10 w-8 p-0 flex-shrink-0 transition-colors hover:!bg-muted rounded-md"
-																aria-label="Toggle submenu"
+																aria-label={t('admin.nav.toggleSubmenu')}
 																onClick={(e) => {
 																	e.stopPropagation()
 																}}
@@ -287,8 +290,7 @@ export function AppSidebar() {
 				))}
 			</div>
 			
-			{/* Custom SidebarRail for clickable border area */}
-			<CustomSidebarRail isCollapsed={isCollapsed} />
+			<CustomSidebarRail isCollapsed={isCollapsed} t={t} />
 		</nav>
 	)
 }

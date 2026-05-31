@@ -17,6 +17,7 @@ import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/addresses.index.ts'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -169,14 +170,15 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 		}
 	}
 
+	const { t: _t } = useTranslation()
 	const getTypeLabel = (type: string) => {
 		switch (type) {
 			case 'SHIPPING':
-				return 'Shipping'
+				return _t('account.addresses.type.shipping')
 			case 'BILLING':
-				return 'Billing'
+				return _t('account.addresses.type.billing')
 			case 'BOTH':
-				return 'Both'
+				return _t('account.addresses.type.both')
 			default:
 				return type
 		}
@@ -195,10 +197,10 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 								{getTypeLabel(address.type)}
 							</Badge>
 							{address.isDefaultShipping && (
-								<Badge variant="success">Default Shipping</Badge>
+								<Badge variant="success">{_t('account.addresses.defaultShipping')}</Badge>
 							)}
 							{address.isDefaultBilling && (
-								<Badge variant="success">Default Billing</Badge>
+								<Badge variant="success">{_t('account.addresses.defaultBilling')}</Badge>
 							)}
 						</div>
 						<div className="text-sm text-gray-500 space-y-1">
@@ -218,7 +220,7 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 					<Button variant="outline" size="sm" asChild>
 						<Link to={`${address.id}/edit`}>
 							<Icon name="pencil-1" className="h-4 w-4 mr-2" />
-							Edit
+							{_t('account.addresses.edit')}
 						</Link>
 					</Button>
 					{!address.isDefaultShipping && (
@@ -232,7 +234,7 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 								disabled={fetcher.state !== 'idle'}
 							>
 								<Icon name="check" className="h-4 w-4 mr-2" />
-								Set Default Shipping
+								{_t('account.addresses.setDefaultShipping')}
 							</Button>
 						</fetcher.Form>
 					)}
@@ -247,7 +249,7 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 								disabled={fetcher.state !== 'idle'}
 							>
 								<Icon name="check" className="h-4 w-4 mr-2" />
-								Set Default Billing
+								{_t('account.addresses.setDefaultBilling')}
 							</Button>
 						</fetcher.Form>
 					)}
@@ -259,19 +261,18 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 								className="text-destructive hover:text-destructive"
 							>
 								<Icon name="trash" className="h-4 w-4 mr-2" />
-								Delete
+								{_t('account.addresses.delete')}
 							</Button>
 						</AlertDialogTrigger>
 						<AlertDialogContent>
 							<AlertDialogHeader>
-								<AlertDialogTitle>Delete Address</AlertDialogTitle>
+								<AlertDialogTitle>{_t('account.addresses.deleteTitle')}</AlertDialogTitle>
 								<AlertDialogDescription>
-									Are you sure you want to delete this address? This action
-									cannot be undone.
+									{_t('account.addresses.deleteDescription')}
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogCancel>{_t('admin.flags.cancel')}</AlertDialogCancel>
 								<fetcher.Form method="POST">
 									<input type="hidden" name="intent" value="delete" />
 									<input type="hidden" name="addressId" value={address.id} />
@@ -280,7 +281,7 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 										disabled={fetcher.state !== 'idle'}
 										className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
 									>
-										{fetcher.state !== 'idle' ? 'Deleting...' : 'Delete'}
+										{fetcher.state !== 'idle' ? _t('account.addresses.deleting') : _t('account.addresses.delete')}
 									</AlertDialogAction>
 								</fetcher.Form>
 							</AlertDialogFooter>
@@ -293,21 +294,22 @@ function AddressCard({ address }: { address: Route.ComponentProps['loaderData'][
 }
 
 export default function Addresses({ loaderData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	const { addresses } = loaderData
 
 	return (
 		<div className="space-y-8">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Saved Addresses</h1>
+					<h1 className="text-3xl font-bold tracking-tight">{t('account.addresses.title')}</h1>
 					<p className="text-gray-600">
-						Manage your shipping and billing addresses
+						{t('account.addresses.description')}
 					</p>
 				</div>
 				<Button asChild>
 					<Link to="new">
 						<Icon name="plus" className="h-4 w-4 mr-2" />
-						Add New Address
+						{t('account.addresses.addNew')}
 					</Link>
 				</Button>
 			</div>
@@ -316,14 +318,14 @@ export default function Addresses({ loaderData }: Route.ComponentProps) {
 				<Card className="p-6 hover:shadow-lg transition-shadow border-blue-100 bg-white/80 backdrop-blur-sm">
 					<CardContent className="py-12 text-center">
 						<Icon name="map-pin" className="h-12 w-12 mx-auto mb-4 text-gray-500" />
-						<p className="text-lg text-gray-900 mb-2">No saved addresses</p>
+						<p className="text-lg text-gray-900 mb-2">{t('account.addresses.empty')}</p>
 						<p className="text-sm text-gray-500 mb-4">
-							Add an address to speed up checkout
+							{t('account.addresses.emptyDescription')}
 						</p>
 						<Button asChild>
 							<Link to="new">
 								<Icon name="plus" className="h-4 w-4 mr-2" />
-								Add Your First Address
+								{t('account.addresses.addFirst')}
 							</Link>
 						</Button>
 					</CardContent>

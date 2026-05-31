@@ -116,6 +116,7 @@ test('Users can change their email address', async ({
 	invariant(code, 'Onboarding code not found')
 	await page.getByRole('textbox', { name: /code/i }).fill(code)
 	await page.getByRole('button', { name: /submit/i }).click()
+	await page.waitForURL('/account/**', { timeout: 15000 })
 	await expect(page.getByText(/email changed/i)).toBeVisible()
 
 	const updatedUser = await prisma.user.findUnique({
