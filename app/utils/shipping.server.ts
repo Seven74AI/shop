@@ -11,7 +11,7 @@ export async function getShippingZonesForCountry(country: string) {
 	})
 
 	// countries is a JSON column of ISO country codes — filter in code since SQLite has no array ops.
-	return zones.filter((zone) => {
+	return zones.filter((zone: { countries: unknown; id: string }) => {
 		const countries = zone.countries as string[]
 		return Array.isArray(countries) && countries.includes(country.toUpperCase())
 	})
