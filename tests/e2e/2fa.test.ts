@@ -19,6 +19,7 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	await navigate('/account/security/two-factor')
 
 	// Wait for the page to fully load before interacting
+	await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
 	await expect(page.getByRole('heading', { name: /two-factor/i })).toBeVisible({ timeout: 30000 })
 	await page.getByRole('button', { name: /enable 2fa/i }).click()
 

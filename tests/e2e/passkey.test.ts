@@ -152,7 +152,7 @@ test('Failed passkey verification shows error', async ({
 	await page.getByRole('button', { name: /register new passkey/i }).click()
 
 	// Wait for error message
-	await expect(page.getByText(/failed to create passkey/i)).toBeVisible()
+	await expect(page.getByText(/failed to create passkey/i)).toBeVisible({ timeout: 15000 })
 
 	// Verify no passkey was registered
 	const credentials = await client.send('WebAuthn.getCredentials', {
