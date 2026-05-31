@@ -99,7 +99,8 @@ test.describe('Accessibility', () => {
 				},
 			})
 
-			testOrder = await prisma.order.create({
+			testOrder = await retryGenerateOrder(async () => {
+			return await prisma.order.create({
 				data: {
 					orderNumber: await generateOrderNumber(),
 					userId: testUser.id,
@@ -123,6 +124,7 @@ test.describe('Accessibility', () => {
 					},
 				},
 			})
+		})
 		})
 
 		test.afterAll(async () => {
