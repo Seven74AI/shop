@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { useFetcher } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { ErrorList } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Card, CardContent } from '#app/components/ui/card.tsx'
@@ -31,6 +32,7 @@ export function MondialRelayPickupSelector({
 	onPickupPointSelect,
 	errors,
 }: MondialRelayPickupSelectorProps) {
+	const { t } = useTranslation()
 	const [searchPostalCode, setSearchPostalCode] = useState(postalCode)
 	const [searchCity, setSearchCity] = useState(city || '')
 	const [selectedPoint, setSelectedPoint] = useState<PickupPoint | null>(null)
@@ -77,13 +79,13 @@ export function MondialRelayPickupSelector({
 	return (
 		<div className="space-y-4">
 			<div className="space-y-2">
-				<Label htmlFor="pickup-search-postal">Search Pickup Points</Label>
+				<Label htmlFor="pickup-search-postal">{t('mondialRelay.searchLabel')}</Label>
 				<div className="flex gap-2">
 					<div className="flex-1">
 						<Input
 							id="pickup-search-postal"
 							type="text"
-							placeholder="Postal code (e.g., 75001)"
+							placeholder={t('mondialRelay.postalPlaceholder')}
 							value={searchPostalCode}
 							onChange={(e) => setSearchPostalCode(e.target.value)}
 							className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
@@ -93,7 +95,7 @@ export function MondialRelayPickupSelector({
 						<div className="flex-1">
 							<Input
 								type="text"
-								placeholder="City (optional)"
+								placeholder={t('mondialRelay.cityPlaceholder')}
 								value={searchCity}
 								onChange={(e) => setSearchCity(e.target.value)}
 								className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
@@ -127,14 +129,14 @@ export function MondialRelayPickupSelector({
 			{isLoading && (
 				<div className="text-center py-4 text-muted-foreground">
 					<Icon name="update" className="h-6 w-6 animate-spin mx-auto mb-2" />
-					<p>Searching for pickup points...</p>
+					<p>{t('mondialRelay.searching')}</p>
 				</div>
 			)}
 
 			{hasError && (
 				<div className="p-4 border border-destructive/50 rounded-lg bg-destructive/10">
 					<p className="text-sm text-destructive">
-						{pickupPointsFetcher.data?.error || 'Failed to search pickup points'}
+						{pickupPointsFetcher.data?.error || t('mondialRelay.searchError')}
 					</p>
 				</div>
 			)}
@@ -169,7 +171,7 @@ export function MondialRelayPickupSelector({
 										</p>
 										{point.distance && (
 											<p className="text-xs text-muted-foreground mt-1">
-												{point.distance}m away
+														{t('mondialRelay.distance', { distance: point.distance })}
 											</p>
 										)}
 									</div>
@@ -182,8 +184,8 @@ export function MondialRelayPickupSelector({
 
 			{!isLoading && !hasError && pickupPoints.length === 0 && searchPostalCode && (
 				<div className="text-center py-8 text-muted-foreground">
-					<p>No pickup points found for this location.</p>
-					<p className="text-sm mt-2">Try a different postal code or city.</p>
+					<p>{t('mondialRelay.noResults')}</p>
+					<p className="text-sm mt-2">{t('mondialRelay.tryDifferent')}</p>
 				</div>
 			)}
 
@@ -191,7 +193,7 @@ export function MondialRelayPickupSelector({
 				<div className="p-4 border rounded-lg bg-muted/50">
 					<div className="flex items-start justify-between">
 						<div>
-							<p className="font-semibold text-sm mb-1">Selected Pickup Point</p>
+							<p className="font-semibold text-sm mb-1">{t('mondialRelay.selectedPoint')}</p>
 							<p className="text-sm">{selectedPoint.name}</p>
 							<p className="text-xs text-muted-foreground">
 								{selectedPoint.address}, {selectedPoint.postalCode} {selectedPoint.city}

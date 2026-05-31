@@ -3,6 +3,7 @@ import { Card } from '#app/components/ui/card.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { useTranslation } from '#app/utils/i18n.tsx'
 import { type Route } from './+types/index.ts'
 import { twoFAVerificationType } from './two-factor.tsx'
 
@@ -58,39 +59,40 @@ function SettingItem({
 }
 
 export default function SecurityIndex({ loaderData }: Route.ComponentProps) {
+	const { t } = useTranslation()
 	return (
 		<div className="space-y-6">
 			<Card className="p-8">
 				<h2 className="mb-2" style={{ fontSize: '16px', lineHeight: '1.5em', fontWeight: 400, color: '#0A0A0A' }}>
-					Security Settings
+					{t('account.security.title')}
 				</h2>
 				<p className="text-sm mb-6" style={{ color: '#717182' }}>
-					Keep your account secure with these options
+					{t('account.security.description')}
 				</p>
 
 				<div className="space-y-2">
 					<SettingItem 
 						icon={<Icon name="lock-closed" className="w-5 h-5" />}
-						title={loaderData.hasPassword ? 'Change Password' : 'Create a Password'}
-						description={loaderData.hasPassword ? 'Update your account password' : 'Set a password for your account'}
+						title={loaderData.hasPassword ? t('account.security.changePassword') : t('account.security.createPassword')}
+						description={loaderData.hasPassword ? t('account.security.updatePassword') : t('account.security.setPassword')}
 						to={loaderData.hasPassword ? 'password' : 'password/create'}
 					/>
 					<SettingItem 
 						icon={<Icon name="shield" className="w-5 h-5" />}
-						title={loaderData.isTwoFactorEnabled ? '2FA is enabled' : 'Enable 2FA'}
-						description={loaderData.isTwoFactorEnabled ? 'Two-factor authentication is active' : 'Add an extra layer of security to your account'}
+						title={loaderData.isTwoFactorEnabled ? t('account.security.2faEnabled') : t('account.security.enable2fa')}
+						description={loaderData.isTwoFactorEnabled ? t('account.security.2faActive') : t('account.security.2faDescription')}
 						to="two-factor"
 					/>
 					<SettingItem 
 						icon={<Icon name="smartphone" className="w-5 h-5" />}
-						title="Manage Providers"
-						description="Set up passwordless authentication"
+						title={t('account.security.manageProviders')}
+						description={t('account.security.providersDescription')}
 						to="passkeys"
 					/>
 					<SettingItem 
 						icon={<Icon name="link-2" className="w-5 h-5" />}
-						title="Manage Connections"
-						description="Connected social accounts and third-party integrations"
+						title={t('account.security.manageConnections')}
+						description={t('account.security.connectionsDescription')}
 						to="connections"
 					/>
 				</div>
