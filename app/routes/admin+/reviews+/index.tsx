@@ -119,4 +119,5 @@ export async function action({ request }: Route.ActionArgs) {
 	})
 }
 
-export { default } from './__reviews-list.tsx'
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./index.lazy')

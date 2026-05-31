@@ -196,19 +196,5 @@ function FlagForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 	)
 }
 
-export default function NewFeatureFlag({ actionData }: Route.ComponentProps) {
-	return (
-		<div className="space-y-8 animate-slide-top">
-			<div>
-				<h1 className="text-2xl font-normal tracking-tight text-foreground">
-					Create New Feature Flag
-				</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Define a feature flag for progressive rollout and feature gating
-				</p>
-			</div>
-
-			<FlagForm actionData={actionData} />
-		</div>
-	)
-}
+// Lazy-load admin route component for code splitting
+export const lazy = () => import('./new.lazy')
