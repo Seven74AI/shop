@@ -77,7 +77,10 @@ app.use(compression())
 app.disable('x-powered-by')
 
 app.use((_, res, next) => {
-	helmet(res)
+	// Set Referrer-Policy to browser default (strict-origin-when-cross-origin)
+	// This is safe for same-origin redirects — the original issue was with
+	// helmet's default no-referrer which strips Referer even for same-origin
+	helmet(res, { general: { referrerPolicy: ['strict-origin-when-cross-origin'] } })
 	next()
 })
 
