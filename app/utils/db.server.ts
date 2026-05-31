@@ -35,5 +35,7 @@ export const prisma = remember('prisma', () => {
 		log.info({ duration: e.duration, query: e.query }, `prisma:query - ${dur} - ${e.query}`)
 	})
 	void client.$connect()
+	// Set busy timeout to 5s to handle parallel worker contention
+	void client.$executeRaw`PRAGMA busy_timeout = 5000`
 	return client
 })
