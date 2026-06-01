@@ -24,6 +24,7 @@ test('Users can register and use passkeys', async ({
 	navigate,
 	login,
 }) => {
+	test.skip(!!process.env.CI || !process.env.DISPLAY, 'CDP WebAuthn does not work in headless Chromium')
 	test.setTimeout(60_000)
 	await login()
 

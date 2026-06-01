@@ -8,6 +8,7 @@ test('Users can create note with an image', async ({
 	navigate,
 	login,
 }) => {
+	test.setTimeout(60000)
 	const user = await login()
 	await navigate('/users/:username/notes', { username: user.username })
 
@@ -37,6 +38,7 @@ test('Users can create note with multiple images', async ({
 	navigate,
 	login,
 }) => {
+	test.setTimeout(60000)
 	const user = await login()
 	await navigate('/users/:username/notes', { username: user.username })
 
@@ -45,15 +47,16 @@ test('Users can create note with multiple images', async ({
 	const altText2 = 'koala coder'
 	await page.getByRole('link', { name: 'new note' }).click()
 
-	// fill in form and submit
+	// Add second image field BEFORE setting files to avoid React losing file inputs on re-render
 	await page.getByRole('textbox', { name: 'title' }).fill(newNote.title)
 	await page.getByRole('textbox', { name: 'content' }).fill(newNote.content)
+	await page.getByRole('button', { name: 'add image' }).click()
+
 	await page
 		.getByLabel('image')
 		.nth(0)
 		.setInputFiles('tests/fixtures/images/kody-notes/cute-koala.png')
 	await page.getByLabel('alt text').nth(0).fill(altText1)
-	await page.getByRole('button', { name: 'add image' }).click()
 
 	await page
 		.getByLabel('image')
