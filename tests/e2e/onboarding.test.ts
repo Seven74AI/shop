@@ -96,10 +96,10 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 
 	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
 
-	// Radix UI uses button[role="checkbox"] — .check() does not work on buttons.
-	// Use .click() to toggle the checkbox state.
-	await page.getByRole('checkbox', { name: /terms/i }).click()
-	await page.getByRole('checkbox', { name: /remember/i }).click()
+	// Radix UI uses button[role="checkbox"] — .check() doesn't work on buttons.
+	// Use .click() + wait for state change, or force-check via the hidden input.
+	await page.getByRole('checkbox', { name: /terms/i }).check({ force: true })
+	await page.getByRole('checkbox', { name: /remember/i }).check({ force: true })
 
 	await page.getByRole('button', { name: /Create an account/i }).click()
 
