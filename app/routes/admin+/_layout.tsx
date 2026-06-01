@@ -1,6 +1,23 @@
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { type Route } from './+types/_layout.ts'
 
+import React, { useState, useEffect } from 'react'
+import { Outlet, useLocation, Link } from 'react-router'
+import { AppSidebar } from '#app/components/app-sidebar.tsx'
+import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from '#app/components/ui/breadcrumb.tsx'
+import { Button } from '#app/components/ui/button.tsx'
+import { Icon } from '#app/components/ui/icon.tsx'
+import { Toggle } from '#app/components/ui/toggle.tsx'
+import { useTranslation } from '#app/utils/i18n.tsx'
+
 export async function loader({ request }: Route.LoaderArgs) {
 	await requireUserWithRole(request, 'admin')
 	return {}
@@ -11,5 +28,71 @@ export const meta: Route.MetaFunction = () => [
 	{ name: 'description', content: 'Admin dashboard for managing your e-commerce store' },
 ]
 
-// Lazy-load admin layout component for code splitting
-export const lazy = () => import('./___layout.lazy')
+export default function AdminLayout() {
+	const [isCollapsed, setIsCollapsed] = useState(false)
+	const { t } = useTranslation()
+
+	// Listen for sidebar state changes
+	useEffect(() => {
+		const handleSidebarStateChange = (event: CustomEvent) => {
+			setIsCollapsed(event.detail.isCollapsed)
+		}
+
+		window.addEventListener('sidebar-state-change', handleSidebarStateChange as EventListener)
+		return () => window.removeEventListener('sidebar-state-change', handleSidebarStateChange as EventListener)
+	}, [])
+
+	return (
+		<div className="flex h-screen bg-background">
+			<AppSidebar />
+			<div className="flex-1 flex flex-col min-w-0">
+				<header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
+					<Toggle
+						pressed={!isCollapsed}
+						onPressedChange={() => {
+							// This will be handled by the sidebar component
+							const event = new CustomEvent('toggle-sidebar')
+							window.dispatchEvent(event)
+						}}
+						aria-label={t('admin.toggleSidebar')}
+						size="sm"
+						className="h-8 w-8 px-2"
+					>
+						<Icon 
+							name="layout" 
+							className="size-full" 
+						/>
+					</Toggle>
+					<AdminBreadcrumbs />
+				</header>
+				<main className="flex-1 overflow-auto p-4">
+					<Outlet />
+				</main>
+			</div>
+		</div>
+	)
+}
+
+export function ErrorBoundary() {
+	const { t } = useTranslation()
+	return (
+		<GeneralErrorBoundary
+			statusHandlers={{
+				403: ({ error }) => (
+					<div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+						<Icon name="lock-closed" className="h-12 w-12 text-muted-foreground" />
+						<h2 className="text-xl font-semibold">{t('error.unauthorized')}</h2>
+						<p className="text-muted-foreground text-center">
+							{typeof error.data === 'object' && error.data && 'message' in error.data
+								? String(error.data.message)
+								: t('error.forbidden')}
+						</p>
+						<Button asChild>
+							<Link to="/">{t('admin.backToHome')}</Link>
+						</Button>
+					</div>
+				),
+			}}
+		/>
+	)
+}

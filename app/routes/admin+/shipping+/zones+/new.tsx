@@ -217,5 +217,19 @@ function ZoneForm({ actionData }: { actionData?: Route.ComponentProps['actionDat
 	)
 }
 
-// Lazy-load admin route component for code splitting
-export const lazy = () => import('./__new.lazy')
+export default function NewShippingZone({ actionData }: Route.ComponentProps) {
+	return (
+		<div className="space-y-8 animate-slide-top">
+			<div>
+				<h1 className="text-2xl font-normal tracking-tight text-foreground">
+					Create New Shipping Zone
+				</h1>
+				<p className="text-sm text-muted-foreground mt-1">
+					Define a geographic region for shipping configuration
+				</p>
+			</div>
+
+			<ZoneForm actionData={actionData} />
+		</div>
+	)
+}

@@ -5,6 +5,10 @@ import { prisma } from '#app/utils/db.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { type Route } from './+types/_layout.ts'
 
+import { Outlet, useLoaderData } from 'react-router'
+import { useTranslation } from '#app/utils/i18n.tsx'
+import type { loader } from './_layout.ts'
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const pathname = url.pathname
@@ -54,5 +58,18 @@ export const meta: Route.MetaFunction = () => [
 	{ title: 'Checkout' },
 ]
 
-// Lazy-load checkout layout component for code splitting
-export const lazy = () => import('./___layout.lazy')
+export default function CheckoutLayout() {
+	const loaderData = useLoaderData<typeof loader>()
+	const { t } = useTranslation()
+	const currentStep = loaderData?.currentStep || 'review'
+
+	return (
+		<div className="container mx-auto max-w-4xl px-4 py-8">
+			<h1 className="mb-8 text-center text-3xl font-bold">{t('shop.checkout.title')}</h1>
+			<CheckoutSteps currentStep={currentStep} />
+			<div className="min-h-[400px]">
+				<Outlet />
+			</div>
+		</div>
+	)
+}

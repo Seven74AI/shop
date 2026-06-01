@@ -119,6 +119,3 @@ export async function action({ request }: Route.ActionArgs) {
 		description: `${ids.length} review(s) ${actionLabel} successfully.`,
 	})
 }
-
-// Lazy-load admin route component for code splitting
-export const lazy = () => import('./__index.lazy')
