@@ -10,7 +10,7 @@ const cartSessionStorage = createCookieSessionStorage({
 		path: '/',
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
-		secrets: process.env.SESSION_SECRET.split(','),
+		secrets: (process.env.SESSION_SECRET ?? 'dev-secret').split(','),
 		maxAge: 60 * 60 * 24 * 30, // 30 days
 	},
 })

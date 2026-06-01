@@ -12,29 +12,37 @@ export const prisma = remember('prisma', () => {
 		timeout: 5000, // PRAGMA busy_timeout — handles parallel worker SQLite contention
 	})
 
+	const isDebug = process.env.PRISMA_DEBUG === 'true'
 	const client = new PrismaClient({
 		adapter,
-		log: [
-			{ level: 'query', emit: 'event' },
-			{ level: 'error', emit: 'stdout' },
-			{ level: 'warn', emit: 'stdout' },
-		],
+		log: isDebug
+			? [
+				{ level: 'query', emit: 'event' },
+				{ level: 'error', emit: 'stdout' },
+				{ level: 'warn', emit: 'stdout' },
+			]
+			: [
+				{ level: 'error', emit: 'stdout' },
+				{ level: 'warn', emit: 'stdout' },
+			],
 	})
-	client.$on('query', async (e) => {
-		if (e.duration < logThreshold) return
-		const color =
-			e.duration < logThreshold * 1.1
-				? 'green'
-				: e.duration < logThreshold * 1.2
-					? 'blue'
-					: e.duration < logThreshold * 1.3
-						? 'yellow'
-						: e.duration < logThreshold * 1.4
-							? 'redBright'
-							: 'red'
-		const dur = styleText(color, `${e.duration}ms`)
-		log.info({ duration: e.duration, query: e.query }, `prisma:query - ${dur} - ${e.query}`)
-	})
+	if (isDebug) {
+		client.$on('query', async (e) => {
+			if (e.duration < logThreshold) return
+			const color =
+				e.duration < logThreshold * 1.1
+					? 'green'
+					: e.duration < logThreshold * 1.2
+						? 'blue'
+						: e.duration < logThreshold * 1.3
+							? 'yellow'
+							: e.duration < logThreshold * 1.4
+								? 'redBright'
+								: 'red'
+			const dur = styleText(color, `${e.duration}ms`)
+			log.info({ duration: e.duration, query: e.query }, `prisma:query - ${dur} - ${e.query}`)
+		})
+	}
 	void client.$connect()
 	// Set busy timeout to 5s to handle parallel worker SQLite contention
 	void client.$executeRaw`PRAGMA busy_timeout = 5000`
