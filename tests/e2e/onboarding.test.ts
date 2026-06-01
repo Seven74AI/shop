@@ -96,21 +96,22 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 
 	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
 
-	await page.getByLabel(/terms/i).check()
-
-	await page.getByLabel(/remember me/i).check()
+	// Radix UI uses button[role="checkbox"] — .check() does not work on buttons.
+	// Use .click() to toggle the checkbox state.
+	await page.getByRole('checkbox', { name: /terms/i }).click()
+	await page.getByRole('checkbox', { name: /remember/i }).click()
 
 	await page.getByRole('button', { name: /Create an account/i }).click()
 
 	await expect(page).toHaveURL(`/`)
 
+	// User menu is a link to the user profile page, not a dropdown.
+	// Click the link and verify we land on the profile page.
 	await page.getByRole('link', { name: 'User menu' }).click()
-	await page.getByRole('menuitem', { name: /profile/i }).click()
-
 	await expect(page).toHaveURL(`/users/${onboardingData.username}`)
 
-	await page.getByRole('link', { name: 'User menu' }).click()
-	await page.getByRole('menuitem', { name: /logout/i }).click()
+	// On user profile, Logout button is directly visible.
+	await page.getByRole('button', { name: /log out/i }).click()
 	await expect(page).toHaveURL(`/`)
 })
 
