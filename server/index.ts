@@ -82,37 +82,14 @@ app.use((_, res, next) => {
 			referrerPolicy: ['strict-origin-when-cross-origin'],
 		},
 		content: {
-			contentSecurityPolicy: {
-				useDefaults: true,
-				directives: {
-					fetch: {
-						'connect-src': [
-							"'self'",
-							'https://api.stripe.com',
-							process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
-						],
-						'frame-src': [
-							"'self'",
-							'https://*.stripe.com',
-						],
-						'img-src': [
-							"'self'",
-							'data:',
-							'https://*.stripe.com',
-						],
-						'style-src': [
-							"'self'",
-							"'unsafe-inline'",
-						],
-					},
-					deprecated: {
-						'report-uri': '/resources/csp-report',
-					},
-					other: {
-						'upgrade-insecure-requests': false,
-					},
-				},
-			},
+			// The Content-Security-Policy is set in app/entry.server.tsx, the only
+			// place that knows the per-request nonce React Router puts on its inline
+			// hydration scripts. Do NOT add a policy here: express appends the
+			// document response headers to these, so the browser would receive two
+			// enforced policies and apply both. A nonce-less `script-src 'self'`
+			// from this middleware blocks every inline script and the app never
+			// hydrates.
+			contentSecurityPolicy: false,
 			xFrameOptions: 'DENY',
 			crossOriginOpenerPolicy: true,
 			originAgentCluster: true,
@@ -304,7 +281,10 @@ closeWithGrace(async ({ err }) => {
 		server.close((e) => (e ? reject(e) : resolve('ok')))
 	})
 	if (err) {
-		log.error({ err: String(err), stack: err.stack }, 'Server shutdown with error')
+		log.error(
+			{ err: String(err), stack: err.stack },
+			'Server shutdown with error',
+		)
 		if (SENTRY_ENABLED) {
 			Sentry.captureException(err)
 			await Sentry.flush(500)
