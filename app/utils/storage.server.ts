@@ -11,17 +11,17 @@ const STORAGE_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID
 const STORAGE_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const STORAGE_REGION = process.env.AWS_REGION
 
-
 /**
  * Upload a verified, sanitized buffer to storage.
  * Used by upload functions after verifyUpload has passed.
  */
-async function uploadBufferToStorage(buffer: Buffer, key: string, contentType: string) {
-	// In mocks mode, skip actual upload
-	if (process.env.MOCKS === 'true') {
-		console.info('🔶 Mocking storage upload (verified):', key)
-		return key
-	}
+async function uploadBufferToStorage(
+	buffer: Buffer,
+	key: string,
+	contentType: string,
+) {
+	// Under MOCKS the MSW Tigris handler (tests/mocks/tigris.ts) intercepts this
+	// PUT and persists the file, so the image can be served back afterwards.
 
 	const uploadDate = new Date().toISOString()
 	const { url, baseHeaders } = getBaseSignedRequestInfo({
@@ -48,7 +48,11 @@ async function uploadBufferToStorage(buffer: Buffer, key: string, contentType: s
 		const errorMessage = `Failed to upload file to storage. Server responded with ${uploadResponse.status}: ${uploadResponse.statusText}`
 		Sentry.captureException(new Error(errorMessage), {
 			tags: { context: 'storage-upload' },
-			extra: { key, status: uploadResponse.status, statusText: uploadResponse.statusText },
+			extra: {
+				key,
+				status: uploadResponse.status,
+				statusText: uploadResponse.statusText,
+			},
 		})
 		throw new Error(`Failed to upload object: ${key}`)
 	}
@@ -109,7 +113,9 @@ export async function uploadProductImages(
 	productId: string,
 	files: Array<File | FileUpload>,
 ) {
-	const uploadPromises = files.map(file => uploadProductImage(productId, file))
+	const uploadPromises = files.map((file) =>
+		uploadProductImage(productId, file),
+	)
 	return Promise.all(uploadPromises)
 }
 
@@ -254,7 +260,9 @@ function getSignedDeleteRequestInfo(key: string) {
 	}
 }
 
-export async function deleteObjectFromStorage(objectKey: string): Promise<void> {
+export async function deleteObjectFromStorage(
+	objectKey: string,
+): Promise<void> {
 	const { url, headers } = getSignedDeleteRequestInfo(objectKey)
 
 	const deleteResponse = await fetch(url, {
@@ -267,13 +275,17 @@ export async function deleteObjectFromStorage(objectKey: string): Promise<void> 
 		const errorMessage = `Failed to delete object from storage. Server responded with ${deleteResponse.status}: ${deleteResponse.statusText}`
 		Sentry.captureException(new Error(errorMessage), {
 			tags: { context: 'storage-delete' },
-			extra: { objectKey, status: deleteResponse.status, statusText: deleteResponse.statusText },
+			extra: {
+				objectKey,
+				status: deleteResponse.status,
+				statusText: deleteResponse.statusText,
+			},
 		})
 		throw new Error(`Failed to delete object: ${objectKey}`)
 	}
 }
 
 export async function deleteProductImages(objectKeys: string[]): Promise<void> {
-	const deletePromises = objectKeys.map(key => deleteObjectFromStorage(key))
+	const deletePromises = objectKeys.map((key) => deleteObjectFromStorage(key))
 	await Promise.all(deletePromises)
 }

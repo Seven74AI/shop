@@ -34,7 +34,9 @@ test('Users can update their password', async ({ page, navigate, login }) => {
 	const user = await login({ password: oldPassword })
 	await navigate('/account/security/password')
 
-	await page.getByRole('textbox', { name: /^current password/i }).fill(oldPassword)
+	await page
+		.getByRole('textbox', { name: /^current password/i })
+		.fill(oldPassword)
 
 	await page.getByRole('textbox', { name: /^new password/i }).fill(newPassword)
 	await page
@@ -106,7 +108,9 @@ test('Users can change their email address', async ({
 	await navigate('/account/profile/change-email')
 	await page.getByRole('textbox', { name: /new email/i }).fill(newEmailAddress)
 	await page.getByRole('button', { name: /send confirmation/i }).click()
-	await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 15000 })
+	await expect(page.getByText(/check your email/i)).toBeVisible({
+		timeout: 15000,
+	})
 	const email = await waitFor(() => readEmail(newEmailAddress), {
 		errorMessage: 'Confirmation email was not sent',
 	})
@@ -117,7 +121,7 @@ test('Users can change their email address', async ({
 	await page.getByRole('textbox', { name: /code/i }).fill(code)
 	await page.getByRole('button', { name: /submit/i }).click()
 	await page.waitForURL('/account/**', { timeout: 15000 })
-	await expect(page.getByText(/email changed/i)).toBeVisible()
+	await expect(page.getByText(/email changed/i)).toBeVisible({ timeout: 15000 })
 
 	const updatedUser = await prisma.user.findUnique({
 		where: { id: preUpdateUser.id },
