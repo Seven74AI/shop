@@ -24,6 +24,7 @@ test('Users can register and use passkeys', async ({
 	navigate,
 	login,
 }) => {
+	test.skip(!!process.env.CI, 'WebAuthn needs a real authenticator')
 	test.setTimeout(60_000)
 	await login()
 
@@ -134,6 +135,7 @@ test('Failed passkey verification shows error', async ({
 	navigate,
 	login,
 }) => {
+	test.skip(!!process.env.CI, 'WebAuthn needs a real authenticator')
 	const password = faker.internet.password()
 	await login({ password })
 	const { client, authenticatorId } = await setupWebAuthn(page)
@@ -153,7 +155,9 @@ test('Failed passkey verification shows error', async ({
 	await page.getByRole('button', { name: /register new passkey/i }).click()
 
 	// Wait for error message
-	await expect(page.getByText(/failed to create passkey/i)).toBeVisible({ timeout: 15000 })
+	await expect(page.getByText(/failed to create passkey/i)).toBeVisible({
+		timeout: 15000,
+	})
 
 	// Verify no passkey was registered
 	const credentials = await client.send('WebAuthn.getCredentials', {
