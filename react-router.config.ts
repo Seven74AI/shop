@@ -11,6 +11,7 @@ export default {
 
 	future: {
 		unstable_optimizeDeps: true,
+		v8_splitRouteModules: true,
 	},
 
 	buildEnd: async ({ viteConfig, reactRouterConfig, buildManifest }) => {
