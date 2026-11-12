@@ -1,5 +1,6 @@
 import { invariant } from '@epic-web/invariant'
 import { faker } from '@faker-js/faker'
+import { type Locator } from '@playwright/test'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	normalizeEmail,
@@ -19,6 +20,18 @@ import {
 
 const URL_REGEX = /(?<url>https?:\/\/[^\s$.?#].[^\s]*)/
 const CODE_REGEX = /Here's your verification code: (?<code>[\d\w]+)/
+// The Radix checkbox is a <button role="checkbox">, so Playwright's .check()
+// can race hydration and fail with "did not change its state". Click and
+// assert aria-checked, retrying until hydration has attached the handler.
+async function checkCustomCheckbox(checkbox: Locator) {
+	await expect(async () => {
+		if ((await checkbox.getAttribute('aria-checked')) !== 'true') {
+			await checkbox.click()
+		}
+		await expect(checkbox).toBeChecked({ timeout: 1000 })
+	}).toPass({ timeout: 15000 })
+}
+
 function extractUrl(text: string) {
 	const match = text.match(URL_REGEX)
 	return match?.groups?.url
@@ -96,9 +109,11 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 
 	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
 
-	await page.getByLabel(/terms/i).check()
+	await checkCustomCheckbox(page.getByRole('checkbox', { name: /terms/i }))
 
-	await page.getByLabel(/remember me/i).check()
+	await checkCustomCheckbox(
+		page.getByRole('checkbox', { name: /remember me/i }),
+	)
 
 	await page.getByRole('button', { name: /Create an account/i }).click()
 
@@ -180,9 +195,11 @@ test.skip('completes onboarding after GitHub OAuth given valid user details', as
 	})
 
 	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
-	await page
-		.getByLabel(/do you agree to our terms of service and privacy policy/i)
-		.check()
+	await checkCustomCheckbox(
+		page.getByRole('checkbox', {
+			name: /do you agree to our terms of service and privacy policy/i,
+		}),
+	)
 	await createAccountButton.click()
 
 	await expect(page).toHaveURL('/')
@@ -324,9 +341,11 @@ test.skip('shows help texts on entering invalid details on onboarding page after
 	// we are all set up and ...
 
 	await page.waitForLoadState('domcontentloaded') // was networkidle, switched for lazy-loading compat
-	await page
-		.getByLabel(/do you agree to our terms of service and privacy policy/i)
-		.check()
+	await checkCustomCheckbox(
+		page.getByRole('checkbox', {
+			name: /do you agree to our terms of service and privacy policy/i,
+		}),
+	)
 	await createAccountButton.click()
 	await expect(createAccountButton.getByText('error')).not.toBeAttached()
 
